@@ -1,1 +1,1 @@
-oz/=lib/openzeppelin-contracts/contracts
+oz/=lib/openzeppelin-contracts/contracts/

@@ -22,7 +22,9 @@
 // ERC721.sol source code copyright OpenZeppelin licensed under the MIT License.
 // With modifications by Nounders DAO.
 //
-//
+
+
+// @todo - we don't need these modifications, so i think we can switch out to OZ's implementation
 // MODIFICATIONS:
 // `_safeMint` and `_mint` contain an additional `creator` argument and
 // emit two `Transfer` logs, rather than one. The first log displays the
@@ -31,6 +33,8 @@
 // attribution on various NFT marketplaces.
 
 pragma solidity ^0.8.6;
+
+
 
 import 'oz/token/ERC721/IERC721.sol';
 import 'oz/token/ERC721/IERC721Receiver.sol';

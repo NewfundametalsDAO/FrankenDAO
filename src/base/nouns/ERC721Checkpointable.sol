@@ -34,9 +34,9 @@
 
 pragma solidity ^0.8.6;
 
-import './ERC721Enumerable.sol';
+import './ERC721.sol';
 
-abstract contract ERC721Checkpointable is ERC721Enumerable {
+abstract contract ERC721Checkpointable is ERC721 {
     /// @notice Defines decimals as per ERC-20 convention to make integrations with 3rd party governance platforms easier
     uint8 public constant decimals = 0;
 
@@ -77,6 +77,9 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
      * @dev Used when calling `_delegate()`
      */
     function votesToDelegate(address delegator) public view returns (uint96) {
+        // @todo - this needs to be redone to gather all the info on staking & evil score
+        // this is what's called when someone delegates
+        // we need to decide whether delegating will be by token (input token ids) or for all (means adding some checkpointing logic)
         return safe96(balanceOf(delegator), 'ERC721Checkpointable::votesToDelegate: amount exceeds 96 bits');
     }
 
@@ -102,6 +105,7 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         super._beforeTokenTransfer(from, to, tokenId);
 
         /// @notice Differs from `_transferTokens()` to use `delegates` override method to simulate auto-delegation
+        // @todo - the only transfer is minting and burning, so just grab staked time and evil score for that
         _moveDelegates(delegates(from), delegates(to), 1);
     }
 
@@ -140,6 +144,7 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         require(signatory != address(0), 'ERC721Checkpointable::delegateBySig: invalid signature');
         require(nonce == nonces[signatory]++, 'ERC721Checkpointable::delegateBySig: invalid nonce');
         require(block.timestamp <= expiry, 'ERC721Checkpointable::delegateBySig: signature expired');
+        // @notice delegatee can be address(0) here and it bricks votes?
         return _delegate(signatory, delegatee);
     }
 
@@ -194,6 +199,7 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         return checkpoints[account][lower].votes;
     }
 
+    // @todo - potentially add tokenids as input here, if we aren't assuming delegating all
     function _delegate(address delegator, address delegatee) internal {
         /// @notice differs from `_delegate()` in `Comp.sol` to use `delegates` override method to simulate auto-delegation
         address currentDelegate = delegates(delegator);
@@ -225,7 +231,7 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
                 uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
                 uint96 dstRepNew = add96(dstRepOld, amount, 'ERC721Checkpointable::_moveDelegates: amount overflows');
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
-            }
+            }       
         }
     }
 
@@ -285,6 +291,21 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
             chainId := chainid()
         }
         return chainId;
+    }
+
+
+
+
+    //////////////////////////////////////////////
+    ////// ADDED FUNCTIONS FOR VOTING POWER //////
+    //////////////////////////////////////////////
+
+    uint evilScoreBin;
+    uint MASK = 1;
+
+    function isItEvil(uint _tokenId) internal view returns (bool) {
+        // do some testing on this, but loosely, scale it over by tokenId bites and then mask to rightmost bit
+        return evilScoreBin >> _tokenId & MASK > 0;
     }
 }
 

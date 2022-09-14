@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+// @todo - remove this, and use staked.getPriorVotes() instead of comp.getPriorVotes() in other contract
+
 contract Comp {
     /// @notice EIP-20 token name for this token
     string public constant name = "Compound";
