@@ -1,6 +1,10 @@
 pragma solidity ^0.8.10;
 
-interface Governance {
+interface IGovernance {
+
+    ////////////
+    // Events //
+    ////////////
     event NewAdmin(address oldAdmin, address newAdmin);
     event NewImplementation(address oldImplementation, address newImplementation);
     event NewPendingAdmin(address oldPendingAdmin, address newPendingAdmin);
@@ -29,18 +33,39 @@ interface Governance {
     event WhitelistAccountExpirationSet(address account, uint256 expiration);
     event WhitelistGuardianSet(address oldGuardian, address newGuardian);
 
+    ///////////
+    // Proxy //
+    ///////////
+    function implementation() external view returns (address);
+
+    //////////////
+    // Treasury //
+    //////////////
+    function timelock() external view returns (address);
+
+    /////////////////////
+    // Frankenpunk NFT //
+    /////////////////////
+    function frankenpunk() external view returns (address);
+
+    ///////////////////////////////////////
+    // Contract Admin, Vetoer, and Roles //
+    ///////////////////////////////////////
     function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
     function VETOER() external view returns (bytes32);
     function admin() external view returns (address);
-    function calculateVotingPower(address voter) external returns (uint256 votingPower);
-    function comp() external view returns (address);
     function getRoleAdmin(bytes32 role) external view returns (bytes32);
-    function grantRole(bytes32 role, address account) external;
+    function pendingAdmin() external view returns (address);
     function hasRole(bytes32 role, address account) external view returns (bool);
-    function implementation() external view returns (address);
+    function grantRole(bytes32 role, address account) external;
+    function renounceRole(bytes32 role, address account) external;
+    function revokeRole(bytes32 role, address account) external;
+
+    ///////////////
+    // Proposals //
+    ///////////////
     function initialProposalId() external view returns (uint256);
     function latestProposalIds(address) external view returns (uint256);
-    function pendingAdmin() external view returns (address);
     function proposalCount() external view returns (uint256);
     function proposalThreshold() external view returns (uint256);
     function proposals(uint256)
@@ -58,10 +83,16 @@ interface Governance {
             bool canceled,
             bool executed
         );
-    function renounceRole(bytes32 role, address account) external;
-    function revokeRole(bytes32 role, address account) external;
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
-    function timelock() external view returns (address);
+
+    ////////////
+    // Voting //
+    ////////////
+    function calculateVotingPower(address voter) external returns (uint256 votingPower);
     function votingDelay() external view returns (uint256);
     function votingPeriod() external view returns (uint256);
+
+    ///////////////////////
+    // EIP 165 Interface //
+    ///////////////////////
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }

@@ -2,14 +2,12 @@
 pragma solidity ^0.8.13;
 
 import "oz/access/AccessControl.sol";
-import "./base/compound-bravo/GovernorBravoDelegate.sol";
-import "./base/compound-bravo/GovernorBravoDelegator.sol";
-import "./base/compound-bravo/GovernorBravoInterfaces.sol";
+import "./interfaces/IGovernance.sol";
 
 /// @title FrankenDAO Governance Contract
 /// @author Solidity Guild
 /// @notice Contract for creating, voting, and executing proposals
-abstract contract Governance is AccessControl, GovernorBravoDelegateStorageV1, GovernorBravoEvents {
+abstract contract Governance is AccessControl, IGovernance {
   // State Variables
 
   // Roles
