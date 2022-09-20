@@ -109,6 +109,19 @@ contract GovernanceStorage {
     /// @notice The latest proposal for each proposer
     mapping(address => uint256) public latestProposalIds;
 
+    // mapping(address => CommunityScoreData) public 
+
+    // struct CommunityScoreData {
+    //     uint proposalsCreated;
+    //     uint proposalAccepted;
+    //     // we could also do percentage of votes they've particiapted in
+    //     uint votes;
+
+    //     // if they want to have seasons, then it could just tally total per season and thehy reset to 0
+    //     mapping(uint => uint) votesBySeason;
+        
+    // }
+
     struct Proposal {
         /// @notice Unique id for looking up a proposal
         uint256 id;

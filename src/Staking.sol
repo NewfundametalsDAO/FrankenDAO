@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "oz/token/ERC721/IERC721.sol";
 import "oz/token/ERC721/IERC721Receiver.sol";
-import { IFrankenpunks } from "./interfaces/IFrankenpunks.sol";
+import "./interfaces/IFrankenpunks.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IGovernance.sol";
 
@@ -11,14 +11,15 @@ import "./interfaces/IGovernance.sol";
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
 abstract contract Staking is ERC721Checkpointable, IStaking {
-  /// @notice Address of the original NFT that will be staked
   IFrankenpunks frankenpunks;
   IGovernance governance;
   address executor;
 
   mapping(uint => uint) public unlockTime;
   uint public stakeBonusTime = 4 weeks;
-  uint public totalVotingPower;
+  uint public totalVotingPower; // we can't cleanly include community in this?
+
+  uint[40] constant EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
 
   /////////////////////////////////
   ////////// CONSTRUCTOR //////////
@@ -55,9 +56,8 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   /// STAKE & UNSTAKE FUNCTIONS ///
   /////////////////////////////////
 
-  // @notice Accepts ownership of a token ID and mints the staked token
-    // @todo - do we want to have multiple lockUp args? require(numTokens == _lockUp.length, "provide lockup status for each token");
-    // @todo - do we want to allow _to address to send stake / unstake?
+  // @todo - do we want to have multiple lockUp args? require(numTokens == _lockUp.length, "provide lockup status for each token");
+  // @todo - do we want to allow _to address to send stake / unstake?
   function stake(uint[] _tokenIds, bool _lockUp, address _to) public {
       uint numTokens = _tokenIds.length;
       require(numTokens > 0, "stake at least one token");
@@ -109,22 +109,20 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
         uint evilPoints = isItEvil(_tokenId) ? 10 : 0;
         return _lockUp ? 40 + evilPoints : 20 + evilPoints;
     }
-    
-    uint EVIL_BITMAP;
-    uint MASK = 1;
 
     function isItEvil(uint _tokenId) internal view returns (bool) {
         // do some testing on this, but loosely, scale it over by tokenId bites and then mask to rightmost bit
-        return EVIL_BITMAP >> _tokenId & MASK > 0;
+        return (EVIL_BITMAP[_tokenId >> 8] >> (_tokenId & 255)) & 1 > 0;
     }
 
     function getCommunityVotingPower(address _voter) public view returns (uint) {
-      if delegates(_voter) != address(0) return 0;
-      
-      uint votesInPastTenProposals = governance.getVotesInPastTenProposals(_voter);
-      uint proposalsToVote = _min(governance.getProposalsToVote(_voter), 10);
-      uint proposalsAccepted = _min(governance.getProposalsAccepted(_voter), 10);
-      return votesInPastTenProposals + 2 * proposalsToVote + 2 * proposalsAccepted;
+      if (balanceOf(_voter) == 0) return 0;
+      if (delegates(_voter) != address(0)) return 0;
+
+      // uint votesInPastTenProposals = governance.getTotalVotes(_voter) / currentProposalId;
+      // uint proposalsToVote = _min(governance.getProposalsToVote(_voter), 10);
+      // uint proposalsAccepted = _min(governance.getProposalsAccepted(_voter), 10);
+      // return votesInPastTenProposals + 2 * proposalsToVote + 2 * proposalsAccepted;
     }
 
     /////////////////////////////////
@@ -132,7 +130,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   /////////////////////////////////
 
   function changeStakeTime(uint _newStakeBonusTime) public {
-    require(_msgSender() == executor, "only governance can change stake time");
+    require(_msgSender() == executor, "only executor can change stake time");
     stakeBonusTime = _newStakeBonusTime;
   }
 

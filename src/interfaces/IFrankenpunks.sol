@@ -1,6 +1,6 @@
 pragma solidity ^0.8.10;
 
-interface FrankenPunks {
+interface IFrankenPunks {
 
     ////////////
     // Events //
