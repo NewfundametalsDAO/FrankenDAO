@@ -5,41 +5,42 @@ import "oz/token/ERC721/IERC721.sol";
 import "oz/token/ERC721/IERC721Receiver.sol";
 import { IFrankenpunks } from "./interfaces/IFrankenpunks.sol";
 import "./interfaces/IStaking.sol";
+import "./interfaces/IGovernance.sol";
 
 /// @title FrankenDAO Staking Contract
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
 abstract contract Staking is ERC721Checkpointable, IStaking {
   /// @notice Address of the original NFT that will be staked
-  IFrankenpunks public frankenpunks;
-  address governance;
+  IFrankenpunks frankenpunks;
+  IGovernance governance;
+  address executor;
 
   mapping(uint => uint) public unlockTime;
   uint public stakeBonusTime = 4 weeks;
-  uint totalVotingPower;
+  uint public totalVotingPower;
 
   /////////////////////////////////
   ////////// CONSTRUCTOR //////////
   /////////////////////////////////
 
-  // @todo - governance should be executor - rename?
-  constructor(address _frankenpunks, uint _stakeBonusTime, address _governance) ERC721("Staked FrankenPunks", "sFP") {
+  constructor(address _frankenpunks, uint _stakeBonusTime, address _governance, address _executor) ERC721("Staked FrankenPunks", "sFP") {
     frankenpunks = IFrankenpunks(_frankenpunks);
     stakeBonusTime = _stakeBonusTime;
     governance = _governance;
+    executor = _executor;
   }
 
   /////////////////////////////////
   // OVERRIDE & REVERT TRANSFERS //
-  /////////////////////////////////
+  /////////////////////////////////  
 
-  // should be nontransferrable because otherwise it's not really staked, they can just trade these
-  // don't forget to do all the different types of inputs, or else users can sneak around it by inputting bytes manually
-  // the only transfers allowed should be internal ones called by stake and unstake functions
-  // should be transferFrom, safeTransferFrom x 2, safeTransfer, check if there are others?
-  // think through rest. i think we leave approvals on so people can stake for one another.
-  // no new functions here for interface, just a note for us to do this later
+  // @todo - make sure this blocks all versions of transferFrom, safeTransferFrom, safeTransfer, etc.
+  function _transfer(address from, address to, uint256 tokenId) internal virtual override {
+    revert("staked tokens cannot be transferred");
+  }
 
+  // @todo - think through rest. i think we leave approvals on so people can stake for one another. mint and burn don't use transfer.
 
   /////////////////////////////////
   /////// TOKEN URI FUNCTIONS /////
@@ -71,8 +72,8 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   }
 
   function _stakeToken(uint _tokenId, bool _lockUp, address _to) internal returns(uint) {
-      require(_isApprovedOrOwner(_msgSender(), _tokenId));
-      transferFrom(ownerOf(_tokenId), address(this), _tokenId);
+      // @todo - no check before they need to have approved this contract to transfer, right?
+      frankenpunks.transferFrom(frankenpunks.ownerOf(_tokenId), address(this), _tokenId);
       _mint(_to, _tokenId);
       if (_lockUp) unlockTime[tokenId] = now + stakeTime;
       return getTokenVotingPower(_tokenId, _lockUp);
@@ -96,7 +97,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       uint tokenUnlockTime = unlockTime[tokenId];
       require(tokenUnlockTime < now, "token is locked");
       _burn(_tokenId);
-      transferFrom(address(this), _to, _tokenId);
+      frankenpunks.transferFrom(address(this), _to, _tokenId);
       return getTokenVotingPower(_tokenId, tokenUnlockTime != 0);
   }
 
@@ -117,12 +118,30 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
         return EVIL_BITMAP >> _tokenId & MASK > 0;
     }
 
+    function getCommunityVotingPower(address _voter) public view returns (uint) {
+      if delegates(_voter) != address(0) return 0;
+      
+      uint votesInPastTenProposals = governance.getVotesInPastTenProposals(_voter);
+      uint proposalsToVote = _min(governance.getProposalsToVote(_voter), 10);
+      uint proposalsAccepted = _min(governance.getProposalsAccepted(_voter), 10);
+      return votesInPastTenProposals + 2 * proposalsToVote + 2 * proposalsAccepted;
+    }
+
     /////////////////////////////////
   //////// OWNER OPERATIONS ///////
   /////////////////////////////////
 
   function changeStakeTime(uint _newStakeBonusTime) public {
-    require(_msgSender() == governance, "only governance can change stake time");
+    require(_msgSender() == executor, "only governance can change stake time");
     stakeBonusTime = _newStakeBonusTime;
+  }
+
+
+  /////////////////////////////////
+  //////////// HELPERS ////////////
+  /////////////////////////////////
+
+  function _min(uint a, uint b) internal pure returns(uint) {
+    return a < b ? a : b;
   }
 }
