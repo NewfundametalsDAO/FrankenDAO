@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "../base/nouns/ERC721Checkpointable.sol";
+import "../token/ERC721Checkpointable.sol";
 
-contract StakingScratchpad is ERC721Checkpointable {
-    mapping(address => address) private _delegates;
-    mapping(address => uint) public communityVotingPower;
-    mapping(address => uint) public votes;
-    mapping(address => uint) public votesFromOwnedTokens;
+contract StakingScratchpad is ERC721Checkpointable {    
     mapping(uint => uint) public unlockTime;
 
     uint stakeTime = 4 weeks;

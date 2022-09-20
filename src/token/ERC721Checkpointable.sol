@@ -1,29 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-/// @title Vote checkpointing for an ERC-721 token
-
-/*********************************
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- * ░░░░░░█████████░░█████████░░░ *
- * ░░░░░░██░░░████░░██░░░████░░░ *
- * ░░██████░░░████████░░░████░░░ *
- * ░░██░░██░░░████░░██░░░████░░░ *
- * ░░██░░██░░░████░░██░░░████░░░ *
- * ░░░░░░█████████░░█████████░░░ *
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- *********************************/
-
-// LICENSE
-// ERC721Checkpointable.sol uses and modifies part of Compound Lab's Comp.sol:
-// https://github.com/compound-finance/compound-protocol/blob/ae4388e780a8d596d97619d9704a931a2752c2bc/contracts/Governance/Comp.sol
-//
-// Comp.sol source code Copyright 2020 Compound Labs, Inc. licensed under the BSD-3-Clause license.
-// With modifications by Nounders DAO.
-//
-// Additional conditions of BSD-3-Clause can be found here: https://opensource.org/licenses/BSD-3-Clause
-//
 // MODIFICATIONS
 // Checkpointing logic from Comp.sol has been used with the following modifications:
 // - `delegates` is renamed to `_delegates` and is set to private
@@ -34,7 +10,7 @@
 
 pragma solidity ^0.8.6;
 
-import './ERC721.sol';
+import './ERC721Enumerable.sol';
 
 abstract contract ERC721Checkpointable is ERC721Enumerable {
     /// @notice Defines decimals as per ERC-20 convention to make integrations with 3rd party governance platforms easier
@@ -42,6 +18,10 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
 
     /// @notice A record of each accounts delegate
     mapping(address => address) private _delegates;
+    
+    mapping(address => uint) public votes;
+    mapping(address => uint) public votesFromOwnedTokens;
+    mapping(address => uint) public communityVotingPower;
 
     /// @notice A checkpoint for marking number of votes from a given block
     struct Checkpoint {
@@ -77,10 +57,7 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
      * @dev Used when calling `_delegate()`
      */
     function votesToDelegate(address delegator) public view returns (uint96) {
-        // @todo - this needs to be redone to gather all the info on staking & evil score
-        // this is what's called when someone delegates
-        // we need to decide whether delegating will be by token (input token ids) or for all (means adding some checkpointing logic)
-        return safe96(balanceOf(delegator), 'ERC721Checkpointable::votesToDelegate: amount exceeds 96 bits');
+        return safe96(votesFromOwnedTokens[delegator], 'ERC721Checkpointable::votesToDelegate: amount exceeds 96 bits');
     }
 
     /**
@@ -105,8 +82,7 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         super._beforeTokenTransfer(from, to, tokenId);
 
         /// @notice Differs from `_transferTokens()` to use `delegates` override method to simulate auto-delegation
-        // @todo - the only transfer is minting and burning, so just grab staked time and evil score for that
-        _moveDelegates(delegates(from), delegates(to), 1);
+        // _moveDelegates(delegates(from), delegates(to), 1);
     }
 
     /**
@@ -144,7 +120,7 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         require(signatory != address(0), 'ERC721Checkpointable::delegateBySig: invalid signature');
         require(nonce == nonces[signatory]++, 'ERC721Checkpointable::delegateBySig: invalid nonce');
         require(block.timestamp <= expiry, 'ERC721Checkpointable::delegateBySig: signature expired');
-        // @notice delegatee can be address(0) here and it bricks votes?
+        // @todo - delegatee can be address(0) here and it bricks votes?
         return _delegate(signatory, delegatee);
     }
 
@@ -199,7 +175,6 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         return checkpoints[account][lower].votes;
     }
 
-    // @todo - potentially add tokenids as input here, if we aren't assuming delegating all
     function _delegate(address delegator, address delegatee) internal {
         /// @notice differs from `_delegate()` in `Comp.sol` to use `delegates` override method to simulate auto-delegation
         address currentDelegate = delegates(delegator);

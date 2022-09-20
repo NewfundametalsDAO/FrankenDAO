@@ -9,27 +9,23 @@ import "./interfaces/IStaking.sol";
 /// @title FrankenDAO Staking Contract
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
-abstract contract Staking is IStaking {
+abstract contract Staking is ERC721Checkpointable, IStaking {
   /// @notice Address of the original NFT that will be staked
   IFrankenpunks public frankenpunks;
-
   address governance;
 
-  /// @notice Map the tokenID to the block it's allowed to be unstaked
-  // changed this from stakedBlock to unlockTime so we don't need to do any math
   mapping(uint => uint) public unlockTime;
-
-  mapping(uint => bool) public stakedForTime;
-
-  uint public stakeTime;
+  uint public stakeBonusTime = 4 weeks;
+  uint totalVotingPower;
 
   /////////////////////////////////
   ////////// CONSTRUCTOR //////////
   /////////////////////////////////
 
-  constructor(address _frankenpunks, uint _stakeTime, address _governance) ERC721("Staked FrankenPunks", "sFP") {
+  // @todo - governance should be executor - rename?
+  constructor(address _frankenpunks, uint _stakeBonusTime, address _governance) ERC721("Staked FrankenPunks", "sFP") {
     frankenpunks = IFrankenpunks(_frankenpunks);
-    stakeTime = _stakeTime;
+    stakeBonusTime = _stakeBonusTime;
     governance = _governance;
   }
 
@@ -59,29 +55,74 @@ abstract contract Staking is IStaking {
   /////////////////////////////////
 
   // @notice Accepts ownership of a token ID and mints the staked token
-  function stake(address _from, uint _tokenId, bool _lockUp) public {
-    // transferFrom(from, addr(this), tokenId)
-    // mint(from, tokenId) => mint same tokenId from this contract as the one they staked
-    // if lockUp, unlockTime[tokenId] = now + stakeTime, else unlockTime[tokenId] = now
-    // question: any downside to making the else "0" instead of now, and checking for that in unstake to save gas?
-    // if lockUp, set stakedForTime[tokenId] = true
-  }
-  
-  // @notice burns the staked NFT and transfers the original back to msg.sender
-  function unstake(uint _tokenId, address _to) public {
-    // require(msg.sender is owner or approved of tokenId)
-    // require(unlockTime[tokenId] < now) // will automatically be correct for 0, if we decide to do that
-    // burn tokenId
-    // transferFrom(addr(this), _to, tokenId)
-    // stakedForTime[tokenId] = false
+    // @todo - do we want to have multiple lockUp args? require(numTokens == _lockUp.length, "provide lockup status for each token");
+    // @todo - do we want to allow _to address to send stake / unstake?
+  function stake(uint[] _tokenIds, bool _lockUp, address _to) public {
+      uint numTokens = _tokenIds.length;
+      require(numTokens > 0, "stake at least one token");
+      
+      uint newVotingPower;
+      for (uint i = 0; i < numTokens; i++) {
+          newVotingPower += _stakeToken(_tokenIds[i], _lockUp, _to);
+      }
+      votes[delegates(owner)] += newVotingPower;
+      votesFromOwnedTokens[owner] += newVotingPower;
+      totalVotingPower += newVotingPower;
   }
 
-  /////////////////////////////////
+  function _stakeToken(uint _tokenId, bool _lockUp, address _to) internal returns(uint) {
+      require(_isApprovedOrOwner(_msgSender(), _tokenId));
+      transferFrom(ownerOf(_tokenId), address(this), _tokenId);
+      _mint(_to, _tokenId);
+      if (_lockUp) unlockTime[tokenId] = now + stakeTime;
+      return getTokenVotingPower(_tokenId, _lockUp);
+  }
+
+  function unstake(uint[] _tokenIds, address _to) public {
+      uint numTokens = _tokenIds.length;
+      require(numTokens > 0, "unstake at least one token");
+      
+      uint lostVotingPower;
+      for (uint i = 0; i < numTokens; i++) {
+          lostVotingPower += _unstakeToken(_tokenIds[i], _to);
+      }
+      votes[delegates(owner)] -= lostVotingPower;
+      votesFromOwnedTokens -= lostVotingPower;
+      totalVotingPower -= lostVotingPower;
+  }
+
+  function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
+      require(_isApprovedOrOwner(_msgSender(), _tokenId));
+      uint tokenUnlockTime = unlockTime[tokenId];
+      require(tokenUnlockTime < now, "token is locked");
+      _burn(_tokenId);
+      transferFrom(address(this), _to, _tokenId);
+      return getTokenVotingPower(_tokenId, tokenUnlockTime != 0);
+  }
+
+    //////////////////////////////////////////////
+    ////// ADDED FUNCTIONS FOR VOTING POWER //////
+    //////////////////////////////////////////////
+    
+    function getTokenVotingPower(uint _tokenId, bool _lockUp) public view returns (uint) {
+        uint evilPoints = isItEvil(_tokenId) ? 10 : 0;
+        return _lockUp ? 40 + evilPoints : 20 + evilPoints;
+    }
+    
+    uint EVIL_BITMAP;
+    uint MASK = 1;
+
+    function isItEvil(uint _tokenId) internal view returns (bool) {
+        // do some testing on this, but loosely, scale it over by tokenId bites and then mask to rightmost bit
+        return EVIL_BITMAP >> _tokenId & MASK > 0;
+    }
+
+    /////////////////////////////////
   //////// OWNER OPERATIONS ///////
   /////////////////////////////////
 
-  function changeStakeTime(uint _newStakeTime) public {
-    // require(only governance can change this)
-    // stakeTime = _newStakeTime;
+  function changeStakeTime(uint _newStakeBonusTime) public {
+    require(_msgSender() == governance, "only governance can change stake time");
+    stakeBonusTime = _newStakeBonusTime;
   }
 }
