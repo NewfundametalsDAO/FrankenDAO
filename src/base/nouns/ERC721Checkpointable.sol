@@ -36,7 +36,7 @@ pragma solidity ^0.8.6;
 
 import './ERC721.sol';
 
-abstract contract ERC721Checkpointable is ERC721 {
+abstract contract ERC721Checkpointable is ERC721Enumerable {
     /// @notice Defines decimals as per ERC-20 convention to make integrations with 3rd party governance platforms easier
     uint8 public constant decimals = 0;
 
@@ -291,21 +291,6 @@ abstract contract ERC721Checkpointable is ERC721 {
             chainId := chainid()
         }
         return chainId;
-    }
-
-
-
-
-    //////////////////////////////////////////////
-    ////// ADDED FUNCTIONS FOR VOTING POWER //////
-    //////////////////////////////////////////////
-
-    uint evilScoreBin;
-    uint MASK = 1;
-
-    function isItEvil(uint _tokenId) internal view returns (bool) {
-        // do some testing on this, but loosely, scale it over by tokenId bites and then mask to rightmost bit
-        return evilScoreBin >> _tokenId & MASK > 0;
     }
 }
 

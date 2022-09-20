@@ -19,6 +19,8 @@ abstract contract Staking is ERC721Checkpointable {
   // changed this from stakedBlock to unlockTime so we don't need to do any math
   mapping(uint => uint) public unlockTime;
 
+  mapping(uint => bool) public stakedForTime;
+
   uint public stakeTime;
 
   /////////////////////////////////
@@ -62,6 +64,7 @@ abstract contract Staking is ERC721Checkpointable {
     // mint(from, tokenId) => mint same tokenId from this contract as the one they staked
     // if lockUp, unlockTime[tokenId] = now + stakeTime, else unlockTime[tokenId] = now
     // question: any downside to making the else "0" instead of now, and checking for that in unstake to save gas?
+    // if lockUp, set stakedForTime[tokenId] = true
   }
   
   // @notice burns the staked NFT and transfers the original back to msg.sender
@@ -70,6 +73,7 @@ abstract contract Staking is ERC721Checkpointable {
     // require(unlockTime[tokenId] < now) // will automatically be correct for 0, if we decide to do that
     // burn tokenId
     // transferFrom(addr(this), _to, tokenId)
+    // stakedForTime[tokenId] = false
   }
 
   /////////////////////////////////
