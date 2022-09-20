@@ -1,6 +1,10 @@
 pragma solidity ^0.8.10;
 
 interface FrankenPunks {
+
+    ////////////
+    // Events //
+    ////////////
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
     event Finalized();
@@ -20,6 +24,9 @@ interface FrankenPunks {
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Withdrew(uint256 balance);
 
+    ////////////////////
+    // View Functions //
+    ////////////////////
     function AUCTION_PRICE_END() external view returns (uint256);
     function AUCTION_PRICE_START() external view returns (uint256);
     function MAX_MINT_PER_TX() external view returns (uint256);

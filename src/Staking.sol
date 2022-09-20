@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./base/nouns/ERC721Checkpointable.sol";
 import "oz/token/ERC721/IERC721.sol";
 import "oz/token/ERC721/IERC721Receiver.sol";
-import { IFrankenpunks } from  "./interfaces/IFrankenpunks.sol";
+import { IFrankenpunks } from "./interfaces/IFrankenpunks.sol";
+import "./interfaces/IStaking.sol";
 
 /// @title FrankenDAO Staking Contract
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
-abstract contract Staking is ERC721Checkpointable {
+abstract contract Staking is IStaking {
   /// @notice Address of the original NFT that will be staked
   IFrankenpunks public frankenpunks;
 
