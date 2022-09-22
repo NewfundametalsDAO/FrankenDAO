@@ -3,47 +3,45 @@ pragma solidity ^0.8.13;
 
 import "oz/token/ERC721/IERC721.sol";
 import "oz/token/ERC721/IERC721Receiver.sol";
-import "./token/ERC721Checkpointable.sol";
-import { IFrankenpunks } from "./interfaces/IFrankenpunks.sol";
+import "./interfaces/IFrankenpunks.sol";
 import "./interfaces/IStaking.sol";
+import "./interfaces/IGovernance.sol";
 
 /// @title FrankenDAO Staking Contract
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
 abstract contract Staking is ERC721Checkpointable, IStaking {
-  address public owner;
-
-  /// @notice Address of the original NFT that will be staked
-  IFrankenpunks public frankenpunks;
-  address governance;
+  IFrankenpunks frankenpunks;
+  IGovernance governance;
+  address executor;
 
   mapping(uint => uint) public unlockTime;
   uint public stakeBonusTime = 4 weeks;
-  uint totalVotingPower;
+  uint public totalVotingPower; // we can't cleanly include community in this?
+
+  uint[40] constant EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
 
   /////////////////////////////////
   ////////// CONSTRUCTOR //////////
   /////////////////////////////////
 
-  // @todo - governance should be executor - rename?
-  constructor(address _frankenpunks, uint _stakeBonusTime, address _governance) ERC721("Staked FrankenPunks", "sFP") {
+  constructor(address _frankenpunks, uint _stakeBonusTime, address _governance, address _executor) ERC721("Staked FrankenPunks", "sFP") {
     frankenpunks = IFrankenpunks(_frankenpunks);
     stakeBonusTime = _stakeBonusTime;
     governance = _governance;
-    owner = msg.sender;
+    executor = _executor;
   }
 
   /////////////////////////////////
   // OVERRIDE & REVERT TRANSFERS //
-  /////////////////////////////////
+  /////////////////////////////////  
 
-  // should be nontransferrable because otherwise it's not really staked, they can just trade these
-  // don't forget to do all the different types of inputs, or else users can sneak around it by inputting bytes manually
-  // the only transfers allowed should be internal ones called by stake and unstake functions
-  // should be transferFrom, safeTransferFrom x 2, safeTransfer, check if there are others?
-  // think through rest. i think we leave approvals on so people can stake for one another.
-  // no new functions here for interface, just a note for us to do this later
+  // @todo - make sure this blocks all versions of transferFrom, safeTransferFrom, safeTransfer, etc.
+  function _transfer(address from, address to, uint256 tokenId) internal virtual override {
+    revert("staked tokens cannot be transferred");
+  }
 
+  // @todo - think through rest. i think we leave approvals on so people can stake for one another. mint and burn don't use transfer.
 
   /////////////////////////////////
   /////// TOKEN URI FUNCTIONS /////
@@ -58,9 +56,8 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   /// STAKE & UNSTAKE FUNCTIONS ///
   /////////////////////////////////
 
-  // @notice Accepts ownership of a token ID and mints the staked token
-    // @todo - do we want to have multiple lockUp args? require(numTokens == _lockUp.length, "provide lockup status for each token");
-    // @todo - do we want to allow _to address to send stake / unstake?
+  // @todo - do we want to have multiple lockUp args? require(numTokens == _lockUp.length, "provide lockup status for each token");
+  // @todo - do we want to allow _to address to send stake / unstake?
   function stake(uint[] _tokenIds, bool _lockUp, address _to) public {
       uint numTokens = _tokenIds.length;
       require(numTokens > 0, "stake at least one token");
@@ -75,8 +72,8 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   }
 
   function _stakeToken(uint _tokenId, bool _lockUp, address _to) internal returns(uint) {
-      require(_isApprovedOrOwner(_msgSender(), _tokenId));
-      transferFrom(ownerOf(_tokenId), address(this), _tokenId);
+      // @todo - no check before they need to have approved this contract to transfer, right?
+      frankenpunks.transferFrom(frankenpunks.ownerOf(_tokenId), address(this), _tokenId);
       _mint(_to, _tokenId);
       if (_lockUp) unlockTime[tokenId] = now + stakeTime;
       return getTokenVotingPower(_tokenId, _lockUp);
@@ -100,7 +97,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       uint tokenUnlockTime = unlockTime[tokenId];
       require(tokenUnlockTime < now, "token is locked");
       _burn(_tokenId);
-      transferFrom(address(this), _to, _tokenId);
+      frankenpunks.transferFrom(address(this), _to, _tokenId);
       return getTokenVotingPower(_tokenId, tokenUnlockTime != 0);
   }
 
@@ -112,21 +109,37 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
         uint evilPoints = isItEvil(_tokenId) ? 10 : 0;
         return _lockUp ? 40 + evilPoints : 20 + evilPoints;
     }
-    
-    uint EVIL_BITMAP;
-    uint MASK = 1;
 
     function isItEvil(uint _tokenId) internal view returns (bool) {
         // do some testing on this, but loosely, scale it over by tokenId bites and then mask to rightmost bit
-        return EVIL_BITMAP >> _tokenId & MASK > 0;
+        return (EVIL_BITMAP[_tokenId >> 8] >> (_tokenId & 255)) & 1 > 0;
     }
 
-    /////////////////////////////////
+    function getCommunityVotingPower(address _voter) public view returns (uint) {
+      if (balanceOf(_voter) == 0) return 0;
+      if (delegates(_voter) != address(0)) return 0;
+
+      // uint votesInPastTenProposals = governance.getTotalVotes(_voter) / currentProposalId;
+      // uint proposalsToVote = _min(governance.getProposalsToVote(_voter), 10);
+      // uint proposalsAccepted = _min(governance.getProposalsAccepted(_voter), 10);
+      // return votesInPastTenProposals + 2 * proposalsToVote + 2 * proposalsAccepted;
+    }
+
+  /////////////////////////////////
   //////// OWNER OPERATIONS ///////
   /////////////////////////////////
 
   function changeStakeTime(uint _newStakeBonusTime) public {
-    require(_msgSender() == governance, "only governance can change stake time");
+    require(_msgSender() == executor, "only executor can change stake time");
     stakeBonusTime = _newStakeBonusTime;
+  }
+
+
+  /////////////////////////////////
+  //////////// HELPERS ////////////
+  /////////////////////////////////
+
+  function _min(uint a, uint b) internal pure returns(uint) {
+    return a < b ? a : b;
   }
 }
