@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "oz/token/ERC721/IERC721.sol";
 import "oz/token/ERC721/IERC721Receiver.sol";
+import "./token/ERC721Checkpointable.sol";
 import { IFrankenpunks } from "./interfaces/IFrankenpunks.sol";
 import "./interfaces/IStaking.sol";
 
@@ -10,6 +11,8 @@ import "./interfaces/IStaking.sol";
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
 abstract contract Staking is ERC721Checkpointable, IStaking {
+  address public owner;
+
   /// @notice Address of the original NFT that will be staked
   IFrankenpunks public frankenpunks;
   address governance;
@@ -27,6 +30,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
     frankenpunks = IFrankenpunks(_frankenpunks);
     stakeBonusTime = _stakeBonusTime;
     governance = _governance;
+    owner = msg.sender;
   }
 
   /////////////////////////////////
