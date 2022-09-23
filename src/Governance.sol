@@ -425,6 +425,112 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         }
     }
 
+    ///////////////
+    //// Views ////
+    ///////////////
+    /**
+     * @notice Gets actions of a proposal
+     * @param proposalId the id of the proposal
+     * @return targets
+     * @return values
+     * @return signatures
+     * @return calldatas
+     */
+    function getActions(uint256 proposalId)
+        external
+        view
+        returns (
+            address[] memory targets,
+            uint256[] memory values,
+            string[] memory signatures,
+            bytes[] memory calldatas
+        )
+    {
+        Proposal storage p = proposals[proposalId];
+        return (p.targets, p.values, p.signatures, p.calldatas);
+    }
+
+    /**
+     * @notice Gets the receipt for a voter on a given proposal
+     * @param proposalId the id of proposal
+     * @param voter The address of the voter
+     * @return The voting receipt
+     */
+    function getReceipt(uint256 proposalId, address voter)
+        external
+        view
+        returns (Receipt memory)
+    {
+        return proposals[proposalId].receipts[voter];
+    }
+
+    /**
+     * @notice Gets the state of a proposal
+     * @param proposalId The id of the proposal
+     * @return Proposal state
+     */
+    function state(uint256 proposalId) public view returns (ProposalState) {
+        require(
+            proposalCount >= proposalId,
+            "FrankenDAO::state: invalid proposal id"
+        );
+        Proposal storage proposal = proposals[proposalId];
+        if (proposal.vetoed) {
+            return ProposalState.Vetoed;
+        } else if (proposal.canceled) {
+            return ProposalState.Canceled;
+        } else if (block.number <= proposal.startBlock) {
+            return ProposalState.Pending;
+        } else if (block.number <= proposal.endBlock) {
+            return ProposalState.Active;
+        } else if (
+            proposal.forVotes <= proposal.againstVotes ||
+            proposal.forVotes < proposal.quorumVotes
+        ) {
+            return ProposalState.Defeated;
+        } else if (proposal.eta == 0) {
+            return ProposalState.Succeeded;
+        } else if (proposal.executed) {
+            return ProposalState.Executed;
+        } else if (block.timestamp >= proposal.eta + timelock.GRACE_PERIOD()) {
+            return ProposalState.Expired;
+        } else {
+            return ProposalState.Queued;
+        }
+    }
+
+    /**
+     * @notice Current proposal threshold using Noun Total Supply
+     * Differs from `GovernerBravo` which uses fixed amount
+     */
+    function proposalThreshold() public view returns (uint256) {
+        return bps2Uint(proposalThresholdBPS, staking.totalSupply());
+    }
+
+    /**
+     * @notice Current quorum votes using Noun Total Supply
+     * Differs from `GovernerBravo` which uses fixed amount
+     */
+    function quorumVotes() public view returns (uint256) {
+        return bps2Uint(quorumVotesBPS, staking.totalSupply());
+    }
+
+    function bps2Uint(uint256 bps, uint256 number)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (number * bps) / 10000;
+    }
+
+    function getChainIdInternal() internal view returns (uint256) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        return chainId;
+    }
+
     ///////////////////
     //// Proposals ////
     ///////////////////
@@ -689,111 +795,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         emit ProposalVetoed(proposalId);
     }
 
-    ///////////////
-    //// Views ////
-    ///////////////
-    /**
-     * @notice Gets actions of a proposal
-     * @param proposalId the id of the proposal
-     * @return targets
-     * @return values
-     * @return signatures
-     * @return calldatas
-     */
-    function getActions(uint256 proposalId)
-        external
-        view
-        returns (
-            address[] memory targets,
-            uint256[] memory values,
-            string[] memory signatures,
-            bytes[] memory calldatas
-        )
-    {
-        Proposal storage p = proposals[proposalId];
-        return (p.targets, p.values, p.signatures, p.calldatas);
-    }
-
-    /**
-     * @notice Gets the receipt for a voter on a given proposal
-     * @param proposalId the id of proposal
-     * @param voter The address of the voter
-     * @return The voting receipt
-     */
-    function getReceipt(uint256 proposalId, address voter)
-        external
-        view
-        returns (Receipt memory)
-    {
-        return proposals[proposalId].receipts[voter];
-    }
-
-    /**
-     * @notice Gets the state of a proposal
-     * @param proposalId The id of the proposal
-     * @return Proposal state
-     */
-    function state(uint256 proposalId) public view returns (ProposalState) {
-        require(
-            proposalCount >= proposalId,
-            "FrankenDAO::state: invalid proposal id"
-        );
-        Proposal storage proposal = proposals[proposalId];
-        if (proposal.vetoed) {
-            return ProposalState.Vetoed;
-        } else if (proposal.canceled) {
-            return ProposalState.Canceled;
-        } else if (block.number <= proposal.startBlock) {
-            return ProposalState.Pending;
-        } else if (block.number <= proposal.endBlock) {
-            return ProposalState.Active;
-        } else if (
-            proposal.forVotes <= proposal.againstVotes ||
-            proposal.forVotes < proposal.quorumVotes
-        ) {
-            return ProposalState.Defeated;
-        } else if (proposal.eta == 0) {
-            return ProposalState.Succeeded;
-        } else if (proposal.executed) {
-            return ProposalState.Executed;
-        } else if (block.timestamp >= proposal.eta + timelock.GRACE_PERIOD()) {
-            return ProposalState.Expired;
-        } else {
-            return ProposalState.Queued;
-        }
-    }
-
-    /**
-     * @notice Current proposal threshold using Noun Total Supply
-     * Differs from `GovernerBravo` which uses fixed amount
-     */
-    function proposalThreshold() public view returns (uint256) {
-        return bps2Uint(proposalThresholdBPS, staking.totalSupply());
-    }
-
-    /**
-     * @notice Current quorum votes using Noun Total Supply
-     * Differs from `GovernerBravo` which uses fixed amount
-     */
-    function quorumVotes() public view returns (uint256) {
-        return bps2Uint(quorumVotesBPS, staking.totalSupply());
-    }
-
-    function bps2Uint(uint256 bps, uint256 number)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (number * bps) / 10000;
-    }
-
-    function getChainIdInternal() internal view returns (uint256) {
-        uint256 chainId;
-        assembly {
-            chainId := chainid()
-        }
-        return chainId;
-    }
 
     ////////////////
     //// Voting ////

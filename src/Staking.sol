@@ -6,12 +6,13 @@ import "oz/token/ERC721/IERC721Receiver.sol";
 import "./interfaces/IFrankenpunks.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IGovernance.sol";
+import "./token/ERC721Checkpointable.sol";
 
 /// @title FrankenDAO Staking Contract
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
 abstract contract Staking is ERC721Checkpointable, IStaking {
-  IFrankenpunks frankenpunks;
+  IFrankenPunks frankenpunks;
   IGovernance governance;
   address executor;
 
@@ -26,7 +27,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   /////////////////////////////////
 
   constructor(address _frankenpunks, uint _stakeBonusTime, address _governance, address _executor) ERC721("Staked FrankenPunks", "sFP") {
-    frankenpunks = IFrankenpunks(_frankenpunks);
+    frankenpunks = IFrankenPunks(_frankenpunks);
     stakeBonusTime = _stakeBonusTime;
     governance = _governance;
     executor = _executor;
