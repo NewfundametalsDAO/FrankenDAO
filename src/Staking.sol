@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
-
-import "oz/token/ERC721/IERC721.sol";
-import "oz/token/ERC721/IERC721Receiver.sol";
+pragma solidity ^0.8.0;
 import "./interfaces/IFrankenpunks.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IGovernance.sol";
@@ -10,6 +7,7 @@ import "./interfaces/IGovernance.sol";
 /// @title FrankenDAO Staking Contract
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
+// @todo - add pausable that only impacts staking (not unstaking)
 abstract contract Staking is ERC721Checkpointable, IStaking {
   IFrankenpunks frankenpunks;
   IGovernance governance;
@@ -66,16 +64,28 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       for (uint i = 0; i < numTokens; i++) {
           newVotingPower += _stakeToken(_tokenIds[i], _lockUp, _to);
       }
-      votes[delegates(owner)] += newVotingPower;
       votesFromOwnedTokens[owner] += newVotingPower;
       totalVotingPower += newVotingPower;
   }
 
+  // function stakeAll(bool _lockUp, address _to) public {
+  //     uint numTokens = frankenpunks.balanceOf(msg.sender);
+  //     require(numTokens > 0, "stake at least one token");
+      
+  //     uint newVotingPower;
+  //     for (uint i = 0; i < numTokens; i++) {
+  //         newVotingPower += _stakeToken(frankenpunks.tokenOfOwnerByIndex(msg.sender, i), _lockUp, _to);
+  //     }
+  //     votesFromOwnedTokens[owner] += newVotingPower;
+  //     totalVotingPower += newVotingPower;
+  // }
+
   function _stakeToken(uint _tokenId, bool _lockUp, address _to) internal returns(uint) {
-      // @todo - no check before they need to have approved this contract to transfer, right?
       frankenpunks.transferFrom(frankenpunks.ownerOf(_tokenId), address(this), _tokenId);
       _mint(_to, _tokenId);
-      if (_lockUp) unlockTime[tokenId] = now + stakeTime;
+
+      if (_lockUp) unlockTime[tokenId] = now + stakeBonusTime;
+
       return getTokenVotingPower(_tokenId, _lockUp);
   }
 
@@ -87,32 +97,31 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       for (uint i = 0; i < numTokens; i++) {
           lostVotingPower += _unstakeToken(_tokenIds[i], _to);
       }
-      votes[delegates(owner)] -= lostVotingPower;
       votesFromOwnedTokens -= lostVotingPower;
       totalVotingPower -= lostVotingPower;
   }
 
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
       require(_isApprovedOrOwner(_msgSender(), _tokenId));
-      uint tokenUnlockTime = unlockTime[tokenId];
-      require(tokenUnlockTime < now, "token is locked");
+      require(unlockTime[tokenId] < block.timestamp, "token is locked");
+
       _burn(_tokenId);
       frankenpunks.transferFrom(address(this), _to, _tokenId);
-      return getTokenVotingPower(_tokenId, tokenUnlockTime != 0);
+      
+      return getTokenVotingPower(_tokenId);
   }
 
     //////////////////////////////////////////////
     ////// ADDED FUNCTIONS FOR VOTING POWER //////
     //////////////////////////////////////////////
     
-    function getTokenVotingPower(uint _tokenId, bool _lockUp) public view returns (uint) {
-        uint evilPoints = isItEvil(_tokenId) ? 10 : 0;
-        return _lockUp ? 40 + evilPoints : 20 + evilPoints;
+    function getTokenVotingPower(uint _tokenId) public view returns (uint) {
+        return unlockTime[tokenId] > 0 ? 40 + evilBonus(_tokenId) : 20 + evilBonus(_tokenId);
     }
 
-    function isItEvil(uint _tokenId) internal view returns (bool) {
+    function evilBonus(uint _tokenId) internal view returns (uint) {
         // do some testing on this, but loosely, scale it over by tokenId bites and then mask to rightmost bit
-        return (EVIL_BITMAP[_tokenId >> 8] >> (_tokenId & 255)) & 1 > 0;
+        return (EVIL_BITMAP[_tokenId >> 8] >> (_tokenId & 255)) & 1 * 10;
     }
 
     function getCommunityVotingPower(address _voter) public view returns (uint) {

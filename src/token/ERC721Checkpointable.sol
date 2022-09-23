@@ -1,25 +1,15 @@
-// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-License-Identifier: MIT
 
-// MODIFICATIONS
-// Checkpointing logic from Comp.sol has been used with the following modifications:
-// - `delegates` is renamed to `_delegates` and is set to private
-// - `delegates` is a public function that uses the `_delegates` mapping look-up, but unlike
-//   Comp.sol, returns the delegator's own address if there is no delegate.
-//   This avoids the delegator needing to "delegate to self" with an additional transaction
-// - `_transferTokens()` is renamed `_beforeTokenTransfer()` and adapted to hook into OpenZeppelin's ERC721 hooks.
+pragma solidity ^0.8.0;
 
-pragma solidity ^0.8.6;
-
-import './ERC721Enumerable.sol';
+// @todo - i think we can just get rid of ours and use OZ for this directly
+import 'oz/token/ERC721/extensions/ERC721Enumerable.sol';
 
 abstract contract ERC721Checkpointable is ERC721Enumerable {
-    /// @notice Defines decimals as per ERC-20 convention to make integrations with 3rd party governance platforms easier
-    uint8 public constant decimals = 0;
-
     /// @notice A record of each accounts delegate
     mapping(address => address) private _delegates;
     
-    mapping(address => uint) public votes;
+    /// @notice Mappings to store the votes from owned tokens and community voting power for each address.
     mapping(address => uint) public votesFromOwnedTokens;
     mapping(address => uint) public communityVotingPower;
 
@@ -81,9 +71,14 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
     ) internal override {
         super._beforeTokenTransfer(from, to, tokenId);
 
-        /// @notice Differs from `_transferTokens()` to use `delegates` override method to simulate auto-delegation
-        // _moveDelegates(delegates(from), delegates(to), 1);
+        _moveDelegates(
+            delegates(from), 
+            delegates(to), 
+            safe96(getTokenVotingPower(tokenId), "ERC721Checkpointable::votesToDelegate: amount exceeds 96 bits")
+        );
     }
+
+    function getTokenVotingPower(uint _tokenId) public view virtual returns(uint); 
 
     /**
      * @notice Delegate votes from `msg.sender` to `delegatee`
@@ -103,6 +98,7 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
      * @param r Half of the ECDSA signature pair
      * @param s Half of the ECDSA signature pair
      */
+     // @todo - do we want to get rid of this? 
     function delegateBySig(
         address delegatee,
         uint256 nonce,
