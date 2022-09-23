@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import "./interfaces/IFrankenpunks.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IGovernance.sol";
@@ -57,6 +58,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
 
   // @todo - do we want to have multiple lockUp args? require(numTokens == _lockUp.length, "provide lockup status for each token");
   // @todo - do we want to allow _to address to send stake / unstake?
+  // stakeAll will live on front end, grabbing owned ids and then calling this
   function stake(uint[] _tokenIds, bool _lockUp, address _to) public {
       uint numTokens = _tokenIds.length;
       require(numTokens > 0, "stake at least one token");
@@ -68,18 +70,6 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       votesFromOwnedTokens[owner] += newVotingPower;
       totalVotingPower += newVotingPower;
   }
-
-  // function stakeAll(bool _lockUp, address _to) public {
-  //     uint numTokens = frankenpunks.balanceOf(msg.sender);
-  //     require(numTokens > 0, "stake at least one token");
-      
-  //     uint newVotingPower;
-  //     for (uint i = 0; i < numTokens; i++) {
-  //         newVotingPower += _stakeToken(frankenpunks.tokenOfOwnerByIndex(msg.sender, i), _lockUp, _to);
-  //     }
-  //     votesFromOwnedTokens[owner] += newVotingPower;
-  //     totalVotingPower += newVotingPower;
-  // }
 
   function _stakeToken(uint _tokenId, bool _lockUp, address _to) internal returns(uint) {
       frankenpunks.transferFrom(frankenpunks.ownerOf(_tokenId), address(this), _tokenId);

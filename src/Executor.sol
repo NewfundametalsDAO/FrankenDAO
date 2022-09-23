@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 contract Executor {
+
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event NewDelay(uint256 indexed newDelay);
@@ -30,10 +31,11 @@ contract Executor {
         uint256 eta
     );
 
-    uint256 public constant GRACE_PERIOD = 14 days;
+    uint256 public constant GRACE_PERIOD = 14 days; // @todo - do we want this editable?
     uint256 public constant MINIMUM_DELAY = 2 days;
     uint256 public constant MAXIMUM_DELAY = 30 days;
 
+    // @todo - should we rename admin to governance to make it clear?
     address public admin;
     address public pendingAdmin;
     uint256 public delay;
@@ -66,6 +68,7 @@ contract Executor {
     }
 
     function setPendingAdmin(address pendingAdmin_) public {
+        // @todo - should we let admin call this as well?
         require(
             msg.sender == address(this),
             'FrankenDAOExecutor::setPendingAdmin: Call must come from FrankenDAOExecutor.'
@@ -88,6 +91,7 @@ contract Executor {
             'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
         );
 
+        // @todo - i think this is fine but new nouns includes description hash for extra security (in case of malicious conflict). lemme think through it.
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = true;
 
