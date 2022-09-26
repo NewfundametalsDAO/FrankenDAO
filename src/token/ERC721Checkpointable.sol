@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-// @todo - i think we can just get rid of ours and use OZ for this directly
 import 'oz/token/ERC721/extensions/ERC721Enumerable.sol';
 
 abstract contract ERC721Checkpointable is ERC721Enumerable {
@@ -11,7 +10,7 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
     
     /// @notice Mappings to store the votes from owned tokens and community voting power for each address.
     mapping(address => uint) public votesFromOwnedTokens;
-    mapping(address => uint) public communityVotingPower;
+    uint public totalVotingPower;
 
     /// @notice A checkpoint for marking number of votes from a given block
     struct Checkpoint {
@@ -74,50 +73,21 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         _moveDelegates(
             delegates(from), 
             delegates(to), 
-            safe96(getTokenVotingPower(tokenId), "ERC721Checkpointable::votesToDelegate: amount exceeds 96 bits")
+            safe96(getTokenVotingPower(tokenId), "ERC721Checkpointable::_beforeTokenTransfer: amount exceeds 96 bits")
         );
     }
 
     function getTokenVotingPower(uint _tokenId) public view virtual returns(uint); 
+
+    function getCommunityVotingPower(address _voter) public view virtual returns(uint);
 
     /**
      * @notice Delegate votes from `msg.sender` to `delegatee`
      * @param delegatee The address to delegate votes to
      */
     function delegate(address delegatee) public {
-        if (delegatee == address(0)) delegatee = msg.sender;
+        if (delegatee == address(0)) delegatee = msg.sender; // @todo - i want to flip this so it's always 0 for self, think through it
         return _delegate(msg.sender, delegatee);
-    }
-
-    /**
-     * @notice Delegates votes from signatory to `delegatee`
-     * @param delegatee The address to delegate votes to
-     * @param nonce The contract state required to match the signature
-     * @param expiry The time at which to expire the signature
-     * @param v The recovery byte of the signature
-     * @param r Half of the ECDSA signature pair
-     * @param s Half of the ECDSA signature pair
-     */
-     // @todo - do we want to get rid of this? 
-    function delegateBySig(
-        address delegatee,
-        uint256 nonce,
-        uint256 expiry,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public {
-        bytes32 domainSeparator = keccak256(
-            abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name())), getChainId(), address(this))
-        );
-        bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
-        bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), 'ERC721Checkpointable::delegateBySig: invalid signature');
-        require(nonce == nonces[signatory]++, 'ERC721Checkpointable::delegateBySig: invalid nonce');
-        require(block.timestamp <= expiry, 'ERC721Checkpointable::delegateBySig: signature expired');
-        // @todo - delegatee can be address(0) here and it bricks votes?
-        return _delegate(signatory, delegatee);
     }
 
     /**
@@ -172,16 +142,20 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
     }
 
     function _delegate(address delegator, address delegatee) internal {
-        /// @notice differs from `_delegate()` in `Comp.sol` to use `delegates` override method to simulate auto-delegation
         address currentDelegate = delegates(delegator);
+        uint96 communityVotesBefore = safe96(getCommunityVotingPower(delegator), 'ERC721Checkpointable::_delegate: amount exceeds 96 bits');
 
         _delegates[delegator] = delegatee;
-
         emit DelegateChanged(delegator, currentDelegate, delegatee);
-
         uint96 amount = votesToDelegate(delegator);
-
         _moveDelegates(currentDelegate, delegatee, amount);
+
+        uint96 communityVotesAfter = safe96(getCommunityVotingPower(delegator), 'ERC721Checkpointable::_delegate: amount exceeds 96 bits');
+        if (communityVotesBefore > communityVotesAfter) {
+            totalVotingPower -= communityVotesBefore - communityVotesAfter;
+        } else if (communityVotesBefore < communityVotesAfter) {
+            totalVotingPower += communityVotesAfter - communityVotesBefore;
+        }
     }
 
     function _moveDelegates(

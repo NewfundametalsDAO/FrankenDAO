@@ -257,18 +257,13 @@ contract GovernanceStorage {
     /// @notice The latest proposal for each proposer
     mapping(address => uint256) public latestProposalIds;
 
-    // mapping(address => CommunityScoreData) public 
+    mapping(address => CommunityScoreData) public getCommunityScoreData;
 
-    // struct CommunityScoreData {
-    //     uint proposalsCreated;
-    //     uint proposalAccepted;
-    //     // we could also do percentage of votes they've particiapted in
-    //     uint votes;
-
-    //     // if they want to have seasons, then it could just tally total per season and thehy reset to 0
-    //     mapping(uint => uint) votesBySeason;
-        
-    // }
+    struct CommunityScoreData {
+        uint64 proposalsCreated;
+        uint64 proposalsPassed;
+        uint64 votes;        
+    }
 
     struct Proposal {
         /// @notice Unique id for looking up a proposal
@@ -559,11 +554,14 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         bytes[] memory calldatas,
         string memory description
     ) public returns (uint256) {
+        uint userProposalCount = ++getCommunityScoreData[msg.sender].proposalsCreated;
+        if (userProposalCount > 10) staking.increaseTotalCommunityVotingPower(2);
+        
         ProposalTemp memory temp;
 
         // TODO: change to getTotalVotingPower();
         //temp.totalSupply = nouns.totalSupply();
-        temp.totalSupply = staking.getTotalVotingPower();
+        temp.totalSupply = staking.totalVotingPower();
 
         temp.proposalThreshold = bps2Uint(
             proposalThresholdBPS,
@@ -715,6 +713,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
             "FrankenDAO::execute: proposal can only be executed if it is queued"
         );
         Proposal storage proposal = proposals[proposalId];
+
+        uint userSuccessfulProposalCount = ++getCommunityScoreData[proposal.proposer].proposalsPassed;
+        if (userSuccessfulProposalCount > 10) staking.increaseTotalCommunityVotingPower(2);
+
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
             timelock.executeTransaction(
@@ -885,6 +887,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         uint256 proposalId,
         uint8 support
     ) internal returns (uint96) {
+        uint userVoteCount = ++getCommunityScoreData[voter].votes;
+        if (userVoteCount > 10) staking.increaseTotalCommunityVotingPower(1);
+        
         require(
             state(proposalId) == ProposalState.Active,
             "FrankenDAO::castVoteInternal: voting is closed"

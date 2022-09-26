@@ -15,9 +15,11 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   IGovernance governance;
   address executor;
 
-  mapping(uint => uint) public unlockTime;
-  uint public stakeBonusTime = 4 weeks;
-  uint public totalVotingPower; // we can't cleanly include community in this?
+  mapping(uint => uint) public unlockTime; // token => unlock timestamp
+  mapping(uint => uint) public stakedTimeBonus; // token => amount of staked bonus they got
+  uint public maxStakeBonusTime = 4 weeks;
+  uint public maxStakeBonusAmount = 20;
+  
 
   uint[40] constant EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
 
@@ -56,28 +58,31 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   /// STAKE & UNSTAKE FUNCTIONS ///
   /////////////////////////////////
 
-  // @todo - do we want to have multiple lockUp args? require(numTokens == _lockUp.length, "provide lockup status for each token");
-  // @todo - do we want to allow _to address to send stake / unstake?
-  // stakeAll will live on front end, grabbing owned ids and then calling this
-  function stake(uint[] _tokenIds, bool _lockUp, address _to) public {
+  function stake(uint[] _tokenIds, uint _unlockTime) public {
       uint numTokens = _tokenIds.length;
       require(numTokens > 0, "stake at least one token");
+      require(unlockTime == 0 || unlockTime > block.timestamp, "can't lock until past time (set 0 for unlocked)");
       
       uint newVotingPower;
       for (uint i = 0; i < numTokens; i++) {
-          newVotingPower += _stakeToken(_tokenIds[i], _lockUp, _to);
+          newVotingPower += _stakeToken(_tokenIds[i], _unlockTime);
       }
       votesFromOwnedTokens[owner] += newVotingPower;
       totalVotingPower += newVotingPower;
   }
 
-  function _stakeToken(uint _tokenId, bool _lockUp, address _to) internal returns(uint) {
+  function _stakeToken(uint _tokenId, uint _unlockTime) internal returns(uint) {
       frankenpunks.transferFrom(frankenpunks.ownerOf(_tokenId), address(this), _tokenId);
-      _mint(_to, _tokenId);
+      _mint(msg.sender, _tokenId); // @todo - or should this be to the owner, or add _to argument to choose?
 
-      if (_lockUp) unlockTime[tokenId] = now + stakeBonusTime;
+      uint stakingBonus = 0;
+      if (_unlockTime > 0) {
+        unlockTime[tokenId] = _unlockTime;
+        stakingBonus = _getStakeLengthBonus(_unlockTime - block.timestamp);
+        stakedTimeBonus[tokenId] = stakingBonus;
+      }
 
-      return getTokenVotingPower(_tokenId, _lockUp);
+      return 20 + stakingBonus + evilBonus(_tokenId);
   }
 
   function unstake(uint[] _tokenIds, address _to) public {
@@ -107,7 +112,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
     //////////////////////////////////////////////
     
     function getTokenVotingPower(uint _tokenId) public view returns (uint) {
-        return unlockTime[tokenId] > 0 ? 40 + evilBonus(_tokenId) : 20 + evilBonus(_tokenId);
+        return 20 + stakedTimeBonus[tokenId] + evilBonus(_tokenId);
     }
 
     function evilBonus(uint _tokenId) internal view returns (uint) {
@@ -117,21 +122,31 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
 
     function getCommunityVotingPower(address _voter) public view returns (uint) {
       if (balanceOf(_voter) == 0) return 0;
-      if (delegates(_voter) != address(0)) return 0;
+      if (delegates(_voter) != address(0) && delegates(_voter) != _voter) return 0; // @todo - change to include self depending on decision there
 
-      // uint votesInPastTenProposals = governance.getTotalVotes(_voter) / currentProposalId;
-      // uint proposalsToVote = _min(governance.getProposalsToVote(_voter), 10);
-      // uint proposalsAccepted = _min(governance.getProposalsAccepted(_voter), 10);
-      // return votesInPastTenProposals + 2 * proposalsToVote + 2 * proposalsAccepted;
+      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.getCommunityScoreData(_voter);
+
+      return _min(votes, 10) + (2 * _min(proposalsCreated, 10)) + (2 * _min(proposalsPassed, 10));
+    }
+
+    // call this when proposals are voted, created, passed, but check thatit's needed first and that they are undelegated
+    function increaseTotalCommunityVotingPower(uint _amount) public {
+      require(_msgSender() == governance, "only governance");
+      totalVotingPower += _amount;
     }
 
   /////////////////////////////////
   //////// OWNER OPERATIONS ///////
   /////////////////////////////////
 
-  function changeStakeTime(uint _newStakeBonusTime) public {
-    require(_msgSender() == executor, "only executor can change stake time");
-    stakeBonusTime = _newStakeBonusTime;
+  function changeStakeTime(uint _newMaxStakeBonusTime) public {
+    require(_msgSender() == executor, "only executor can change max stake bonus time");
+    maxStakeBonusTime = _newMaxStakeBonusTime;
+  }
+
+  function changeStakeAmount(uint _newMaxStakeBonusAmount) public {
+    require(_msgSender() == executor, "only executor can change max stake bonus amount");
+    maxStakeBonusAmount = _newMaxStakeBonusAmount;
   }
 
 
@@ -141,5 +156,9 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
 
   function _min(uint a, uint b) internal pure returns(uint) {
     return a < b ? a : b;
+  }
+
+  function _getStakeLengthBonus(uint _stakeLength) internal pure returns(uint) {
+    return _stakeLength * maxStakeBonusAmount / maxStakeBonusTime;
   }
 }
