@@ -19,7 +19,8 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   mapping(uint => uint) public stakedTimeBonus; // token => amount of staked bonus they got
   uint public maxStakeBonusTime = 4 weeks;
   uint public maxStakeBonusAmount = 20;
-  
+
+  bool paused;
 
   uint[40] constant EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
 
@@ -59,9 +60,11 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   /////////////////////////////////
 
   function stake(uint[] _tokenIds, uint _unlockTime) public {
+      require(!paused, "staking is paused");
+      require(unlockTime == 0 || unlockTime > block.timestamp, "must lock until future time (or set 0 for unlocked)");
+
       uint numTokens = _tokenIds.length;
       require(numTokens > 0, "stake at least one token");
-      require(unlockTime == 0 || unlockTime > block.timestamp, "can't lock until past time (set 0 for unlocked)");
       
       uint newVotingPower;
       for (uint i = 0; i < numTokens; i++) {
@@ -72,17 +75,22 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   }
 
   function _stakeToken(uint _tokenId, uint _unlockTime) internal returns(uint) {
-      frankenpunks.transferFrom(frankenpunks.ownerOf(_tokenId), address(this), _tokenId);
-      _mint(msg.sender, _tokenId); // @todo - or should this be to the owner, or add _to argument to choose?
-
-      uint stakingBonus = 0;
       if (_unlockTime > 0) {
         unlockTime[tokenId] = _unlockTime;
-        stakingBonus = _getStakeLengthBonus(_unlockTime - block.timestamp);
-        stakedTimeBonus[tokenId] = stakingBonus;
+        uint fullStakedTimeBonus = _getStakeLengthBonus(_unlockTime - block.timestamp);
+      
+        if (_tokenId < 10000) {
+          stakedTimeBonus[tokenId] = fullStakedTimeBonus;
+        } else {
+          stakedTimeBonus[tokenId] = fullStakedTimeBonus / 2;
+        }
       }
 
-      return 20 + stakingBonus + evilBonus(_tokenId);
+      frankenpunks.transferFrom(frankenpunks.ownerOf(_tokenId), address(this), _tokenId);
+      // mint has to be AFTER staked bonus calculation, because it'll pull that in in awarding votes
+      _mint(msg.sender, _tokenId); // @todo - or should this be to the owner, or add _to argument to choose?
+
+      return getTokenVotingPower(_tokenId);
   }
 
   function unstake(uint[] _tokenIds, address _to) public {
@@ -101,23 +109,33 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       require(_isApprovedOrOwner(_msgSender(), _tokenId));
       require(unlockTime[tokenId] < block.timestamp, "token is locked");
 
+      // burn and lostVotingPower calculations have to happen BEFORE bonus is zero'd out, because it pulls that when calculating
       _burn(_tokenId);
       frankenpunks.transferFrom(address(this), _to, _tokenId);
+      uint lostVotingPower = getTokenVotingPower(_tokenId);
+
+      unlockTime[tokenId] = 0;
+      stakedTimeBonus[tokenId] = 0;
       
-      return getTokenVotingPower(_tokenId);
+      return lostVotingPower;
   }
 
     //////////////////////////////////////////////
-    ////// ADDED FUNCTIONS FOR VOTING POWER //////
+    ///// VOTING POWER CALCULATION FUNCTIONS /////
     //////////////////////////////////////////////
     
     function getTokenVotingPower(uint _tokenId) public view returns (uint) {
+      if (_tokenId < 10000) {
         return 20 + stakedTimeBonus[tokenId] + evilBonus(_tokenId);
+      } else {
+        return 10 + stakedTimeBonus[tokenId];
+      }
     }
-
+    
+    // do some testing on this, but loosely, scale it over by tokenId bites and then mask to rightmost bit
     function evilBonus(uint _tokenId) internal view returns (uint) {
-        // do some testing on this, but loosely, scale it over by tokenId bites and then mask to rightmost bit
-        return (EVIL_BITMAP[_tokenId >> 8] >> (_tokenId & 255)) & 1 * 10;
+      if (_tokenId >= 10000) return 0; 
+      return (EVIL_BITMAP[_tokenId >> 8] >> (_tokenId & 255)) & 1 * 10;
     }
 
     function getCommunityVotingPower(address _voter) public view returns (uint) {
@@ -130,7 +148,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
     }
 
     // call this when proposals are voted, created, passed, but check thatit's needed first and that they are undelegated
-    function increaseTotalCommunityVotingPower(uint _amount) public {
+    function incrementTotalCommunityVotingPower(uint _amount) public {
       require(_msgSender() == governance, "only governance");
       totalVotingPower += _amount;
     }
@@ -149,6 +167,10 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
     maxStakeBonusAmount = _newMaxStakeBonusAmount;
   }
 
+  function setPause(bool _paused) external {
+    require(_msgSender() == executor, "only executor can pause"); // @todo - change this to multsig
+    paused = _paused;
+  }
 
   /////////////////////////////////
   //////////// HELPERS ////////////

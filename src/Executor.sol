@@ -6,48 +6,31 @@ contract Executor {
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event NewDelay(uint256 indexed newDelay);
-    event CancelTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        uint256 value,
-        string signature,
-        bytes data,
-        uint256 eta
-    );
-    event ExecuteTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        uint256 value,
-        string signature,
-        bytes data,
-        uint256 eta
-    );
-    event QueueTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        uint256 value,
-        string signature,
-        bytes data,
-        uint256 eta
-    );
+    event CancelTransaction(bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
+    event ExecuteTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
+    event QueueTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
 
     uint256 public constant GRACE_PERIOD = 14 days; // @todo - do we want this editable?
     uint256 public constant MINIMUM_DELAY = 2 days;
     uint256 public constant MAXIMUM_DELAY = 30 days;
 
+    bool initialized;
+    
     // @todo - should we rename admin to governance to make it clear?
     address public admin;
     address public pendingAdmin;
     uint256 public delay;
-
+    
     mapping(bytes32 => bool) public queuedTransactions;
 
-    constructor(address admin_, uint256 delay_) {
+    function initialize(address admin_, uint256 delay_) {
+        require(!initialized, "already initialized");
         require(delay_ >= MINIMUM_DELAY, 'FrankenDAOExecutor::constructor: Delay must exceed minimum delay.');
         require(delay_ <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must not exceed maximum delay.');
 
         admin = admin_;
         delay = delay_;
+        initialized = true;
     }
 
     function setDelay(uint256 delay_) public {

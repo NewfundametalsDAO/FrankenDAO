@@ -555,7 +555,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         string memory description
     ) public returns (uint256) {
         uint userProposalCount = ++getCommunityScoreData[msg.sender].proposalsCreated;
-        if (userProposalCount > 10) staking.increaseTotalCommunityVotingPower(2);
+        if (userProposalCount > 10) staking.incrementTotalCommunityVotingPower(2);
         
         ProposalTemp memory temp;
 
@@ -715,7 +715,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         Proposal storage proposal = proposals[proposalId];
 
         uint userSuccessfulProposalCount = ++getCommunityScoreData[proposal.proposer].proposalsPassed;
-        if (userSuccessfulProposalCount > 10) staking.increaseTotalCommunityVotingPower(2);
+        if (userSuccessfulProposalCount > 10) staking.incrementTotalCommunityVotingPower(2);
 
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
@@ -888,7 +888,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         uint8 support
     ) internal returns (uint96) {
         uint userVoteCount = ++getCommunityScoreData[voter].votes;
-        if (userVoteCount > 10) staking.increaseTotalCommunityVotingPower(1);
+        if (userVoteCount > 10) staking.incrementTotalCommunityVotingPower(1);
         
         require(
             state(proposalId) == ProposalState.Active,
