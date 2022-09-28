@@ -193,6 +193,7 @@ contract GovernanceStorage {
     //////////////////
     //// Treasury ////
     //////////////////
+
     /// @notice The address of the Franken DAO Executor FrankenDAOExecutor (i.e.
     ///         the treasury)
     IFrankenDAOExecutor public timelock;
@@ -200,12 +201,13 @@ contract GovernanceStorage {
     ///////////////
     //// Token ////
     ///////////////
-    /// @notice The address of the Franken tokens
+    /// @notice The address of staked the Franken tokens
     FrankenToken public staking;
 
-    ///////////////////////////
-    //// Voting Parameters ////
-    ///////////////////////////
+    //////////////////////////
+    //// Voting Constants ////
+    //////////////////////////
+
     /// @notice The minimum setable proposal threshold
     uint256 public constant MIN_PROPOSAL_THRESHOLD_BPS = 1; // 1 basis point or 0.01%
 
@@ -233,6 +235,10 @@ contract GovernanceStorage {
     /// @notice The maximum number of actions that can be included in a proposal
     uint256 public constant proposalMaxOperations = 10; // 10 actions
 
+    ///////////////////////////
+    //// Voting Parameters ////
+    ///////////////////////////
+
     /// @notice The delay before voting on a proposal may take place, once proposed, in blocks
     uint256 public votingDelay;
 
@@ -248,6 +254,7 @@ contract GovernanceStorage {
     //////////////////
     //// Proposal ////
     //////////////////
+
     /// @notice The total number of proposals
     uint256 public proposalCount;
 
@@ -330,6 +337,7 @@ contract GovernanceStorage {
     ////////////////////////////
     //// EIP-712 Signatures ////
     ////////////////////////////
+
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH =
         keccak256(
