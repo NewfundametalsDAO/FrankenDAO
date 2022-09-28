@@ -14,7 +14,7 @@ contract Executor {
     uint256 public constant MINIMUM_DELAY = 2 days;
     uint256 public constant MAXIMUM_DELAY = 30 days;
 
-    bool initialized;
+    bool public initialized;
     
     // @todo - should we rename admin to governance to make it clear?
     address public admin;

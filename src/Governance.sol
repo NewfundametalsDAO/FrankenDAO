@@ -261,6 +261,11 @@ contract GovernanceStorage {
     /// @notice The official record of all proposals ever proposed
     mapping(uint256 => Proposal) public proposals;
 
+    /// @notice retrieve a proposal by it's unique id
+    function getProposal(uint256 id_) public view returns (Proposal) {
+        return proposals[id_];
+    }
+
     /// @notice The latest proposal for each proposer
     mapping(address => uint256) public latestProposalIds;
 
@@ -507,7 +512,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
      * Differs from `GovernerBravo` which uses fixed amount
      */
     function proposalThreshold() public view returns (uint256) {
-        return bps2Uint(proposalThresholdBPS, staking.totalSupply());
+        return bps2Uint(proposalThresholdBPS, staking.totalVotingPower());
     }
 
     /**
@@ -515,7 +520,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
      * Differs from `GovernerBravo` which uses fixed amount
      */
     function quorumVotes() public view returns (uint256) {
-        return bps2Uint(quorumVotesBPS, staking.totalSupply());
+        return bps2Uint(quorumVotesBPS, staking.totalVotingPower());
     }
 
     function bps2Uint(uint256 bps, uint256 number)
@@ -567,8 +572,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         
         ProposalTemp memory temp;
 
-        // TODO: change to getTotalVotingPower();
-        //temp.totalSupply = nouns.totalSupply();
         temp.totalSupply = staking.totalVotingPower();
 
         temp.proposalThreshold = bps2Uint(
@@ -913,7 +916,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
             "FrankenDAO::castVoteInternal: voter already voted"
         );
 
-        // TODO: replace `nouns` with staking
         /// @notice: Unlike GovernerBravo, votes are considered from the block the proposal was created in order to normalize quorumVotes and proposalThreshold metrics
         uint96 votes = staking.getPriorVotes(
             voter,

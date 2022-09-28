@@ -20,7 +20,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   uint public maxStakeBonusTime = 4 weeks;
   uint public maxStakeBonusAmount = 20;
 
-  bool paused;
+  bool public paused;
 
   string public _baseTokenURI;
 
