@@ -3,8 +3,8 @@ pragma solidity ^0.8.13;
 
 import "oz/access/AccessControl.sol";
 import "./interfaces/IGovernance.sol";
-import "./interfaces/IFrankenpunks.sol";
 import "./Staking.sol";
+import "./Executor.sol";
 
 contract Admin is AccessControl {
     /// @notice Administrator for this contract
@@ -80,10 +80,7 @@ contract Admin is AccessControl {
      * @dev Helper to grant an address the VETOER role
      */
     function _addVetoer(address newVetoer) public {
-        require(
-            msg.sender == admin,
-            "FrankenDAO::_setVetoer: admin only"
-        );
+        require(msg.sender == admin, "FrankenDAO::_setVetoer: admin only");
 
         grantRole(VETOER, newVetoer);
 
@@ -261,11 +258,6 @@ contract GovernanceStorage {
     /// @notice The official record of all proposals ever proposed
     mapping(uint256 => Proposal) public proposals;
 
-    /// @notice retrieve a proposal by it's unique id
-    function getProposal(uint256 id_) public view returns (Proposal) {
-        return proposals[id_];
-    }
-
     /// @notice The latest proposal for each proposer
     mapping(address => uint256) public latestProposalIds;
 
@@ -274,7 +266,7 @@ contract GovernanceStorage {
     struct CommunityScoreData {
         uint64 proposalsCreated;
         uint64 proposalsPassed;
-        uint64 votes;        
+        uint64 votes;
     }
 
     struct Proposal {
@@ -314,6 +306,56 @@ contract GovernanceStorage {
         bool executed;
         /// @notice Receipts of ballots for the entire set of voters
         mapping(address => Receipt) receipts;
+    }
+
+    function getProposalData(uint256 id_)
+        public
+        view
+        returns (
+            uint256,
+            address,
+            uint256,
+            uint256
+        )
+    {
+        Proposal storage proposal = proposals[id_];
+        return (
+            proposal.id,
+            proposal.proposer,
+            proposal.proposalThreshold,
+            proposal.quorumVotes
+        );
+    }
+
+    /// @notice get the status of a proposal
+    function getProposalStatus(uint256 id_)
+        public
+        view
+        returns (
+            bool,
+            bool,
+            bool
+        )
+    {
+        Proposal storage proposal = proposals[id_];
+        return (proposal.canceled, proposal.vetoed, proposal.executed);
+    }
+
+    function getProposalVotes(uint256 id_)
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        Proposal storage proposal = proposals[id_];
+        return (
+            proposal.forVotes,
+            proposal.againstVotes,
+            proposal.abstainVotes
+        );
     }
 
     /// @notice Ballot receipt record for a voter
@@ -567,9 +609,11 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         bytes[] memory calldatas,
         string memory description
     ) public returns (uint256) {
-        uint userProposalCount = ++getCommunityScoreData[msg.sender].proposalsCreated;
-        if (userProposalCount > 10) staking.incrementTotalCommunityVotingPower(2);
-        
+        uint256 userProposalCount = ++getCommunityScoreData[msg.sender]
+            .proposalsCreated;
+        if (userProposalCount > 10)
+            staking.incrementTotalCommunityVotingPower(2);
+
         ProposalTemp memory temp;
 
         temp.totalSupply = staking.totalVotingPower();
@@ -725,8 +769,11 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         );
         Proposal storage proposal = proposals[proposalId];
 
-        uint userSuccessfulProposalCount = ++getCommunityScoreData[proposal.proposer].proposalsPassed;
-        if (userSuccessfulProposalCount > 10) staking.incrementTotalCommunityVotingPower(2);
+        uint256 userSuccessfulProposalCount = ++getCommunityScoreData[
+            proposal.proposer
+        ].proposalsPassed;
+        if (userSuccessfulProposalCount > 10)
+            staking.incrementTotalCommunityVotingPower(2);
 
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
@@ -898,9 +945,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         uint256 proposalId,
         uint8 support
     ) internal returns (uint96) {
-        uint userVoteCount = ++getCommunityScoreData[voter].votes;
+        uint256 userVoteCount = ++getCommunityScoreData[voter].votes;
         if (userVoteCount > 10) staking.incrementTotalCommunityVotingPower(1);
-        
+
         require(
             state(proposalId) == ProposalState.Active,
             "FrankenDAO::castVoteInternal: voting is closed"

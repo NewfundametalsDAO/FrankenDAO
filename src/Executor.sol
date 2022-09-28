@@ -23,7 +23,7 @@ contract Executor {
     
     mapping(bytes32 => bool) public queuedTransactions;
 
-    function initialize(address admin_, uint256 delay_) {
+    function initialize(address admin_, uint256 delay_) public {
         require(!initialized, "already initialized");
         require(delay_ >= MINIMUM_DELAY, 'FrankenDAOExecutor::constructor: Delay must exceed minimum delay.');
         require(delay_ <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must not exceed maximum delay.');

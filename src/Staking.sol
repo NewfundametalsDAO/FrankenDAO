@@ -3,16 +3,19 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IFrankenpunks.sol";
 import "./interfaces/IStaking.sol";
-import "./interfaces/IGovernance.sol";
+import "./Governance.sol";
 import "./token/ERC721Checkpointable.sol";
+import "../lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 
 /// @title FrankenDAO Staking Contract
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
 // @todo - add pausable that only impacts staking (not unstaking)
 abstract contract Staking is ERC721Checkpointable, IStaking {
+  using Strings for uint256;
+
   IFrankenPunks frankenpunks;
-  IGovernance governance;
+  Governance governance;
   address executor;
 
   mapping(uint => uint) public unlockTime; // token => unlock timestamp
@@ -23,8 +26,10 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   bool public paused;
 
   string public _baseTokenURI;
+  
+  uint256 public totalVotingPower;
 
-  uint[40] constant EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
+  uint[40] EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
 
   /////////////////////////////////
   ////////// CONSTRUCTOR //////////
@@ -32,8 +37,8 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
 
   constructor(address _frankenpunks, uint _stakeBonusTime, address _governance, address _executor) ERC721("Staked FrankenPunks", "sFP") {
     frankenpunks = IFrankenPunks(_frankenpunks);
-    stakeBonusTime = _stakeBonusTime;
-    governance = _governance;
+    //stakeBonusTime = _stakeBonusTime;
+    governance = Governance( _governance );
     executor = _executor;
   }
 
@@ -57,13 +62,13 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   // redeploy that metadata to IPFS but can we use the SVG renderer to add
   // a frame around the original NFT image?
 
-  function tokenURI(uint256 tokenId_) public view virtual override returns
+  function tokenURI(uint256 _tokenId) public view virtual override returns
   (string memory) {
-    _requireMinted(tokenId);
+    _requireMinted(_tokenId);
 
     string memory baseURI = _baseTokenURI;
     return bytes(baseURI).length > 0
-      ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json"))
+      ? string(abi.encodePacked(baseURI, _tokenId.toString(), ".json"))
       : "";
   }
 
@@ -71,7 +76,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   /// STAKE & UNSTAKE FUNCTIONS ///
   /////////////////////////////////
 
-  function stake(uint[] _tokenIds, uint _unlockTime) public {
+  function stake(uint[] calldata _tokenIds, uint _unlockTime) public {
       require(!paused, "staking is paused");
       require(unlockTime == 0 || unlockTime > block.timestamp, "must lock until future time (or set 0 for unlocked)");
 
@@ -82,19 +87,20 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       for (uint i = 0; i < numTokens; i++) {
           newVotingPower += _stakeToken(_tokenIds[i], _unlockTime);
       }
-      votesFromOwnedTokens[owner] += newVotingPower;
+      //votesFromOwnedTokens[owner] += newVotingPower;
+      votesFromOwnedTokens[msg.sender] += newVotingPower; // @todo: changed to msg.sender to it compile
       totalVotingPower += newVotingPower;
   }
 
   function _stakeToken(uint _tokenId, uint _unlockTime) internal returns(uint) {
       if (_unlockTime > 0) {
-        unlockTime[tokenId] = _unlockTime;
+        unlockTime[_tokenId] = _unlockTime;
         uint fullStakedTimeBonus = _getStakeLengthBonus(_unlockTime - block.timestamp);
       
         if (_tokenId < 10000) {
-          stakedTimeBonus[tokenId] = fullStakedTimeBonus;
+          stakedTimeBonus[_tokenId] = fullStakedTimeBonus;
         } else {
-          stakedTimeBonus[tokenId] = fullStakedTimeBonus / 2;
+          stakedTimeBonus[_tokenId] = fullStakedTimeBonus / 2;
         }
       }
 
@@ -105,7 +111,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       return getTokenVotingPower(_tokenId);
   }
 
-  function unstake(uint[] _tokenIds, address _to) public {
+  function unstake(uint[] calldata _tokenIds, address _to) public {
       uint numTokens = _tokenIds.length;
       require(numTokens > 0, "unstake at least one token");
       
@@ -119,15 +125,15 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
 
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
       require(_isApprovedOrOwner(_msgSender(), _tokenId));
-      require(unlockTime[tokenId] < block.timestamp, "token is locked");
+      require(unlockTime[_tokenId] < block.timestamp, "token is locked");
 
       // burn and lostVotingPower calculations have to happen BEFORE bonus is zero'd out, because it pulls that when calculating
       _burn(_tokenId);
       frankenpunks.transferFrom(address(this), _to, _tokenId);
       uint lostVotingPower = getTokenVotingPower(_tokenId);
 
-      unlockTime[tokenId] = 0;
-      stakedTimeBonus[tokenId] = 0;
+      unlockTime[_tokenId] = 0;
+      stakedTimeBonus[_tokenId] = 0;
       
       return lostVotingPower;
   }
@@ -138,16 +144,16 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
     
     function getTokenVotingPower(uint _tokenId) public view returns (uint) {
       if (_tokenId < 10000) {
-        return 20 + stakedTimeBonus[tokenId] + evilBonus(_tokenId);
+        return 20 + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
       } else {
-        return 10 + stakedTimeBonus[tokenId];
+        return 10 + stakedTimeBonus[_tokenId];
       }
     }
     
     // do some testing on this, but loosely, scale it over by tokenId bites and then mask to rightmost bit
     function evilBonus(uint _tokenId) internal view returns (uint) {
       if (_tokenId >= 10000) return 0; 
-      return (EVIL_BITMAP[_tokenId >> 8] >> (_tokenId & 255)) & 1 * 10;
+      return (EVIL_BITMAPS[_tokenId >> 8] >> (_tokenId & 255)) & 1 * 10;
     }
 
     function getCommunityVotingPower(address _voter) public view returns (uint) {
