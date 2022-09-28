@@ -22,6 +22,8 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
 
   bool paused;
 
+  string public _baseTokenURI;
+
   uint[40] constant EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
 
   /////////////////////////////////
@@ -50,10 +52,20 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   /////// TOKEN URI FUNCTIONS /////
   /////////////////////////////////
 
-  // we need to create metadata that matches 1-to-1 with old ones
-  // token uri of same token should be same but wrapped
-  // could do it manually and just redeploy that metadata to IPFS
-  // but can we use the SVG renderer to add a frame around the original NFT image?
+  // @todo - we need to create metadata that matches 1-to-1 with old ones token
+  // uri of same token should be same but wrapped could do it manually and just
+  // redeploy that metadata to IPFS but can we use the SVG renderer to add
+  // a frame around the original NFT image?
+
+  function tokenURI(uint256 tokenId_) public view virtual override returns
+  (string memory) {
+    _requireMinted(tokenId);
+
+    string memory baseURI = _baseTokenURI;
+    return bytes(baseURI).length > 0
+      ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json"))
+      : "";
+  }
 
   /////////////////////////////////
   /// STAKE & UNSTAKE FUNCTIONS ///
@@ -170,6 +182,11 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   function setPause(bool _paused) external {
     require(_msgSender() == executor, "only executor can pause"); // @todo - change this to multsig
     paused = _paused;
+  }
+
+  function setBaseURI(string calldata baseURI_) external {
+    require (_msgSender() == executor, "only executor can set base URI");
+    _baseTokenURI = baseURI_;
   }
 
   /////////////////////////////////
