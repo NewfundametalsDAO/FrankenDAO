@@ -11,7 +11,7 @@ import "../lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
 // @todo - add pausable that only impacts staking (not unstaking)
-abstract contract Staking is ERC721Checkpointable, IStaking {
+abstract contract Staking is ERC721Checkpointable {
   using Strings for uint256;
 
   IFrankenPunks frankenpunks;
@@ -27,8 +27,6 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
 
   string public _baseTokenURI;
   
-  uint256 public totalVotingPower;
-
   uint[40] EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
 
   /////////////////////////////////
@@ -47,7 +45,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
   /////////////////////////////////  
 
   // @todo - make sure this blocks all versions of transferFrom, safeTransferFrom, safeTransfer, etc.
-  function _transfer(address from, address to, uint256 tokenId) internal virtual override {
+  function _transfer(address _from, address _to, uint256 _tokenId) internal virtual override {
     revert("staked tokens cannot be transferred");
   }
 
@@ -78,7 +76,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
 
   function stake(uint[] calldata _tokenIds, uint _unlockTime) public {
       require(!paused, "staking is paused");
-      require(unlockTime == 0 || unlockTime > block.timestamp, "must lock until future time (or set 0 for unlocked)");
+      require(_unlockTime == 0 || _unlockTime > block.timestamp, "must lock until future time (or set 0 for unlocked)");
 
       uint numTokens = _tokenIds.length;
       require(numTokens > 0, "stake at least one token");
@@ -119,7 +117,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       for (uint i = 0; i < numTokens; i++) {
           lostVotingPower += _unstakeToken(_tokenIds[i], _to);
       }
-      votesFromOwnedTokens -= lostVotingPower;
+      votesFromOwnedTokens[msg.sender] -= lostVotingPower;
       totalVotingPower -= lostVotingPower;
   }
 
@@ -142,7 +140,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
     ///// VOTING POWER CALCULATION FUNCTIONS /////
     //////////////////////////////////////////////
     
-    function getTokenVotingPower(uint _tokenId) public view returns (uint) {
+    function getTokenVotingPower(uint _tokenId) public override view returns (uint) {
       if (_tokenId < 10000) {
         return 20 + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
       } else {
@@ -156,7 +154,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
       return (EVIL_BITMAPS[_tokenId >> 8] >> (_tokenId & 255)) & 1 * 10;
     }
 
-    function getCommunityVotingPower(address _voter) public view returns (uint) {
+    function getCommunityVotingPower(address _voter) public override view returns (uint) {
       if (balanceOf(_voter) == 0) return 0;
       if (delegates(_voter) != address(0) && delegates(_voter) != _voter) return 0; // @todo - change to include self depending on decision there
 
@@ -167,7 +165,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
 
     // call this when proposals are voted, created, passed, but check thatit's needed first and that they are undelegated
     function incrementTotalCommunityVotingPower(uint _amount) public {
-      require(_msgSender() == governance, "only governance");
+      require(_msgSender() == address( governance ), "only governance");
       totalVotingPower += _amount;
     }
 
@@ -203,7 +201,7 @@ abstract contract Staking is ERC721Checkpointable, IStaking {
     return a < b ? a : b;
   }
 
-  function _getStakeLengthBonus(uint _stakeLength) internal pure returns(uint) {
+  function _getStakeLengthBonus(uint _stakeLength) internal view returns(uint) {
     return _stakeLength * maxStakeBonusAmount / maxStakeBonusTime;
   }
 }

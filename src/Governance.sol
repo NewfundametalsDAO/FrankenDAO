@@ -93,7 +93,7 @@ contract Admin is AccessControl {
      */
     function _renouceVetoer() public {
         require(
-            hasRole(msg.sender),
+            hasRole(VETOER, msg.sender),
             "FrankenDAO::_renouceVetoer: address is not a vetoer"
         );
 
@@ -193,13 +193,13 @@ contract GovernanceStorage {
 
     /// @notice The address of the Franken DAO Executor FrankenDAOExecutor (i.e.
     ///         the treasury)
-    IFrankenDAOExecutor public timelock;
+    Executor public timelock;
 
     ///////////////
     //// Token ////
     ///////////////
     /// @notice The address of staked the Franken tokens
-    FrankenToken public staking;
+    Staking public staking;
 
     //////////////////////////
     //// Voting Constants ////
@@ -408,7 +408,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
      * * @param quorumVotesBPS_ The initial quorum votes threshold in basis points
      */
     function initialize(
-        address timelock_,
+        address payable timelock_,
         address staking_,
         address[] memory vetoers_,
         uint256 votingPeriod_,
@@ -459,8 +459,8 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         );
         emit QuorumVotesBPSSet(quorumVotesBPS, quorumVotesBPS_);
 
-        timelock = IFrankenDAOExecutor(timelock_);
-        staking = FrankenTokenLike(staking_);
+        timelock = Executor(timelock_);
+        staking = Staking(staking_);
         votingPeriod = votingPeriod_;
         votingDelay = votingDelay_;
         proposalThresholdBPS = proposalThresholdBPS_;
@@ -833,7 +833,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
     //   A `vetoed` flag was added to the `Proposal` struct to support this.
     // we'll probably just copy and edit the Compound contracts directly rather than import and edit
     function veto(uint256 proposalId) external {
-        require(hasRole(VETOER), "FrankenDAO::veto: only vetoer");
+        require(hasRole(VETOER, msg.sender), "FrankenDAO::veto: only vetoer");
         require(
             state(proposalId) != ProposalState.Executed,
             "FrankenDAO::veto: cannot veto executed proposal"
@@ -854,7 +854,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
 
         emit ProposalVetoed(proposalId);
     }
-
 
     ////////////////
     //// Voting ////
