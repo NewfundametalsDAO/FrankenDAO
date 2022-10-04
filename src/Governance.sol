@@ -5,6 +5,7 @@ import "oz/access/AccessControl.sol";
 import "./interfaces/IGovernance.sol";
 import "./Staking.sol";
 import "./Executor.sol";
+import "./Refund.sol";
 
 contract Admin is AccessControl {
     /// @notice Administrator for this contract
@@ -396,7 +397,7 @@ contract GovernanceStorage {
         keccak256("Ballot(uint256 proposalId,uint8 support)");
 }
 
-contract Governance is Admin, GovernanceStorage, GovernanceEvents {
+contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     /**
      * @notice Used to initialize the contract during delegator contructor
      * @param timelock_ The address of the FrankenDAOExecutor
@@ -874,6 +875,20 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
     }
 
     /**
+     * @notice Cast a vote for a proposal, asking the DAO to refund gas costs.
+     * Users with > 0 votes receive refunds. Refunds are partial when using a gas priority fee higher than the DAO's cap.
+     * Refunds are partial when the DAO's balance is insufficient.
+     * No refund is sent when the DAO's balance is empty. No refund is sent to users with no votes.
+     * Voting takes place regardless of refund success.
+     * @param proposalId_ The id of the proposal to vote on
+     * @param support_ The support value for the vote. 0=against, 1=for, 2=abstain
+     * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
+     */
+    function castRefundableVote(uint256 proposalId_, uint8 support_) external {
+        castRefundableVoteInternal(proposalId_, support_, '');
+    }
+
+    /**
      * @notice Cast a vote for a proposal with a reason
      * @param proposalId The id of the proposal to vote on
      * @param support The support value for the vote. 0=against, 1=for, 2=abstain
@@ -891,6 +906,25 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
             castVoteInternal(msg.sender, proposalId, support),
             reason
         );
+    }
+
+    /**
+     * @notice Cast a vote for a proposal, asking the DAO to refund gas costs.
+     * Users with > 0 votes receive refunds. Refunds are partial when using a gas priority fee higher than the DAO's cap.
+     * Refunds are partial when the DAO's balance is insufficient.
+     * No refund is sent when the DAO's balance is empty. No refund is sent to users with no votes.
+     * Voting takes place regardless of refund success.
+     * @param proposalId_ The id of the proposal to vote on
+     * @param support_ The support value for the vote. 0=against, 1=for, 2=abstain
+     * @param reason_ The reason given for the vote by the voter
+     * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
+     */
+    function castRefundableVoteWithReason(
+        uint256 proposalId_,
+        uint8 support_,
+        string calldata reason_
+    ) external {
+        castRefundableVoteInternal(proposalId_, support_, reason_);
     }
 
     /**
@@ -981,6 +1015,26 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents {
         receipt.votes = votes;
 
         return votes;
+    }
+
+    /**
+     * @notice Internal function that carries out refundable voting logic
+     * @param proposalId_ The id of the proposal to vote on
+     * @param support_ The support value for the vote. 0=against, 1=for, 2=abstain
+     * @param reason_ The reason given for the vote by the voter
+     * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
+     */
+    function castRefundableVoteInternal(
+        uint256 proposalId_,
+        uint8 support_,
+        string memory reason_
+    ) internal {
+        uint256 startGas = gasleft();
+        uint96 votes = castVoteInternal(msg.sender, proposalId_, support_);
+        emit VoteCast(msg.sender, proposalId_, support_, votes, reason_);
+        if (votes > 0) {
+            _refundGas(startGas);
+        }
     }
 
     ///////////////
