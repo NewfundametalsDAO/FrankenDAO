@@ -182,6 +182,9 @@ contract GovernanceEvents {
         uint256 oldQuorumVotesBPS,
         uint256 newQuorumVotesBPS
     );
+
+    event VotingRefundSet(bool status);
+    event ProposalRefundSet(bool status);
 }
 
 contract GovernanceStorage {
@@ -248,6 +251,12 @@ contract GovernanceStorage {
 
     /// @notice The basis point number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed. *DIFFERS from GovernerBravo
     uint256 public quorumVotesBPS;
+
+    /// @notice Whether or not gas is refunded for casting votes.
+    bool public votingRefund;
+
+    /// @notice Whether or not gas is refunded for submitting proposals.
+    bool public proposalRefund;
 
     //////////////////
     //// Proposal ////
@@ -610,7 +619,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         bytes[] memory calldatas,
         string memory description
     ) public returns (uint256) {
-        uint proposalId = _propose(
+        uint256 proposalId = _propose(
             targets,
             values,
             signatures,
@@ -630,7 +639,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     ) public returns (uint256) {
         uint256 startGas = gasleft();
 
-        uint proposalId = _propose(
+        uint256 proposalId = _propose(
             targets,
             values,
             signatures,
@@ -638,7 +647,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             description
         );
 
-        if (proposalId > 0) {
+        if (proposalId > 0 && proposalRefund) {
             _refundGas(startGas);
         }
 
@@ -927,7 +936,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
      */
     function castRefundableVote(uint256 proposalId_, uint8 support_) external {
-        castRefundableVoteInternal(proposalId_, support_, '');
+        castRefundableVoteInternal(proposalId_, support_, "");
     }
 
     /**
@@ -1074,7 +1083,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         uint256 startGas = gasleft();
         uint96 votes = castVoteInternal(msg.sender, proposalId_, support_);
         emit VoteCast(msg.sender, proposalId_, support_, votes, reason_);
-        if (votes > 0) {
+        if (votes > 0 && votingRefund) {
             _refundGas(startGas);
         }
     }
@@ -1082,6 +1091,36 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     ///////////////
     //// Admin ////
     ///////////////
+    /**
+     * @notice Admin function for setting turning gas refunds
+     * on voting on and off
+     */
+    function _toggleProposalRefund() external {
+        require(
+            msg.sender == admin,
+            "FrankenDAO::_toggleProposalRefund: admin only"
+        );
+
+        votingRefund = !votingRefund;
+
+        emit VotingRefundSet(votingRefund);
+    }
+
+    /**
+     * @notice Admin function for setting turning gas refunds
+     * on voting on and off
+     */
+    function _togleVotingRefund() external {
+        require(
+            msg.sender == admin,
+            "FrankenDAO::_togleVotingRefund: admin only"
+        );
+
+        proposalRefund = !proposalRefund;
+
+        emit ProposalRefundSet(proposalRefund);
+    }
+
     /**
      * @notice Admin function for setting the voting delay
      * @param newVotingDelay new voting delay, in blocks

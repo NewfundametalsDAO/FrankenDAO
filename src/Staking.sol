@@ -25,10 +25,14 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   uint public maxStakeBonusAmount = 20;
 
   bool public paused;
+  bool public stakingRefund;
 
   string public _baseTokenURI;
   
   uint[40] EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
+
+  event StakingPause(bool status);
+  event StakingRefundSet(bool status);
 
   /////////////////////////////////
   ////////// CONSTRUCTOR //////////
@@ -219,6 +223,15 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   function setPause(bool _paused) external {
     require(_msgSender() == executor, "only executor can pause"); // @todo - change this to multsig
     paused = _paused;
+    emit StakingPause(_paused);
+  }
+
+  function toggleStakingRefund() external {
+    require(_msgSender() == executor, "only executor toggle staking refund"); 
+
+    stakingRefund = !stakingRefund;
+
+    emit StakingRefundSet(stakingRefund);
   }
 
   function setBaseURI(string calldata baseURI_) external {
