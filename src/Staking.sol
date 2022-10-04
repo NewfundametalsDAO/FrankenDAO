@@ -6,12 +6,13 @@ import "./interfaces/IStaking.sol";
 import "./Governance.sol";
 import "./token/ERC721Checkpointable.sol";
 import "../lib/openzeppelin-contracts/contracts/utils/Strings.sol";
+import "./Refund.sol";
 
 /// @title FrankenDAO Staking Contract
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
 // @todo - add pausable that only impacts staking (not unstaking)
-abstract contract Staking is ERC721Checkpointable {
+abstract contract Staking is ERC721Checkpointable, Refund {
   using Strings for uint256;
 
   IFrankenPunks frankenpunks;
@@ -75,6 +76,20 @@ abstract contract Staking is ERC721Checkpointable {
   /////////////////////////////////
 
   function stake(uint[] calldata _tokenIds, uint _unlockTime) public {
+    _stake(_tokenIds, _unlockTime);
+  }
+
+  function stakeWithRefund(uint[] calldata _tokenIds, uint _unlockTime) public {
+      uint256 startGas = gasleft();
+
+      uint newVotingPower = _stake(_tokenIds, _unlockTime);
+
+      if (newVotingPower > 0) {
+        _refundGas(startGas);
+      }
+  }
+
+  function _stake(uint[] calldata _tokenIds, uint _unlockTime) internal returns (uint){
       require(!paused, "staking is paused");
       require(_unlockTime == 0 || _unlockTime > block.timestamp, "must lock until future time (or set 0 for unlocked)");
 
@@ -88,6 +103,8 @@ abstract contract Staking is ERC721Checkpointable {
       //votesFromOwnedTokens[owner] += newVotingPower;
       votesFromOwnedTokens[msg.sender] += newVotingPower; // @todo: changed to msg.sender to it compile
       totalVotingPower += newVotingPower;
+
+      return newVotingPower;
   }
 
   function _stakeToken(uint _tokenId, uint _unlockTime) internal returns(uint) {
@@ -110,6 +127,20 @@ abstract contract Staking is ERC721Checkpointable {
   }
 
   function unstake(uint[] calldata _tokenIds, address _to) public {
+    _unstake(_tokenIds, _to);
+  }
+
+  function unstakeWithRefund(uint[] calldata _tokenIds, address _to) public {
+    uint startGas = gasleft();
+
+    uint lostVotingPower = _unstake(_tokenIds, _to);
+
+    if (lostVotingPower > 0) {
+      _refundGas(startGas);
+    }
+  }
+
+  function _unstake(uint[] calldata _tokenIds, address _to) internal returns (uint){
       uint numTokens = _tokenIds.length;
       require(numTokens > 0, "unstake at least one token");
       
@@ -119,6 +150,8 @@ abstract contract Staking is ERC721Checkpointable {
       }
       votesFromOwnedTokens[msg.sender] -= lostVotingPower;
       totalVotingPower -= lostVotingPower;
+
+      return lostVotingPower;
   }
 
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
