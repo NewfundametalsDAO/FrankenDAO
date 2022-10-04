@@ -610,6 +610,48 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         bytes[] memory calldatas,
         string memory description
     ) public returns (uint256) {
+        uint proposalId = _propose(
+            targets,
+            values,
+            signatures,
+            calldatas,
+            description
+        );
+
+        return proposalId;
+    }
+
+    function proposeWithRefund(
+        address[] memory targets,
+        uint256[] memory values,
+        string[] memory signatures,
+        bytes[] memory calldatas,
+        string memory description
+    ) public returns (uint256) {
+        uint256 startGas = gasleft();
+
+        uint proposalId = _propose(
+            targets,
+            values,
+            signatures,
+            calldatas,
+            description
+        );
+
+        if (proposalId > 0) {
+            _refundGas(startGas);
+        }
+
+        return proposalId;
+    }
+
+    function _propose(
+        address[] memory targets,
+        uint256[] memory values,
+        string[] memory signatures,
+        bytes[] memory calldatas,
+        string memory description
+    ) internal returns (uint256) {
         uint256 userProposalCount = ++getCommunityScoreData[msg.sender]
             .proposalsCreated;
         if (userProposalCount > 10)
