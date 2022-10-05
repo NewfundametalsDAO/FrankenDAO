@@ -161,7 +161,7 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   }
 
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
-      require(_isApprovedOrOwner(_msgSender(), _tokenId));
+      require(_isApprovedOrOwner(msg.sender, _tokenId));
       require(unlockTime[_tokenId] < block.timestamp, "token is locked");
 
       // burn and lostVotingPower calculations have to happen BEFORE bonus is zero'd out, because it pulls that when calculating
@@ -204,7 +204,7 @@ abstract contract Staking is ERC721Checkpointable, Refund {
 
     // call this when proposals are voted, created, passed, but check thatit's needed first and that they are undelegated
     function incrementTotalCommunityVotingPower(uint _amount) public {
-      require(_msgSender() == address(governance), "only governance");
+      require(msg.sender == address( governance ), "only governance");
       totalVotingPower += _amount;
     }
 
@@ -213,23 +213,23 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   /////////////////////////////////
 
   function changeStakeTime(uint _newMaxStakeBonusTime) public {
-    require(_msgSender() == executor, "only executor can change max stake bonus time");
+    require(msg.sender == executor, "only executor can change max stake bonus time");
     maxStakeBonusTime = _newMaxStakeBonusTime;
   }
 
   function changeStakeAmount(uint _newMaxStakeBonusAmount) public {
-    require(_msgSender() == executor, "only executor can change max stake bonus amount");
+    require(msg.sender == executor, "only executor can change max stake bonus amount");
     maxStakeBonusAmount = _newMaxStakeBonusAmount;
   }
 
   function setPause(bool _paused) external {
-    require(_msgSender() == executor, "only executor can pause"); // @todo - change this to multsig
+    require(msg.sender == executor, "only executor can pause"); // @todo - change this to multsig
     paused = _paused;
     emit StakingPause(_paused);
   }
 
   function toggleStakingRefund() external {
-    require(_msgSender() == executor, "only executor toggle staking refund"); 
+    require(msg.sender == executor, "only executor toggle staking refund"); 
 
     stakingRefund = !stakingRefund;
 
@@ -237,7 +237,7 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   }
 
   function setBaseURI(string calldata baseURI_) external {
-    require (_msgSender() == executor, "only executor can set base URI");
+    require (msg.sender == executor, "only executor can set base URI");
     _baseTokenURI = baseURI_;
   }
 
