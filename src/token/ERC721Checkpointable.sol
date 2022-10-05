@@ -3,14 +3,16 @@
 pragma solidity ^0.8.0;
 
 import 'oz/token/ERC721/extensions/ERC721Enumerable.sol';
+import "./Refund.sol";
 
-abstract contract ERC721Checkpointable is ERC721Enumerable {
+abstract contract ERC721Checkpointable is ERC721Enumerable, Refund{
     /// @notice A record of each accounts delegate
     mapping(address => address) private _delegates;
     
     /// @notice Mappings to store the votes from owned tokens and community voting power for each address.
     mapping(address => uint) public votesFromOwnedTokens;
     uint public totalVotingPower;
+    bool public delegatingRefund;
 
     /// @notice A checkpoint for marking number of votes from a given block
     struct Checkpoint {
@@ -40,6 +42,9 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
 
     /// @notice An event thats emitted when a delegate account's vote balance changes
     event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
+
+    /// @notice An event thats emitted when refunding is set for delegating
+    event DelegatingRefundingSet(bool status);
 
     /**
      * @notice The votes a delegator can delegate, which is the current balance of the delegator.
@@ -88,6 +93,23 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
     function delegate(address delegatee) public {
         if (delegatee == address(0)) delegatee = msg.sender; // @todo - i want to flip this so it's always 0 for self, think through it
         return _delegate(msg.sender, delegatee);
+    }
+
+    /**
+     * @notice Delegate votes from `msg.sender` to `delegatee`
+     * @param delegatee The address to delegate votes to
+     */
+    function delegateWithRefund(address delegatee) public {
+        require(
+            delegatingRefund,
+            "FrankenDAO::delegateWithRefund: refunding gas is turned off"
+        );
+        uint256 startGas = gasleft();
+
+        if (delegatee == address(0)) delegatee = msg.sender; // @todo - i want to flip this so it's always 0 for self, think through it
+        _delegate(msg.sender, delegatee);
+
+        _refundGas(startGas);
     }
 
     /**
@@ -199,6 +221,12 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         }
 
         emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
+    }
+
+    function setDelegatingRefund(bool _refunding) external {
+        require(msg.sender == executor, "FrankenDAO::setDelegatingRefund: only executor can set gas refunding");
+        delegatingRefund = _refunding;
+        emit DelegatingRefundingSet(_refunding);
     }
 
     function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
