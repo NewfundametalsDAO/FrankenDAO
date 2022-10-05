@@ -1101,30 +1101,30 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @notice Admin function for setting turning gas refunds
      * on voting on and off
      */
-    function _toggleProposalRefund() external {
+    function setProposalRefund(bool _proposing) external {
         require(
             msg.sender == admin,
-            "FrankenDAO::_toggleProposalRefund: admin only"
+            "FrankenDAO::setProposalRefund: admin only"
         );
 
-        votingRefund = !votingRefund;
+        votingRefund = _proposing;
 
-        emit VotingRefundSet(votingRefund);
+        emit VotingRefundSet(_proposing);
     }
 
     /**
      * @notice Admin function for setting turning gas refunds
      * on voting on and off
      */
-    function _togleVotingRefund() external {
+    function setVotingRefund(bool _voting) external {
         require(
             msg.sender == admin,
-            "FrankenDAO::_togleVotingRefund: admin only"
+            "FrankenDAO::setVotingRefund: admin only"
         );
 
-        proposalRefund = !proposalRefund;
+        proposalRefund = _voting;
 
-        emit ProposalRefundSet(proposalRefund);
+        emit ProposalRefundSet(_voting);
     }
 
     /**

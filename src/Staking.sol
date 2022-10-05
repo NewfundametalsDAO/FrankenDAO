@@ -228,12 +228,12 @@ abstract contract Staking is ERC721Checkpointable, Refund {
     emit StakingPause(_paused);
   }
 
-  function toggleStakingRefund() external {
-    require(msg.sender == executor, "only executor toggle staking refund"); 
+  function setStakingRefund(bool _staking) external {
+    require(msg.sender == executor, "only executor set staking refund"); 
 
-    stakingRefund = !stakingRefund;
+    stakingRefund = _staking;
 
-    emit StakingRefundSet(stakingRefund);
+    emit StakingRefundSet(_staking);
   }
 
   function setBaseURI(string calldata baseURI_) external {
