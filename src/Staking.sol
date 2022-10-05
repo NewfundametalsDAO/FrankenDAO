@@ -83,6 +83,8 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   }
 
   function stakeWithRefund(uint[] calldata _tokenIds, uint _unlockTime) public {
+      require(stakingRefund, "FrankenDAO::stakeWithRefund: refunding gas is turned off")
+    
       uint256 startGas = gasleft();
 
       uint newVotingPower = _stake(_tokenIds, _unlockTime);
@@ -134,6 +136,7 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   }
 
   function unstakeWithRefund(uint[] calldata _tokenIds, address _to) public {
+    require(stakingRefund, "FrankenDAO::unstakeWithRefund: refunding gas is turned off")
     uint startGas = gasleft();
 
     uint lostVotingPower = _unstake(_tokenIds, _to);
