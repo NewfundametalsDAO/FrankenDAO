@@ -9,6 +9,7 @@ contract Refund {
     /// @notice The vote refund gas overhead, including 7K for ETH transfer and 29K for general transaction overhead
     uint256 public constant REFUND_BASE_GAS = 36000;
 
+    // @todo should we do this as a modifier that grabs the startGas as the start?
     function _refundGas(uint256 startGas) internal {
         unchecked {
             uint256 balance = address(this).balance;

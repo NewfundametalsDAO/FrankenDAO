@@ -16,7 +16,6 @@ contract Executor {
 
     bool public initialized;
     
-    // @todo - should we rename admin to governance to make it clear?
     address public admin;
     address public pendingAdmin;
     uint256 public delay;
@@ -42,6 +41,8 @@ contract Executor {
         emit NewDelay(delay);
     }
 
+    // @note new contracts will need to have a function that calls this directly, since normal proposals go through governance
+    // @todo or do we want to change this so it's called via executor?
     function acceptAdmin() public {
         require(msg.sender == pendingAdmin, 'FrankenDAOExecutor::acceptAdmin: Call must come from pendingAdmin.');
         admin = msg.sender;
@@ -51,7 +52,6 @@ contract Executor {
     }
 
     function setPendingAdmin(address pendingAdmin_) public {
-        // @todo - should we let admin call this as well?
         require(
             msg.sender == address(this),
             'FrankenDAOExecutor::setPendingAdmin: Call must come from FrankenDAOExecutor.'
@@ -74,7 +74,8 @@ contract Executor {
             'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
         );
 
-        // @todo - i think this is fine but new nouns includes description hash for extra security (in case of malicious conflict). lemme think through it.
+        // @todo only issue with no description is two identical being queued back to back. maybe block that if already true so they can execute first, then queue next one?
+        // i think this is fine but new nouns includes description hash for extra security (in case of malicious conflict). lemme think through it.
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = true;
 

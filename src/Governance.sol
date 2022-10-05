@@ -936,6 +936,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
      */
     function castRefundableVote(uint256 proposalId_, uint8 support_) external {
+        // @todo why doesn't refundable vote emit event?
         castRefundableVoteInternal(proposalId_, support_, "");
     }
 
@@ -975,6 +976,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         uint8 support_,
         string calldata reason_
     ) external {
+        // @todo why doesn't refundable vote emit event?
         castRefundableVoteInternal(proposalId_, support_, reason_);
     }
 
@@ -1030,7 +1032,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         uint8 support
     ) internal returns (uint96) {
         uint256 userVoteCount = ++getCommunityScoreData[voter].votes;
-        if (userVoteCount > 10) staking.incrementTotalCommunityVotingPower(1);
+        if (userVoteCount <= 10) staking.incrementTotalCommunityVotingPower(1);
 
         require(
             state(proposalId) == ProposalState.Active,
@@ -1080,6 +1082,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         uint8 support_,
         string memory reason_
     ) internal {
+        // @todo do we need internal function for this or can we just do it on the external one, calling to castVoteInternal?
         uint256 startGas = gasleft();
         uint96 votes = castVoteInternal(msg.sender, proposalId_, support_);
         emit VoteCast(msg.sender, proposalId_, support_, votes, reason_);

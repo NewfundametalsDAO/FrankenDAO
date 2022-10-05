@@ -11,7 +11,6 @@ import "./Refund.sol";
 /// @title FrankenDAO Staking Contract
 /// @author The name of the author
 /// @notice Contract for staking FrankenPunks
-// @todo - add pausable that only impacts staking (not unstaking)
 abstract contract Staking is ERC721Checkpointable, Refund {
   using Strings for uint256;
 
@@ -202,7 +201,7 @@ abstract contract Staking is ERC721Checkpointable, Refund {
 
     // call this when proposals are voted, created, passed, but check thatit's needed first and that they are undelegated
     function incrementTotalCommunityVotingPower(uint _amount) public {
-      require(_msgSender() == address( governance ), "only governance");
+      require(_msgSender() == address(governance), "only governance");
       totalVotingPower += _amount;
     }
 
