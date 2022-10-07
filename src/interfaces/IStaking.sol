@@ -1,61 +1,66 @@
 pragma solidity ^0.8.10;
 
 interface IStaking {
-
-    ////////////
-    // Events //
-    ////////////
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
     event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
+    event DelegatingRefundingSet(bool status);
+    event IssueRefund(address refunded, uint256 ammount, bool sent);
+    event StakingPause(bool status);
+    event StakingRefundSet(bool status);
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 
-    /////////////
-    // Staking //
-    /////////////
-    function blockStaked(uint256) external view returns (uint256);
-
-    ////////////////
-    // Delegation //
-    ////////////////
     function DELEGATION_TYPEHASH() external view returns (bytes32);
     function DOMAIN_TYPEHASH() external view returns (bytes32);
+    function MAX_REFUND_PRIORITY_FEE() external view returns (uint256);
+    function REFUND_BASE_GAS() external view returns (uint256);
+    function _baseTokenURI() external view returns (string memory);
+    function approve(address to, uint256 tokenId) external;
+    function balanceOf(address owner) external view returns (uint256);
+    function changeStakeAmount(uint256 _newMaxStakeBonusAmount) external;
+    function changeStakeTime(uint256 _newMaxStakeBonusTime) external;
+    function checkpoints(address, uint32) external view returns (uint32 fromBlock, uint96 votes);
     function delegate(address delegatee) external;
-    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external;
+    function delegateWithRefund(address delegatee) external;
     function delegates(address delegator) external view returns (address);
-    function votesToDelegate(address delegator) external view returns (uint96);
-
-    //////////////////
-    // Voting Power //
-    //////////////////
+    function delegatingRefund() external view returns (bool);
+    function getApproved(uint256 tokenId) external view returns (address);
+    function getCommunityVotingPower(address _voter) external view returns (uint256);
     function getCurrentVotes(address account) external view returns (uint96);
     function getPriorVotes(address account, uint256 blockNumber) external view returns (uint96);
-    function checkpoints(address, uint32) external view returns (uint32 fromBlock, uint96 votes);
-    function numCheckpoints(address) external view returns (uint32);
-
-    /////////
-    // NFT //
-    /////////
-    function symbol() external view returns (string memory);
+    function getTokenVotingPower(uint256 _tokenId) external view returns (uint256);
+    function incrementTotalCommunityVotingPower(uint256 _amount) external;
+    function isApprovedForAll(address owner, address operator) external view returns (bool);
+    function maxStakeBonusAmount() external view returns (uint256);
+    function maxStakeBonusTime() external view returns (uint256);
     function name() external view returns (string memory);
     function nonces(address) external view returns (uint256);
-    function decimals() external view returns (uint8);
-    function totalSupply() external view returns (uint256);
-    function tokenURI(uint256 tokenId) external view returns (string memory);
-    function burn() external returns (uint256 tokenID);
-    function mint() external returns (uint256 stakedTokenId);
+    function numCheckpoints(address) external view returns (uint32);
+    function ownerOf(uint256 tokenId) external view returns (address);
+    function paused() external view returns (bool);
+    function safeTransferFrom(address from, address to, uint256 tokenId) external;
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) external;
+    function setApprovalForAll(address operator, bool approved) external;
+    function setBaseURI(string memory baseURI_) external;
+    function setDelegatingRefund(bool _refunding) external;
+    function setPause(bool _paused) external;
+    function setStakingRefund(bool _staking) external;
+    function stake(uint256[] memory _tokenIds, uint256 _unlockTime) external;
+    function stakeWithRefund(uint256[] memory _tokenIds, uint256 _unlockTime) external;
+    function stakedTimeBonus(uint256) external view returns (uint256);
+    function stakingRefund() external view returns (bool);
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+    function symbol() external view returns (string memory);
     function tokenByIndex(uint256 index) external view returns (uint256);
     function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256);
-    function approve(address to, uint256 tokenId) external;
-    function getApproved(uint256 tokenId) external view returns (address);
-    function isApprovedForAll(address owner, address operator) external view returns (bool);
-    function setApprovalForAll(address operator, bool approved) external;
-    function balanceOf(address owner) external view returns (uint256);
-    function originalAddress() external view returns (address);
-    function ownerOf(uint256 tokenId) external view returns (address);
-    function safeTransferFrom(address from, address to, uint256 tokenId) external;
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) external;
+    function tokenURI(uint256 _tokenId) external view returns (string memory);
+    function totalSupply() external view returns (uint256);
+    function totalVotingPower() external view returns (uint256);
     function transferFrom(address from, address to, uint256 tokenId) external;
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+    function unlockTime(uint256) external view returns (uint256);
+    function unstake(uint256[] memory _tokenIds, address _to) external;
+    function unstakeWithRefund(uint256[] memory _tokenIds, address _to) external;
+    function votesFromOwnedTokens(address) external view returns (uint256);
+    function votesToDelegate(address delegator) external view returns (uint96);
 }
