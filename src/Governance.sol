@@ -637,7 +637,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         bytes[] memory calldatas,
         string memory description
     ) public returns (uint256) {
-        require(proposalRefund, "FrankenDAO::proposeWithRefund: refunding gas is turned off")
+        require(
+            proposalRefund,
+            "FrankenDAO::proposeWithRefund: refunding gas is turned off"
+        );
         uint256 startGas = gasleft();
 
         uint256 proposalId = _propose(
@@ -938,7 +941,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      */
     function castRefundableVote(uint256 proposalId_, uint8 support_) external {
         // @todo why doesn't refundable vote emit event?
-        require(votingRefund, "FrankenDAO::castRefundableVote: refunding gas is turned off")
+        require(
+            votingRefund,
+            "FrankenDAO::castRefundableVote: refunding gas is turned off"
+        );
         castRefundableVoteInternal(proposalId_, support_, "");
     }
 
@@ -979,7 +985,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         string calldata reason_
     ) external {
         // @todo why doesn't refundable vote emit event?
-        require(votingRefund, "FrankenDAO::castRefundableVoteWithReason: refunding gas is turned off")
+        require(
+            votingRefund,
+            "FrankenDAO::castRefundableVoteWithReason: refunding gas is turned off"
+        );
         castRefundableVoteInternal(proposalId_, support_, reason_);
     }
 

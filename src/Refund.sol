@@ -18,6 +18,10 @@ contract Refund {
      */
     // @todo should we do this as a modifier that grabs the startGas as the start?
     function _refundGas(uint256 _startGas) internal {
+        require(
+            address(this).balance >= _startGas,
+            "Refund: not enough Eth to refund transaction"
+        );
         unchecked {
             uint256 balance = address(this).balance;
             if (balance == 0) {
