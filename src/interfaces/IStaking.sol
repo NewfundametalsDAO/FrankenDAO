@@ -1,6 +1,15 @@
 pragma solidity ^0.8.10;
 
 interface IStaking {
+
+    struct CommunityPowerMultipliers {
+        uint64 votes;
+        uint64 proposalsCreated;
+        uint64 proposalsPassed;
+    }
+
+    enum Refund { NoRefunds, StakingRefund, DelegatingRefund, StakingAndDelegatingRefund }
+
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
@@ -8,9 +17,10 @@ interface IStaking {
     event DelegatingRefundingSet(bool status);
     event IssueRefund(address refunded, uint256 ammount, bool sent);
     event StakingPause(bool status);
-    event StakingRefundSet(bool status);
+    event RefundSet(Refund status);
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
-
+    event StakingPause(bool status);
+    
     function DELEGATION_TYPEHASH() external view returns (bytes32);
     function DOMAIN_TYPEHASH() external view returns (bytes32);
     function MAX_REFUND_PRIORITY_FEE() external view returns (uint256);

@@ -2,85 +2,44 @@
 pragma solidity ^0.8.0;
 
 import "oz/token/ERC721/ERC721.sol";
-import "./Refund.sol";
+import "./utils/Refund.sol";
 import "oz/utils/Strings.sol";
-import "./interfaces/IFrankenpunks.sol";
+import "./interfaces/IERC721.sol";
 import "./interfaces/IStaking.sol";
 import "./Governance.sol";
-<<<<<<< HEAD
-=======
-import "./token/ERC721Checkpointable.sol";
-import "../lib/openzeppelin-contracts/contracts/utils/Strings.sol";
-import "./utils/Refund.sol";
->>>>>>> 8c7bb13739c4aec52f6281b8e58e86bd24d92275
 
 /// @title FrankenDAO Staking Contract
 /// @author Zach Obront & Zakk Fleischmann
 /// @notice Contract for staking FrankenPunks
-abstract contract Staking is ERC721, Refund {
+contract Staking is ERC721, Refund {
   using Strings for uint256;
 
-  IFrankenPunks frankenpunks;
+  IERC721 frankenpunks;
+  IERC721 frankenmonsters;
   Governance governance;
   address executor;
 
   uint public maxStakeBonusTime;
   uint public maxStakeBonusAmount;
-
-  /////////////////////////////////
-  ////////// CONSTRUCTOR //////////
-  /////////////////////////////////
-
-  constructor(address _frankenpunks, address _governance, address _executor, uint _maxStakeBonusTime, uint _maxStakeBonusAmount) ERC721("Staked FrankenPunks", "sFP") {
-    frankenpunks = IFrankenPunks(_frankenpunks);
-    governance = Governance( _governance );
-    executor = _executor;
-    maxStakeBonusTime = _maxStakeBonusTime; // 4 weeks
-    maxStakeBonusAmount = _maxStakeBonusAmount; // 20
-  }
-
-  /////////////////////////////////
-  //////////// STORAGE ////////////
-  /////////////////////////////////
+  CommunityPowerMultipliers public communityPowerMultipliers;
+  uint[40] EVIL_BITMAPS; // @todo check if cheaper to make immutable in constructor or insert manually into contract
 
   mapping(uint => uint) public unlockTime; // token => unlock timestamp
   mapping(uint => uint) public stakedTimeBonus; // token => amount of staked bonus they got
 
   mapping(address => address) private _delegates;
-  mapping(address => uint) public votesFromOwnedTokens;
-  mapping(address => uint) public votingPower;
+  mapping(address => uint96) public votesFromOwnedTokens;
+  mapping(address => uint96) public tokenVotingPower;
   uint public totalTokenVotingPower;
 
-  enum Refund { NoRefunds, StakingRefund, DelegatingRefund, StakingAndDelegatingRefund }
   Refund public refund;
-
   bool public paused;
 
   string public _baseTokenURI;
 
-  uint public votesMultiplier = 100;
-  uint public proposalsMultiplier = 100;
-  uint public executedMultiplier = 100;
-  
-  uint[40] EVIL_BITMAPS; // @todo check if cheaper to make immutable in constructor or insert manually into contract
-
-<<<<<<< HEAD
-  // @todo add all this to the interface instead
-  event StakingPause(bool status);
-    
-  /// @notice An event thats emitted when refunding is set for delegating or staking
-  event RefundSet(Refund);
-=======
-  vent StakingPause(bool status);
-  event StakingRefundSet(bool status);
->>>>>>> 8c7bb13739c4aec52f6281b8e58e86bd24d92275
-
-  /// @notice An event thats emitted when an account changes its delegate
-  event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
-
-  /// @notice An event thats emitted when a delegate account's vote balance changes
-  event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
-
+  /////////////////////////////////
+  /////////// MODIFIERS ///////////
+  /////////////////////////////////
 
   modifier lockedWhileVotesCast(uint[] _tokenIds) {
     uint[] activeProposals = governance.getActiveProposals();
@@ -88,6 +47,36 @@ abstract contract Staking is ERC721, Refund {
       require(!governance.getReceipt(activeProposals[i], delegates(msg.sender)).hasVoted, "Staking: Cannot stake while votes are cast");
     }
     _;
+  }
+
+  /////////////////////////////////
+  ////////// CONSTRUCTOR //////////
+  /////////////////////////////////
+
+  constructor(
+    address _frankenpunks, 
+    address _frankenmonsters,
+    address _governance, 
+    address _executor, 
+    uint _maxStakeBonusTime, 
+    uint _maxStakeBonusAmount,
+    uint initialVotesMultiplier, 
+    uint initialProposalsMultiplier, 
+    uint initialExecutedMultiplier
+  ) ERC721("Staked FrankenPunks", "sFP") {
+    frankenpunks = IERC721(_frankenpunks);
+    frankenmonsters = IERC721(_frankenmonsters);
+    governance = Governance( _governance );
+    executor = _executor;
+
+    maxStakeBonusTime = _maxStakeBonusTime; // 4 weeks
+    maxStakeBonusAmount = _maxStakeBonusAmount; // 20
+
+    communityPowerMultipliers = CommunityPowerMultipliers({
+      votes: initialVotesMultiplier, // 100
+      proposalsCreated: initialProposalsMultiplier, // 200
+      proposalsPassed: initialExecutedMultiplier //200
+    });
   }
 
   /////////////////////////////////
@@ -139,11 +128,11 @@ abstract contract Staking is ERC721, Refund {
     require(currentDelegate != delegatee, "ERC721Checkpointable::_delegate: already delegated to this address");
 
     _delegates[delegator] = delegatee == delegator ? address(0) : delegatee;
-    uint96 amount = safe96(votesFromOwnedTokens[delegator], 'ERC721Checkpointable::votesToDelegate: amount exceeds 96 bits');
+    uint96 amount = votesFromOwnedTokens[delegator];
     require(amount > 0, "ERC721Checkpointable::_delegate: amount must be greater than 0");
     
-    votingPower[from] -= amount; // @todo is this safe or should i use sub96? do i need to check for addr(0)? i don't think so.
-    votingPower[to] += amount; 
+    tokenVotingPower[currentDelegate] -= amount;
+    tokenVotingPower[delegatee] += amount; 
 
     _updateTotalCommunityVotingPower(delegator, currentDelegate, delegatee, amount);
     emit DelegateChanged(delegator, currentDelegate, delegatee);
@@ -175,35 +164,32 @@ abstract contract Staking is ERC721, Refund {
     _stake(_tokenIds, _unlockTime);
   }
 
-  function _stake(uint[] calldata _tokenIds, uint _unlockTime) internal lockedWhileVotesCast {
+  // @todo think through more to make sure doesn't need to be locked
+  function _stake(uint[] calldata _tokenIds, uint _unlockTime) internal {
       require(!paused, "staking is paused");
       require(_unlockTime == 0 || _unlockTime > block.timestamp, "must lock until future time (or set 0 for unlocked)");
 
       uint numTokens = _tokenIds.length;
       require(numTokens > 0, "stake at least one token");
       
-      uint newVotingPower;
+      uint96 newVotingPower;
       for (uint i = 0; i < numTokens; i++) {
           newVotingPower += _stakeToken(_tokenIds[i], _unlockTime);
       }
       votesFromOwnedTokens[msg.sender] += newVotingPower; // @todo i assumed everything for msg.sender, so approved can do it and they hold it not owner. think through.
-      votingPower[delegates(msg.sender)] += newVotingPower;
+      tokenVotingPower[delegates(msg.sender)] += newVotingPower;
       totalTokenVotingPower += newVotingPower;
   }
 
   function _stakeToken(uint _tokenId, uint _unlockTime) internal returns(uint) {
       if (_unlockTime > 0) {
         unlockTime[_tokenId] = _unlockTime;
-        uint fullStakedTimeBonus = _getStakeLengthBonus(_unlockTime - block.timestamp);
-      
-        if (_tokenId < 10000) {
-          stakedTimeBonus[_tokenId] = fullStakedTimeBonus;
-        } else {
-          stakedTimeBonus[_tokenId] = fullStakedTimeBonus / 2;
-        }
+        uint fullStakedTimeBonus = (_unlockTime - block.timestamp) * maxStakeBonusAmount / maxStakeBonusTime;
+        stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : fullStakedTimeBonus / 2;
       }
 
-      frankenpunks.transferFrom(frankenpunks.ownerOf(_tokenId), address(this), _tokenId);
+      IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
+      collection.transferFrom(collection.ownerOf(_tokenId), address(this), _tokenId);
       // mint has to be AFTER staked bonus calculation, because it'll pull that in in awarding votes
       _mint(msg.sender, _tokenId);
 
@@ -214,6 +200,7 @@ abstract contract Staking is ERC721, Refund {
     _unstake(_tokenIds, _to);
   }
 
+  // @todo probably don't want to make unstake refundable?
   function unstakeWithRefund(uint[] calldata _tokenIds, address _to) public refundable {
     require(refund == Refund.StakingRefund || refund == Refund.StakingAndDelegatingRefund, "Staking: Staking refunds are not enabled");
     _unstake(_tokenIds, _to);
@@ -223,12 +210,12 @@ abstract contract Staking is ERC721, Refund {
     uint numTokens = _tokenIds.length;
     require(numTokens > 0, "unstake at least one token");
     
-    uint lostVotingPower;
+    uint96 lostVotingPower;
     for (uint i = 0; i < numTokens; i++) {
         lostVotingPower += _unstakeToken(_tokenIds[i], _to);
     }
     votesFromOwnedTokens[msg.sender] -= lostVotingPower;
-    votingPower[delegates(msg.sender)] -= lostVotingPower;
+    tokenVotingPower[delegates(msg.sender)] -= lostVotingPower;
     totalTokenVotingPower -= lostVotingPower;
   }
 
@@ -237,7 +224,8 @@ abstract contract Staking is ERC721, Refund {
     require(unlockTime[_tokenId] < block.timestamp, "token is locked");
 
     // burn and lostVotingPower calculations have to happen BEFORE bonus is zero'd out, because it pulls that when calculating
-    frankenpunks.transferFrom(address(this), _to, _tokenId);
+    IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
+    collection.transferFrom(address(this), _to, _tokenId);
     uint lostVotingPower = getTokenVotingPower(_tokenId);
     _burn(_tokenId);
 
@@ -251,9 +239,8 @@ abstract contract Staking is ERC721, Refund {
     ///// VOTING POWER CALCULATION FUNCTIONS /////
     //////////////////////////////////////////////
     
-    // @todo change getPriorVotes to getVotes in Gov
     function getVotes(address account) public view returns (uint96) {
-        return votingPower[account] + getCommunityVotingPower(account);
+        return tokenVotingPower[account] + getCommunityVotingPower(account);
     }
     
     function getTokenVotingPower(uint _tokenId) public override view returns (uint) {
@@ -277,7 +264,8 @@ abstract contract Staking is ERC721, Refund {
 
         (votes, proposalsCreated, proposalsPassed) = governance.getCommunityScoreData(_voter);
       }
-      return (votes * VOTES_MULTIPLIER_PERCENT / 100) + (2 * _min(proposalsCreated, 10)) + (2 * _min(proposalsPassed, 10));
+      CommunityPowerMultipliers cpMultipliers = communityPowerMultipliers;
+      return (votes * cpMultipliers.votes / 100) + (proposalsCreated * cpMultipliers.proposalsCreated / 100) + (proposalsPassed * cpMultipliers.proposalsPassed / 100);
     }
 
     function getTotalVotingPower() public view returns (uint) {
@@ -293,6 +281,8 @@ abstract contract Staking is ERC721, Refund {
   /////////////////////////////////
   //////// OWNER OPERATIONS ///////
   /////////////////////////////////
+  
+  // @todo - divide these up between multisig, executor, or either
 
   function changeStakeTime(uint _newMaxStakeBonusTime) public {
     require(msg.sender == executor, "only executor can change max stake bonus time");
@@ -305,7 +295,7 @@ abstract contract Staking is ERC721, Refund {
   }
 
   function setPause(bool _paused) external {
-    require(msg.sender == executor, "only executor can pause"); // @todo - change this to multsig
+    require(msg.sender == executor, "only executor can pause"); 
     paused = _paused;
     emit StakingPause(_paused);
   }
@@ -317,48 +307,7 @@ abstract contract Staking is ERC721, Refund {
   }
 
   function setBaseURI(string calldata baseURI_) external {
-    require (msg.sender == executor, "only executor can set base URI");
+    require(msg.sender == executor, "only executor can set base URI");
     _baseTokenURI = baseURI_;
-  }
-
-  /////////////////////////////////
-  //////////// HELPERS ////////////
-  /////////////////////////////////
-
-  function _min(uint a, uint b) internal pure returns(uint) {
-    return a < b ? a : b;
-  }
-
-  function _getStakeLengthBonus(uint _stakeLength) internal view returns(uint) {
-    return _stakeLength * maxStakeBonusAmount / maxStakeBonusTime;
-  }
-
-  function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
-      require(n < 2**32, errorMessage);
-      return uint32(n);
-  }
-
-  function safe96(uint256 n, string memory errorMessage) internal pure returns (uint96) {
-      require(n < 2**96, errorMessage);
-      return uint96(n);
-  }
-
-  function add96(
-      uint96 a,
-      uint96 b,
-      string memory errorMessage
-  ) internal pure returns (uint96) {
-      uint96 c = a + b;
-      require(c >= a, errorMessage);
-      return c;
-  }
-
-  function sub96(
-      uint96 a,
-      uint96 b,
-      string memory errorMessage
-  ) internal pure returns (uint96) {
-      require(b <= a, errorMessage);
-      return a - b;
   }
 }
