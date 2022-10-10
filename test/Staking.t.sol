@@ -5,5 +5,7 @@ import "forge-std/Test.sol";
 import "../src/Staking.sol";
 
 contract StakingTest is Test {
+    // make sure _transfer revert blocks all versions of transferFrom, safeTransferFrom, safeTransfer, etc.
 
+    // test evil bonus
 }

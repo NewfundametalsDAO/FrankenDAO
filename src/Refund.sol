@@ -35,6 +35,12 @@ contract Refund {
         }
     }
 
+    modifier refundable() {
+        uint256 startGas = gasleft();
+        _;
+        _refundGas(startGas);
+    }
+
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
     }
