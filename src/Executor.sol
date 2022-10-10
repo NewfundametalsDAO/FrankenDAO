@@ -1,64 +1,38 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-contract Executor {
+import "./events/ExecutorEvents.sol";
+import "./utils/Admin.sol";
 
-    event NewAdmin(address indexed newAdmin);
-    event NewPendingAdmin(address indexed newPendingAdmin);
-    event NewDelay(uint256 indexed newDelay);
-    event CancelTransaction(bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
-    event ExecuteTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
-    event QueueTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
-
+contract Executor is ExecutorEvents, Admin {
     uint256 public constant GRACE_PERIOD = 14 days; // @todo - do we want this editable?
     uint256 public constant MINIMUM_DELAY = 2 days;
     uint256 public constant MAXIMUM_DELAY = 30 days;
 
     bool public initialized;
     
-    address public admin;
-    address public pendingAdmin;
     uint256 public delay;
     
     mapping(bytes32 => bool) public queuedTransactions;
 
-    function initialize(address admin_, uint256 delay_) public {
-        require(!initialized, "already initialized");
-        require(delay_ >= MINIMUM_DELAY, 'FrankenDAOExecutor::constructor: Delay must exceed minimum delay.');
-        require(delay_ <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must not exceed maximum delay.');
+    function initialize(address _founders, address _council, uint256 _delay) public {
+        require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
+        require(_delay >= MINIMUM_DELAY, 'FrankenDAOExecutor::initialize: Delay must exceed minimum delay.');
+        require(_delay <= MAXIMUM_DELAY, 'FrankenDAOExecutor::initialize: Delay must not exceed maximum delay.');
 
-        admin = admin_;
-        delay = delay_;
+        founders = _founders;
+        council = _council;
+        delay = _delay;
         initialized = true;
     }
 
     function setDelay(uint256 delay_) public {
-        require(msg.sender == address(this), 'FrankenDAOExecutor::setDelay: Call must come from FrankenDAOExecutor.');
+        require(isAdmin(), 'FrankenDAOExecutor::setDelay: Call must come from admin.');
         require(delay_ >= MINIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must exceed minimum delay.');
         require(delay_ <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must not exceed maximum delay.');
         delay = delay_;
 
         emit NewDelay(delay);
-    }
-
-    // @note new contracts will need to have a function that calls this directly, since normal proposals go through governance
-    // @todo or do we want to change this so it's called via executor?
-    function acceptAdmin() public {
-        require(msg.sender == pendingAdmin, 'FrankenDAOExecutor::acceptAdmin: Call must come from pendingAdmin.');
-        admin = msg.sender;
-        pendingAdmin = address(0);
-
-        emit NewAdmin(admin);
-    }
-
-    function setPendingAdmin(address pendingAdmin_) public {
-        require(
-            msg.sender == address(this),
-            'FrankenDAOExecutor::setPendingAdmin: Call must come from FrankenDAOExecutor.'
-        );
-        pendingAdmin = pendingAdmin_;
-
-        emit NewPendingAdmin(pendingAdmin);
     }
 
     function queueTransaction(
@@ -68,7 +42,7 @@ contract Executor {
         bytes memory data,
         uint256 eta
     ) public returns (bytes32) {
-        require(msg.sender == admin, 'FrankenDAOExecutor::queueTransaction: Call must come from admin.');
+        require(isAdmin(), 'FrankenDAOExecutor::queueTransaction: Call must come from admin.');
         require(
             eta >= getBlockTimestamp() + delay,
             'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
@@ -90,7 +64,7 @@ contract Executor {
         bytes memory data,
         uint256 eta
     ) public {
-        require(msg.sender == admin, 'FrankenDAOExecutor::cancelTransaction: Call must come from admin.');
+        require(isAdmin(), 'FrankenDAOExecutor::cancelTransaction: Call must come from admin.');
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
@@ -105,7 +79,9 @@ contract Executor {
         bytes memory data,
         uint256 eta
     ) public returns (bytes memory) {
-        require(msg.sender == admin, 'FrankenDAOExecutor::executeTransaction: Call must come from admin.');
+        // @todo SHouldn't anyone willing to pay the gas be able to execute?
+        // @todo Does this need to update community voting power in Staking?
+        require(isAdmin(), 'FrankenDAOExecutor::executeTransaction: Call must come from admin.');
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         require(queuedTransactions[txHash], "FrankenDAOExecutor::executeTransaction: Transaction hasn't been queued.");
