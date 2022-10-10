@@ -602,45 +602,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     }
 
     /**
-     * @notice Cast a vote for a proposal by signature
-     * @dev External function that accepts EIP-712 signatures for voting on proposals.
-     */
-    function castVoteBySig(
-        uint256 proposalId,
-        uint8 support,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                DOMAIN_TYPEHASH,
-                keccak256(bytes(name)),
-                getChainIdInternal(),
-                address(this)
-            )
-        );
-        bytes32 structHash = keccak256(
-            abi.encode(BALLOT_TYPEHASH, proposalId, support)
-        );
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", domainSeparator, structHash)
-        );
-        address signatory = ecrecover(digest, v, r, s);
-        require(
-            signatory != address(0),
-            "FrankenDAO::castVoteBySig: invalid signature"
-        );
-        emit VoteCast(
-            signatory,
-            proposalId,
-            support,
-            castVoteInternal(signatory, proposalId, support),
-            ""
-        );
-    }
-
-    /**
      * @notice Internal function that caries out voting logic
      * @param voter The voter that is casting their vote
      * @param proposalId The id of the proposal to vote on

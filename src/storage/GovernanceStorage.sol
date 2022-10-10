@@ -205,18 +205,4 @@ contract GovernanceStorage {
         Executed,
         Vetoed
     }
-
-    ////////////////////////////
-    //// EIP-712 Signatures ////
-    ////////////////////////////
-
-    /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256(
-            "EIP712Domain(string name,uint256 chainId,address verifyingContract)"
-        );
-
-    /// @notice The EIP-712 typehash for the ballot struct used by the contract
-    bytes32 public constant BALLOT_TYPEHASH =
-        keccak256("Ballot(uint256 proposalId,uint8 support)");
 }
