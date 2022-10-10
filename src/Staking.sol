@@ -9,7 +9,7 @@ import "../lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 import "./Refund.sol";
 
 /// @title FrankenDAO Staking Contract
-/// @author The name of the author
+/// @author Zach Obront & Zakk Fleischmann
 /// @notice Contract for staking FrankenPunks
 abstract contract Staking is ERC721Checkpointable, Refund {
   using Strings for uint256;
@@ -27,8 +27,17 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   bool public stakingRefund;
 
   string public _baseTokenURI;
+
+  uint totalCommunityVotingPowerFromPropose;
+  uint totalCommunityVotingPowerFromExecute;
+  uint totalCommunityVotingPowerFromVote;
+
+
+  uint public votesMultiplier = 100;
+  uint public proposalsMultiplier = 100;
+  uint public executedMultiplier = 100;
   
-  uint[40] EVIL_BITMAPS; // check if cheaper to make immutable in constructor or insert manually into contract
+  uint[40] EVIL_BITMAPS; // @todo check if cheaper to make immutable in constructor or insert manually into contract
 
   event StakingPause(bool status);
   event StakingRefundSet(bool status);
@@ -53,7 +62,7 @@ abstract contract Staking is ERC721Checkpointable, Refund {
     revert("staked tokens cannot be transferred");
   }
 
-  // @todo - think through rest. i think we leave approvals on so people can stake for one another. mint and burn don't use transfer.
+  // @todo - think through rest. i think we leave approvals on so people can unstake for one another. mint and burn don't use transfer.
 
   /////////////////////////////////
   /////// TOKEN URI FUNCTIONS /////
@@ -73,6 +82,14 @@ abstract contract Staking is ERC721Checkpointable, Refund {
       ? string(abi.encodePacked(baseURI, _tokenId.toString(), ".json"))
       : "";
   }
+  
+  /////////////////////////////////
+  ////// VOTING CALCULATIONS //////
+  /////////////////////////////////
+
+
+
+  
 
   /////////////////////////////////
   /// STAKE & UNSTAKE FUNCTIONS ///
@@ -166,6 +183,7 @@ abstract contract Staking is ERC721Checkpointable, Refund {
 
       // burn and lostVotingPower calculations have to happen BEFORE bonus is zero'd out, because it pulls that when calculating
       _burn(_tokenId);
+      votingPower[delegates(ownerOf(_tokenId))] -= getTokenVotingPower(_tokenId);
       frankenpunks.transferFrom(address(this), _to, _tokenId);
       uint lostVotingPower = getTokenVotingPower(_tokenId);
 
@@ -194,12 +212,19 @@ abstract contract Staking is ERC721Checkpointable, Refund {
     }
 
     function getCommunityVotingPower(address _voter) public override view returns (uint) {
-      if (balanceOf(_voter) == 0) return 0;
-      if (delegates(_voter) != address(0) && delegates(_voter) != _voter) return 0; // @todo - change to include self depending on decision there
+      uint64 votes;
+      uint64 proposalsCreated;
+      uint64 proposalsPassed;
+      
+      if (_voter == type(uint).max) {
+        (votes, proposalsCreated, proposalsPassed) = governance.totalCommunityVotingPowerBreakdown();
+      } else {
+        if (balanceOf(_voter) == 0) return 0;
+        if (delegates(_voter) != address(0) && delegates(_voter) != _voter) return 0; // @todo - change to include self depending on decision there
 
-      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.getCommunityScoreData(_voter);
-
-      return _min(votes, 10) + (2 * _min(proposalsCreated, 10)) + (2 * _min(proposalsPassed, 10));
+        (votes, proposalsCreated, proposalsPassed) = governance.getCommunityScoreData(_voter);
+      }
+      return (votes * VOTES_MULTIPLIER_PERCENT / 100) + (2 * _min(proposalsCreated, 10)) + (2 * _min(proposalsPassed, 10));
     }
 
     // call this when proposals are voted, created, passed, but check thatit's needed first and that they are undelegated

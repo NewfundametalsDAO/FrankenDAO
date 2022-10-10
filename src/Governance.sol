@@ -57,6 +57,7 @@ contract Admin is AccessControl {
      */
     function _acceptAdmin() external {
         // Check caller is pendingAdmin and pendingAdmin ≠ address(0)
+        // @todo why is the zero addr check needed? msg.sender will never be addr(0), can it?
         require(
             msg.sender == pendingAdmin && msg.sender != address(0),
             "FrankenDAO::_acceptAdmin: pending admin only"
@@ -272,6 +273,7 @@ contract GovernanceStorage {
     mapping(address => uint256) public latestProposalIds;
 
     mapping(address => CommunityScoreData) public getCommunityScoreData;
+    CommunityScoreData public totalCommunityVotingPowerBreakdown;
 
     struct CommunityScoreData {
         uint64 proposalsCreated;
@@ -430,7 +432,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             address(timelock) == address(0),
             "FrankenDAO::initialize: can only initialize once"
         );
-        // TODO: make sure the admin is set previously
+        // @todo: make sure the admin is set previously
         require(msg.sender == admin, "FrankenDAO::initialize: admin only");
         require(
             timelock_ != address(0),
@@ -662,10 +664,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         bytes[] memory calldatas,
         string memory description
     ) internal returns (uint256) {
-        uint256 userProposalCount = ++getCommunityScoreData[msg.sender]
-            .proposalsCreated;
-        if (userProposalCount > 10)
-            staking.incrementTotalCommunityVotingPower(2);
+        uint256 userProposalCount = ++getCommunityScoreData[msg.sender].proposalsCreated;
+        // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
+        totalCommunityVotingPowerBreakdown.proposalsCreated += 1;
 
         ProposalTemp memory temp;
 
@@ -822,12 +823,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         );
         Proposal storage proposal = proposals[proposalId];
 
-        uint256 userSuccessfulProposalCount = ++getCommunityScoreData[
-            proposal.proposer
-        ].proposalsPassed;
-        if (userSuccessfulProposalCount > 10)
-            staking.incrementTotalCommunityVotingPower(2);
-
+        uint256 userSuccessfulProposalCount = ++getCommunityScoreData[proposal.proposer].proposalsPassed;
+        // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
+        totalCommunityVotingPowerBreakdown.proposalsPassed += 1;
+        
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
             timelock.executeTransaction(
@@ -1035,7 +1034,8 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         uint8 support
     ) internal returns (uint96) {
         uint256 userVoteCount = ++getCommunityScoreData[voter].votes;
-        if (userVoteCount <= 10) staking.incrementTotalCommunityVotingPower(1);
+        // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
+        totalCommunityVotingPowerBreakdown.votes += 1;
 
         require(
             state(proposalId) == ProposalState.Active,
