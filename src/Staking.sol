@@ -6,7 +6,7 @@ import "./interfaces/IStaking.sol";
 import "./Governance.sol";
 import "./token/ERC721Checkpointable.sol";
 import "../lib/openzeppelin-contracts/contracts/utils/Strings.sol";
-import "./Refund.sol";
+import "./utils/Refund.sol";
 
 /// @title FrankenDAO Staking Contract
 /// @author Zach Obront & Zakk Fleischmann
@@ -40,7 +40,7 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   
   uint[40] EVIL_BITMAPS; // @todo check if cheaper to make immutable in constructor or insert manually into contract
 
-  event StakingPause(bool status);
+  vent StakingPause(bool status);
   event StakingRefundSet(bool status);
 
   /// @notice An event thats emitted when refunding is set for delegating
