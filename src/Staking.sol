@@ -25,6 +25,7 @@ abstract contract Staking is ERC721Checkpointable, Refund {
 
   bool public paused;
   bool public stakingRefund;
+  bool public delegatingRefund;
 
   string public _baseTokenURI;
 
@@ -41,6 +42,9 @@ abstract contract Staking is ERC721Checkpointable, Refund {
 
   event StakingPause(bool status);
   event StakingRefundSet(bool status);
+
+  /// @notice An event thats emitted when refunding is set for delegating
+  event DelegatingRefundingSet(bool status);
 
   /////////////////////////////////
   ////////// CONSTRUCTOR //////////
@@ -100,7 +104,10 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   }
 
   function stakeWithRefund(uint[] calldata _tokenIds, uint _unlockTime) public {
-      require(stakingRefund, "FrankenDAO::stakeWithRefund: refunding gas is turned off")
+      require(
+        stakingRefund,
+        "FrankenDAO::stakeWithRefund: refunding gas is turned off"
+      );
     
       uint256 startGas = gasleft();
 
@@ -153,7 +160,10 @@ abstract contract Staking is ERC721Checkpointable, Refund {
   }
 
   function unstakeWithRefund(uint[] calldata _tokenIds, address _to) public {
-    require(stakingRefund, "FrankenDAO::unstakeWithRefund: refunding gas is turned off")
+    require(
+      stakingRefund,
+      "FrankenDAO::unstakeWithRefund: refunding gas is turned off"
+    );
     uint startGas = gasleft();
 
     uint lostVotingPower = _unstake(_tokenIds, _to);
@@ -233,6 +243,28 @@ abstract contract Staking is ERC721Checkpointable, Refund {
       totalVotingPower += _amount;
     }
 
+  //////////////////////////////////////////////
+  ///// Additional Delegating Functionality ////
+  //////////////////////////////////////////////
+
+  /**
+    * @notice Delegate votes from `msg.sender` to `delegatee`
+    * @param delegatee The address to delegate votes to
+    */
+  function delegateWithRefund(address delegatee) public {
+      require(
+          delegatingRefund,
+          "FrankenDAO::delegateWithRefund: refunding gas is turned off"
+      );
+      uint256 startGas = gasleft();
+
+      if (delegatee == address(0)) delegatee = msg.sender; // @todo - i want to flip this so it's always 0 for self, think through it
+      _delegate(msg.sender, delegatee);
+
+      _refundGas(startGas);
+  }
+
+
   /////////////////////////////////
   //////// OWNER OPERATIONS ///////
   /////////////////////////////////
@@ -259,6 +291,12 @@ abstract contract Staking is ERC721Checkpointable, Refund {
     stakingRefund = _staking;
 
     emit StakingRefundSet(_staking);
+  }
+
+  function setDelegatingRefund(bool _refunding) external {
+      require(msg.sender == executor, "FrankenDAO::setDelegatingRefund: only executor can set gas refunding");
+      delegatingRefund = _refunding;
+      emit DelegatingRefundingSet(_refunding);
   }
 
   function setBaseURI(string calldata baseURI_) external {
