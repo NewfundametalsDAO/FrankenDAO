@@ -248,12 +248,11 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         string[] memory signatures,
         bytes[] memory calldatas,
         string memory description
-    ) public returns (uint256) {
+    ) public refundable returns (uint256) {
         require(
             proposalRefund,
             "FrankenDAO::proposeWithRefund: refunding gas is turned off"
         );
-        uint256 startGas = gasleft();
 
         uint256 proposalId = _propose(
             targets,
@@ -262,10 +261,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             calldatas,
             description
         );
-
-        if (proposalId > 0) {
-            _refundGas(startGas);
-        }
 
         return proposalId;
     }
@@ -534,8 +529,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             proposalId,
             support,
             castVoteInternal(msg.sender, proposalId, support),
-            ""
-        );
+       );
     }
 
     /**
@@ -548,59 +542,16 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param support_ The support value for the vote. 0=against, 1=for, 2=abstain
      * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
      */
-    function castRefundableVote(uint256 proposalId_, uint8 support_) external {
+    function castRefundableVote(uint256 proposalId_, uint8 support_) external
+    refundable {
         // @todo why doesn't refundable vote emit event?
         require(
             votingRefund,
             "FrankenDAO::castRefundableVote: refunding gas is turned off"
         );
-        castRefundableVoteInternal(proposalId_, support_, "");
+        uint96 votes = castVoteInternal(msg.sender, proposalId_, support_);
+        emit VoteCast(msg.sender, proposalId_, support_, votes);
     }
-
-    /**
-     * @notice Cast a vote for a proposal with a reason
-     * @param proposalId The id of the proposal to vote on
-     * @param support The support value for the vote. 0=against, 1=for, 2=abstain
-     * @param reason The reason given for the vote by the voter
-     */
-    function castVoteWithReason(
-        uint256 proposalId,
-        uint8 support,
-        string calldata reason
-    ) external {
-        emit VoteCast(
-            msg.sender,
-            proposalId,
-            support,
-            castVoteInternal(msg.sender, proposalId, support),
-            reason
-        );
-    }
-
-    /**
-     * @notice Cast a vote for a proposal, asking the DAO to refund gas costs.
-     * Users with > 0 votes receive refunds. Refunds are partial when using a gas priority fee higher than the DAO's cap.
-     * Refunds are partial when the DAO's balance is insufficient.
-     * No refund is sent when the DAO's balance is empty. No refund is sent to users with no votes.
-     * Voting takes place regardless of refund success.
-     * @param proposalId_ The id of the proposal to vote on
-     * @param support_ The support value for the vote. 0=against, 1=for, 2=abstain
-     * @param reason_ The reason given for the vote by the voter
-     * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
-     */
-    function castRefundableVoteWithReason(
-        uint256 proposalId_,
-        uint8 support_,
-        string calldata reason_
-    ) external {
-        // @todo why doesn't refundable vote emit event?
-        require(
-            votingRefund,
-            "FrankenDAO::castRefundableVoteWithReason: refunding gas is turned off"
-        );
-        castRefundableVoteInternal(proposalId_, support_, reason_);
-    }
-
     /**
      * @notice Internal function that caries out voting logic
      * @param voter The voter that is casting their vote
@@ -653,27 +604,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         return votes;
     }
 
-    /**
-     * @notice Internal function that carries out refundable voting logic
-     * @param proposalId_ The id of the proposal to vote on
-     * @param support_ The support value for the vote. 0=against, 1=for, 2=abstain
-     * @param reason_ The reason given for the vote by the voter
-     * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
-     */
-    function castRefundableVoteInternal(
-        uint256 proposalId_,
-        uint8 support_,
-        string memory reason_
-    ) internal {
-        // @todo do we need internal function for this or can we just do it on the external one, calling to castVoteInternal?
-        uint256 startGas = gasleft();
-        uint96 votes = castVoteInternal(msg.sender, proposalId_, support_);
-        emit VoteCast(msg.sender, proposalId_, support_, votes, reason_);
-        if (votes > 0) {
-            _refundGas(startGas);
-        }
-    }
-
     ///////////////
     //// Admin ////
     ///////////////
@@ -687,7 +617,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             "FrankenDAO::setProposalRefund: admin only"
         );
 
-        votingRefund = _proposing;
+        proposalRefund = _proposing;
 
         emit VotingRefundSet(_proposing);
     }
@@ -702,7 +632,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             "FrankenDAO::setVotingRefund: admin only"
         );
 
-        proposalRefund = _voting;
+        votingRefund = _voting;
 
         emit ProposalRefundSet(_voting);
     }
