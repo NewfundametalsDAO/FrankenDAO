@@ -1,109 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "oz/access/AccessControl.sol";
 import "./interfaces/IGovernance.sol";
 import "./Staking.sol";
 import "./Executor.sol";
+import "./Admin.sol";
 import "./Refund.sol";
-
-contract Admin is AccessControl {
-    /// @notice Administrator for this contract
-    address public admin;
-
-    /// @notice Pending administrator for this contract
-    address public pendingAdmin;
-
-    /// @notice role required to veto proposals
-    bytes32 public constant VETOER = keccak256("Vetoer");
-
-    /// @notice Emitted when pendingAdmin is changed
-    event NewPendingAdmin(address oldPendingAdmin, address newPendingAdmin);
-
-    /// @notice Emitted when pendingAdmin is accepted, which means admin is updated
-    event NewAdmin(address oldAdmin, address newAdmin);
-
-    /// @notice Emitted when vetoer is changed
-    event NewVetoer(address newVetoer);
-
-    /// @notice Emitted when a vetoer renounces their role
-    event RenounceVetoer(address oldVetoer);
-
-    /**
-     * @notice Begins transfer of admin rights. The newPendingAdmin must call `_acceptAdmin` to finalize the transfer.
-     * @dev Admin function to begin change of admin. The newPendingAdmin must call `_acceptAdmin` to finalize the transfer.
-     * @param newPendingAdmin New pending admin.
-     */
-    function _setPendingAdmin(address newPendingAdmin) external {
-        // Check caller = admin
-        require(
-            msg.sender == admin,
-            "FrankenDAO::_setPendingAdmin: admin only"
-        );
-
-        // Save current value, if any, for inclusion in log
-        address oldPendingAdmin = pendingAdmin;
-
-        // Store pendingAdmin with value newPendingAdmin
-        pendingAdmin = newPendingAdmin;
-
-        // Emit NewPendingAdmin(oldPendingAdmin, newPendingAdmin)
-        emit NewPendingAdmin(oldPendingAdmin, newPendingAdmin);
-    }
-
-    /**
-     * @notice Accepts transfer of admin rights. msg.sender must be pendingAdmin
-     * @dev Admin function for pending admin to accept role and update admin
-     */
-    function _acceptAdmin() external {
-        // Check caller is pendingAdmin and pendingAdmin ≠ address(0)
-        // @todo why is the zero addr check needed? msg.sender will never be addr(0), can it?
-        require(
-            msg.sender == pendingAdmin && msg.sender != address(0),
-            "FrankenDAO::_acceptAdmin: pending admin only"
-        );
-
-        // Save current values for inclusion in log
-        address oldAdmin = admin;
-        address oldPendingAdmin = pendingAdmin;
-
-        // Store admin with value pendingAdmin
-        admin = pendingAdmin;
-
-        // Clear the pending value
-        pendingAdmin = address(0);
-
-        emit NewAdmin(oldAdmin, admin);
-        emit NewPendingAdmin(oldPendingAdmin, pendingAdmin);
-    }
-
-    /**
-     * @notice Grants vetoer role to address
-     * @dev Helper to grant an address the VETOER role
-     */
-    function _addVetoer(address newVetoer) public {
-        require(msg.sender == admin, "FrankenDAO::_setVetoer: admin only");
-
-        grantRole(VETOER, newVetoer);
-
-        emit NewVetoer(newVetoer);
-    }
-
-    /**
-     * @notice Renounce vetoer role from address
-     * @dev Helper to renounce VETOER role
-     */
-    function _renouceVetoer() public {
-        require(
-            hasRole(VETOER, msg.sender),
-            "FrankenDAO::_renouceVetoer: address is not a vetoer"
-        );
-
-        renounceRole(VETOER, msg.sender);
-
-        emit RenounceVetoer(msg.sender);
-    }
-}
 
 contract GovernanceEvents {
     /// @notice An event emitted when a new proposal is created
@@ -409,6 +311,8 @@ contract GovernanceStorage {
 }
 
 contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
+    bool public initialized;
+
     /**
      * @notice Used to initialize the contract during delegator contructor
      * @param timelock_ The address of the FrankenDAOExecutor
@@ -422,18 +326,19 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     function initialize(
         address payable timelock_,
         address staking_,
+        address founders_,
+        address council_,
         address[] memory vetoers_,
         uint256 votingPeriod_,
         uint256 votingDelay_,
         uint256 proposalThresholdBPS_,
         uint256 quorumVotesBPS_
     ) public virtual {
+        require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
         require(
             address(timelock) == address(0),
             "FrankenDAO::initialize: can only initialize once"
         );
-        // @todo: make sure the admin is set previously
-        require(msg.sender == admin, "FrankenDAO::initialize: admin only");
         require(
             timelock_ != address(0),
             "FrankenDAO::initialize: invalid timelock address"
@@ -478,6 +383,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         proposalThresholdBPS = proposalThresholdBPS_;
         quorumVotesBPS = quorumVotesBPS_;
 
+        executor = timelock_;
+        founders = founders_;
+        council = council_;
+
         // TODO: move to constructor?
         _setupRole(VETOER, msg.sender);
         emit NewVetoer(msg.sender);
@@ -485,6 +394,8 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         for (uint256 index = 0; index < vetoers_.length; index++) {
             _addVetoer(vetoers_[index]);
         }
+
+        initialized = true;
     }
 
     ///////////////
@@ -888,7 +799,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     //   A `vetoed` flag was added to the `Proposal` struct to support this.
     // we'll probably just copy and edit the Compound contracts directly rather than import and edit
     function veto(uint256 proposalId) external {
-        require(hasRole(VETOER, msg.sender), "FrankenDAO::veto: only vetoer");
+        require(canVeto(), "FrankenDAO::veto: only vetoer");
         require(
             state(proposalId) != ProposalState.Executed,
             "FrankenDAO::veto: cannot veto executed proposal"
@@ -1112,7 +1023,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      */
     function setProposalRefund(bool _proposing) external {
         require(
-            msg.sender == admin,
+            isAdmin(),
             "FrankenDAO::setProposalRefund: admin only"
         );
 
@@ -1127,7 +1038,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      */
     function setVotingRefund(bool _voting) external {
         require(
-            msg.sender == admin,
+        isAdmin(),
             "FrankenDAO::setVotingRefund: admin only"
         );
 
@@ -1141,7 +1052,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param newVotingDelay new voting delay, in blocks
      */
     function _setVotingDelay(uint256 newVotingDelay) external {
-        require(msg.sender == admin, "FrankenDAO::_setVotingDelay: admin only");
+        require(isAdmin(), "FrankenDAO::_setVotingDelay: admin only");
         require(
             newVotingDelay >= MIN_VOTING_DELAY &&
                 newVotingDelay <= MAX_VOTING_DELAY,
@@ -1159,7 +1070,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      */
     function _setVotingPeriod(uint256 newVotingPeriod) external {
         require(
-            msg.sender == admin,
+            isAdmin(),
             "FrankenDAO::_setVotingPeriod: admin only"
         );
         require(
@@ -1182,7 +1093,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         external
     {
         require(
-            msg.sender == admin,
+            isAdmin(),
             "FrankenDAO::_setProposalThresholdBPS: admin only"
         );
         require(
@@ -1206,7 +1117,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      */
     function _setQuorumVotesBPS(uint256 newQuorumVotesBPS) external {
         require(
-            msg.sender == admin,
+            isAdmin(),
             "FrankenDAO::_setQuorumVotesBPS: admin only"
         );
         require(
