@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./interfaces/IGovernance.sol";
-import "./events/GovernanceEvents.sol"
+import "./events/GovernanceEvents.sol";
 import "./storage/GovernanceStorage.sol";
 import "./Staking.sol";
 import "./Executor.sol";
@@ -528,7 +528,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             msg.sender,
             proposalId,
             support,
-            castVoteInternal(msg.sender, proposalId, support),
+            castVoteInternal(msg.sender, proposalId, support)
        );
     }
 
