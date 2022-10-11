@@ -720,4 +720,25 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
 
         emit QuorumVotesBPSSet(oldQuorumVotesBPS, quorumVotesBPS);
     }
+
+    function updateTotalCommunityVotingPowerBreakdown(
+        uint64 _votes,
+        uint64 _proposalsCreated,
+        uint64 _proposalsPassed
+    ) external {
+        require(
+            msg.sender == staking,
+            "FrankenDAO::updateTotalCommunityVotingPowerBreakdown: only staking"
+        );
+
+        totalCommunityVotingPowerBreakdown.proposalsCreated = _proposalsCreated;
+        totalCommunityVotingPowerBreakdown.proposalsPassed = _proposalsPassed;
+        totalCommunityVotingPowerBreakdown.votes = _votes;
+
+        emit TotalCommunityVotingPowerBreakdownUpdated(
+            _proposalsCreated,
+            _proposalsPassed,
+            _votes
+        );
+    }
 }
