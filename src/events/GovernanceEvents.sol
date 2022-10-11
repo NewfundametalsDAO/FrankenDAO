@@ -54,12 +54,6 @@ contract GovernanceEvents {
     /// @notice An event emitted when a proposal has been vetoed by vetoAddress
     event ProposalVetoed(uint256 id);
 
-    /// @notice An event emitted when the voting delay is set
-    event VotingDelaySet(uint256 oldVotingDelay, uint256 newVotingDelay);
-
-    /// @notice An event emitted when the voting period is set
-    event VotingPeriodSet(uint256 oldVotingPeriod, uint256 newVotingPeriod);
-
     /// @notice Emitted when implementation is changed
     event NewImplementation(
         address oldImplementation,
