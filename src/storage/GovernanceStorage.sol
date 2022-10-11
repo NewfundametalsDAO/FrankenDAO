@@ -31,12 +31,6 @@ contract GovernanceStorage {
     /// @notice The maximum setable proposal threshold
     uint256 public constant MAX_PROPOSAL_THRESHOLD_BPS = 1_000; // 1,000 basis points or 10%
 
-    /// @notice The minimum setable voting period
-    uint256 public constant MIN_VOTING_PERIOD = 5_760; // About 24 hours
-
-    /// @notice The max setable voting period
-    uint256 public constant MAX_VOTING_PERIOD = 80_640; // About 2 weeks
-
     /// @notice The minimum setable quorum votes basis points
     uint256 public constant MIN_QUORUM_VOTES_BPS = 200; // 200 basis points or 2%
 
@@ -55,7 +49,8 @@ contract GovernanceStorage {
     uint256 public constant VOTING_DELAY = 5_760; // About 24 hours
 
     /// @notice The duration of voting on a proposal, in blocks
-    uint256 public votingPeriod;
+    // @todo get voting period from the team
+    uint256 public constant VOTING_PERIOD = 40_320; // About 1 week
 
     /// @notice The basis point number of votes required in order for a voter to become a proposer. *DIFFERS from GovernerBravo
     uint256 public proposalThresholdBPS;

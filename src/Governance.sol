@@ -17,7 +17,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param timelock_ The address of the FrankenDAOExecutor
      * @param staking_ The address of the NOUN tokens
      * @param vetoers_ List of addresses allowed to unilaterally veto proposals
-     * @param votingPeriod_ The initial voting period
      * @param proposalThresholdBPS_ The initial proposal threshold in basis points
      * * @param quorumVotesBPS_ The initial quorum votes threshold in basis points
      */
@@ -27,7 +26,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         address founders_,
         address council_,
         address[] memory vetoers_,
-        uint256 votingPeriod_,
         uint256 proposalThresholdBPS_,
         uint256 quorumVotesBPS_
     ) public virtual {
@@ -45,11 +43,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             "FrankenDAO::initialize: invalid staking address"
         );
         require(
-            votingPeriod_ >= MIN_VOTING_PERIOD &&
-                votingPeriod_ <= MAX_VOTING_PERIOD,
-            "FrankenDAO::initialize: invalid voting period"
-        );
-        require(
             proposalThresholdBPS_ >= MIN_PROPOSAL_THRESHOLD_BPS &&
                 proposalThresholdBPS_ <= MAX_PROPOSAL_THRESHOLD_BPS,
             "FrankenDAO::initialize: invalid proposal threshold"
@@ -60,7 +53,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             "FrankenDAO::initialize: invalid proposal threshold"
         );
 
-        emit VotingPeriodSet(votingPeriod, votingPeriod_);
         emit ProposalThresholdBPSSet(
             proposalThresholdBPS,
             proposalThresholdBPS_
@@ -69,7 +61,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
 
         timelock = Executor(timelock_);
         staking = Staking(staking_);
-        votingPeriod = votingPeriod_;
         proposalThresholdBPS = proposalThresholdBPS_;
         quorumVotesBPS = quorumVotesBPS_;
 
@@ -312,7 +303,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         }
 
         temp.startBlock = block.number + VOTING_DELAY;
-        temp.endBlock = temp.startBlock + votingPeriod;
+        temp.endBlock = temp.startBlock + VOTING_PERIOD;
 
         proposalCount++;
         Proposal storage newProposal = proposals[proposalCount];
@@ -653,26 +644,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         votingRefund = _voting;
 
         emit ProposalRefundSet(_voting);
-    }
-
-    /**
-     * @notice Admin function for setting the voting period
-     * @param newVotingPeriod new voting period, in blocks
-     */
-    function _setVotingPeriod(uint256 newVotingPeriod) external {
-        require(
-            isAdmin(),
-            "FrankenDAO::_setVotingPeriod: admin only"
-        );
-        require(
-            newVotingPeriod >= MIN_VOTING_PERIOD &&
-                newVotingPeriod <= MAX_VOTING_PERIOD,
-            "FrankenDAO::_setVotingPeriod: invalid voting period"
-        );
-        uint256 oldVotingPeriod = votingPeriod;
-        votingPeriod = newVotingPeriod;
-
-        emit VotingPeriodSet(oldVotingPeriod, votingPeriod);
     }
 
     /**
