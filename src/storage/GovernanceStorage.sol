@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "../Executor.sol";
+import "../Staking.sol";
+
 contract GovernanceStorage {
     /// @notice The name of this contract
     string public constant name = "Franken DAO";
