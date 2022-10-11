@@ -23,6 +23,9 @@ contract Admin {
     event NewFounders(address oldFounders, address newFounders);
     event NewCouncil(address oldCouncil, address newCouncil);
 
+    /// @notice Error emitted when an auth condition is not met
+    error Unauthorized();
+
     /**
      * @notice Begins transfer of founder rights. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
      * @dev Founders function to begin change of founder. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
@@ -131,10 +134,28 @@ contract Admin {
     /// @notice Helper that returns true if msg.sender has the power to veto
     function canVeto() internal returns (bool) {
         return (
-            msg.sender == executor || 
-            msg.sender == founders || 
-            msg.sender == council
+            msg.sender == founders || msg.sender == council
         );
+    }
+
+    /// @notice Modifier for function that can only be called by the Executor (Timelock) contract
+    modifier onlyExecutor() {
+        if(msg.sender != executor ) revert Unauthorized();
+        _;
+    }
+
+    /// @notice Modifier for functions that can only be called by the Executor
+    ///         (Timelock) contract or the founder role
+    modifier onlyAdmin() {
+        if (msg.sender != executor || msg.sender != founders) revert Unauthorized();
+        _;
+    }
+    
+    /// @notice Modifier for functions that can only be called by the founder
+    ///         role or the council
+    modifier onlyVetoers() {
+        if(msg.sender != founders || msg.sender != council) revert Unauthorized();
+        _;
     }
 }
 
