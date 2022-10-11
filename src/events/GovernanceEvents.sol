@@ -67,9 +67,9 @@ contract GovernanceEvents {
     );
 
     /// @notice Emitted when proposal threshold basis points is set
-    event ProposalThresholdBPSSet(
-        uint256 oldProposalThresholdBPS,
-        uint256 newProposalThresholdBPS
+    event ProposalThresholdSet(
+        uint256 oldProposalThreshold,
+        uint256 newProposalThreshold
     );
 
     /// @notice Emitted when quorum votes basis points is set

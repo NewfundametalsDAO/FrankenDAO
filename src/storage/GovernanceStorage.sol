@@ -26,10 +26,10 @@ contract GovernanceStorage {
     //////////////////////////
 
     /// @notice The minimum setable proposal threshold
-    uint256 public constant MIN_PROPOSAL_THRESHOLD_BPS = 1; // 1 basis point or 0.01%
+    uint256 public constant MIN_PROPOSAL_THRESHOLD = 1; // 1 basis point or 0.01%
 
     /// @notice The maximum setable proposal threshold
-    uint256 public constant MAX_PROPOSAL_THRESHOLD_BPS = 1_000; // 1,000 basis points or 10%
+    uint256 public constant MAX_PROPOSAL_THRESHOLD = 1_000; // 1,000 basis points or 10%
 
     /// @notice The minimum setable quorum votes basis points
     uint256 public constant MIN_QUORUM_VOTES_BPS = 200; // 200 basis points or 2%
@@ -52,8 +52,9 @@ contract GovernanceStorage {
     // @todo get voting period from the team
     uint256 public constant VOTING_PERIOD = 40_320; // About 1 week
 
-    /// @notice The basis point number of votes required in order for a voter to become a proposer. *DIFFERS from GovernerBravo
-    uint256 public proposalThresholdBPS;
+    /// @notice The number of votes required in order for a voter to become a proposer. *DIFFERS from GovernerBravo
+    // @todo get proposal threshold value from the team
+    uint256 public proposalThreshold;
 
     /// @notice The basis point number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed. *DIFFERS from GovernerBravo
     uint256 public quorumVotesBPS;

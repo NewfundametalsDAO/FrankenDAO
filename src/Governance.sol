@@ -17,7 +17,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param timelock_ The address of the FrankenDAOExecutor
      * @param staking_ The address of the NOUN tokens
      * @param vetoers_ List of addresses allowed to unilaterally veto proposals
-     * @param proposalThresholdBPS_ The initial proposal threshold in basis points
+     * @param proposalThreshold The initial proposal threshold
      * * @param quorumVotesBPS_ The initial quorum votes threshold in basis points
      */
     function initialize(
@@ -26,7 +26,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         address founders_,
         address council_,
         address[] memory vetoers_,
-        uint256 proposalThresholdBPS_,
+        uint256 _proposalThreshold,
         uint256 quorumVotesBPS_
     ) public virtual {
         require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
@@ -262,10 +262,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
 
         temp.totalSupply = staking.totalVotingPower();
 
-        temp.proposalThreshold = bps2Uint(
-            proposalThresholdBPS,
-            temp.totalSupply
-        );
+        temp.proposalThreshold = proposalThreshold;
 
         require(
             staking.getPriorVotes(msg.sender, block.number - 1) >
@@ -647,28 +644,28 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     }
 
     /**
-     * @notice Admin function for setting the proposal threshold basis points
-     * @dev newProposalThresholdBPS must be greater than the hardcoded min
-     * @param newProposalThresholdBPS new proposal threshold
+     * @notice Admin function for setting the proposal threshold
+     * @dev _newProposalThreshold must be greater than the hardcoded min
+     * @param _newProposalThreshold new proposal threshold
      */
-    function _setProposalThresholdBPS(uint256 newProposalThresholdBPS)
+    function _setProposalThreshold(uint256 _newProposalThreshold)
         external
     {
         require(
             isAdmin(),
-            "FrankenDAO::_setProposalThresholdBPS: admin only"
+            "FrankenDAO::_setProposalThreshold: admin only"
         );
         require(
-            newProposalThresholdBPS >= MIN_PROPOSAL_THRESHOLD_BPS &&
-                newProposalThresholdBPS <= MAX_PROPOSAL_THRESHOLD_BPS,
+            _newProposalThreshold >= MIN_PROPOSAL_THRESHOLD &&
+                _newProposalThreshold <= MAX_PROPOSAL_THRESHOLD,
             "FrankenDAO::_setProposalThreshold: invalid proposal threshold"
         );
-        uint256 oldProposalThresholdBPS = proposalThresholdBPS;
-        proposalThresholdBPS = newProposalThresholdBPS;
+        uint256 oldProposalThreshold = proposalThreshold;
+        proposalThreshold = _newProposalThreshold;
 
-        emit ProposalThresholdBPSSet(
-            oldProposalThresholdBPS,
-            proposalThresholdBPS
+        emit ProposalThresholdSet(
+            oldProposalThreshold,
+            proposalThreshold
         );
     }
 
