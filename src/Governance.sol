@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./interfaces/IGovernance.sol";
-import "./events/GovernanceEvents.sol"
+import "./events/GovernanceEvents.sol";
 import "./storage/GovernanceStorage.sol";
 import "./Staking.sol";
 import "./Executor.sol";
@@ -340,6 +340,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         newProposal.forVotes = 0;
         newProposal.againstVotes = 0;
         newProposal.abstainVotes = 0;
+        newProposal.verified = true;
         newProposal.canceled = false;
         newProposal.executed = false;
         newProposal.vetoed = false;
@@ -377,6 +378,22 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         return newProposal.id;
     }
 
+    /// @notice Function for verifying a proposal
+    /// @param _id Id of the proposal to verify
+    function verifyProposal(uint _id) external onlyVetoers {
+        // Can't verify a proposal that's been vetoed, canceled,
+        ProposalState state = state(_id);
+        require(
+            state == ProposalState.Pending || state == ProposalState.Active,
+            "FrankenDAOGovernance::verifyProposal: proposal can't be verified"
+        );
+
+        proposals[_id].verified = true;
+
+        // Add ID to activeProposals list
+        activeProposals.push(_id);
+    }
+
     /////////////////
     //// Execute ////
     /////////////////
@@ -401,6 +418,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             );
         }
         proposal.eta = eta;
+
+        // @todo Remove from activeProposals list
+        _removeFromActiveProposals(proposalId);
+
         emit ProposalQueued(proposalId, eta);
     }
 
@@ -480,6 +501,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             );
         }
 
+        // @todo Remove from activeProposals list
+        _removeFromActiveProposals(proposalId);
+
         emit ProposalCanceled(proposalId);
     }
 
@@ -511,6 +535,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
                 proposal.eta
             );
         }
+
+        // @todo Remove from activeProposals list
+        _removeFromActiveProposals(proposalId);
 
         emit ProposalVetoed(proposalId);
     }
@@ -719,5 +746,20 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         quorumVotesBPS = newQuorumVotesBPS;
 
         emit QuorumVotesBPSSet(oldQuorumVotesBPS, quorumVotesBPS);
+    }
+
+    function _removeFromActiveProposals(uint256 _id) private {
+        uint256 index;
+
+        for (uint256 i = 0; i < array.length; i++) {
+            if(activeProposals[i] == _id) {
+                index = i;
+                break;
+            }
+        }
+
+        delete activeProposals[index];
+        activeProposals[index] activeProposals[activeProposals.length - 1];
+        activeProposals.pop();
     }
 }
