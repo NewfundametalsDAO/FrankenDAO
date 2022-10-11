@@ -555,7 +555,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             msg.sender,
             proposalId,
             support,
-            castVoteInternal(msg.sender, proposalId, support),
+            castVoteInternal(msg.sender, proposalId, support)
        );
     }
 
@@ -759,7 +759,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         }
 
         delete activeProposals[index];
-        activeProposals[index] activeProposals[activeProposals.length - 1];
+        activeProposals[index] = activeProposals[activeProposals.length - 1];
         activeProposals.pop();
     }
 }
