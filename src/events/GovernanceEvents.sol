@@ -66,16 +66,16 @@ contract GovernanceEvents {
         address newImplementation
     );
 
-    /// @notice Emitted when proposal threshold basis points is set
+    /// @notice Emitted when proposal threshold is set
     event ProposalThresholdSet(
         uint256 oldProposalThreshold,
         uint256 newProposalThreshold
     );
 
-    /// @notice Emitted when quorum votes basis points is set
-    event QuorumVotesBPSSet(
-        uint256 oldQuorumVotesBPS,
-        uint256 newQuorumVotesBPS
+    /// @notice Emitted when quorum votes is set
+    event QuorumVotesSet(
+        uint256 oldQuorumVotes,
+        uint256 newQuorumVotes
     );
 
     event VotingRefundSet(bool status);

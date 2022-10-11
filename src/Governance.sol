@@ -18,7 +18,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param staking_ The address of the NOUN tokens
      * @param vetoers_ List of addresses allowed to unilaterally veto proposals
      * @param proposalThreshold The initial proposal threshold
-     * * @param quorumVotesBPS_ The initial quorum votes threshold in basis points
+     * * @param _quorumVotes The initial quorum votes threshold in
      */
     function initialize(
         address payable timelock_,
@@ -27,7 +27,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         address council_,
         address[] memory vetoers_,
         uint256 _proposalThreshold,
-        uint256 quorumVotesBPS_
+        uint256 _quorumVotes
     ) public virtual {
         require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
         require(
@@ -43,26 +43,26 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             "FrankenDAO::initialize: invalid staking address"
         );
         require(
-            proposalThresholdBPS_ >= MIN_PROPOSAL_THRESHOLD_BPS &&
-                proposalThresholdBPS_ <= MAX_PROPOSAL_THRESHOLD_BPS,
+            _proposalThreshold >= MIN_PROPOSAL_THRESHOLD &&
+                _proposalThreshold <= MAX_PROPOSAL_THRESHOLD,
             "FrankenDAO::initialize: invalid proposal threshold"
         );
         require(
-            quorumVotesBPS_ >= MIN_QUORUM_VOTES_BPS &&
-                quorumVotesBPS_ <= MAX_QUORUM_VOTES_BPS,
+            _quorumVotes >= MIN_QUORUM_VOTES &&
+                _quorumVotes <= MAX_QUORUM_VOTES,
             "FrankenDAO::initialize: invalid proposal threshold"
         );
 
-        emit ProposalThresholdBPSSet(
-            proposalThresholdBPS,
-            proposalThresholdBPS_
+        emit ProposalThresholdSet(
+            proposalThreshold,
+            _proposalThreshold
         );
-        emit QuorumVotesBPSSet(quorumVotesBPS, quorumVotesBPS_);
+        emit QuorumVotesSet(quorumVotes, _quorumVotes);
 
         timelock = Executor(timelock_);
         staking = Staking(staking_);
-        proposalThresholdBPS = proposalThresholdBPS_;
-        quorumVotesBPS = quorumVotesBPS_;
+        proposalThreshold = _proposalThreshold;
+        quorumVotes = _quorumVotes;
 
         executor = timelock_;
         founders = founders_;
@@ -151,22 +151,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         } else {
             return ProposalState.Queued;
         }
-    }
-
-    /**
-     * @notice Current proposal threshold using Noun Total Supply
-     * Differs from `GovernerBravo` which uses fixed amount
-     */
-    function proposalThreshold() public view returns (uint256) {
-        return bps2Uint(proposalThresholdBPS, staking.totalVotingPower());
-    }
-
-    /**
-     * @notice Current quorum votes using Noun Total Supply
-     * Differs from `GovernerBravo` which uses fixed amount
-     */
-    function quorumVotes() public view returns (uint256) {
-        return bps2Uint(quorumVotesBPS, staking.totalVotingPower());
     }
 
     function bps2Uint(uint256 bps, uint256 number)
@@ -308,7 +292,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         newProposal.id = proposalCount;
         newProposal.proposer = msg.sender;
         newProposal.proposalThreshold = temp.proposalThreshold;
-        newProposal.quorumVotes = bps2Uint(quorumVotesBPS, temp.totalSupply);
+        newProposal.quorumVotes = quorumVotes;
         newProposal.eta = 0;
         newProposal.targets = targets;
         newProposal.values = values;
@@ -670,24 +654,24 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     }
 
     /**
-     * @notice Admin function for setting the quorum votes basis points
-     * @dev newQuorumVotesBPS must be greater than the hardcoded min
-     * @param newQuorumVotesBPS new proposal threshold
+     * @notice Admin function for setting the quorum votes
+     * @dev _newQuorumVotes must be greater than the hardcoded min
+     * @param _newQuorumVotes new proposal threshold
      */
-    function _setQuorumVotesBPS(uint256 newQuorumVotesBPS) external {
+    function _setQuorumVotes(uint256 _newQuorumVotes) external {
         require(
             isAdmin(),
-            "FrankenDAO::_setQuorumVotesBPS: admin only"
+            "FrankenDAO::_setQuorumVotes: admin only"
         );
         require(
-            newQuorumVotesBPS >= MIN_QUORUM_VOTES_BPS &&
-                newQuorumVotesBPS <= MAX_QUORUM_VOTES_BPS,
+            _newQuorumVotes >= MIN_QUORUM_VOTES &&
+                _newQuorumVotes <= MAX_QUORUM_VOTES,
             "FrankenDAO::_setProposalThreshold: invalid proposal threshold"
         );
-        uint256 oldQuorumVotesBPS = quorumVotesBPS;
-        quorumVotesBPS = newQuorumVotesBPS;
+        uint256 oldQuorumVotes = quorumVotes;
+        quorumVotes = _newQuorumVotes;
 
-        emit QuorumVotesBPSSet(oldQuorumVotesBPS, quorumVotesBPS);
+        emit QuorumVotesSet(oldQuorumVotes, quorumVotes);
     }
 
     function _removeFromActiveProposals(uint256 _id) private {

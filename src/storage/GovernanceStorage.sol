@@ -31,11 +31,11 @@ contract GovernanceStorage {
     /// @notice The maximum setable proposal threshold
     uint256 public constant MAX_PROPOSAL_THRESHOLD = 1_000; // 1,000 basis points or 10%
 
-    /// @notice The minimum setable quorum votes basis points
-    uint256 public constant MIN_QUORUM_VOTES_BPS = 200; // 200 basis points or 2%
+    /// @notice The minimum setable quorum votes
+    uint256 public constant MIN_QUORUM_VOTES = 200; // 200 basis points or 2%
 
-    /// @notice The maximum setable quorum votes basis points
-    uint256 public constant MAX_QUORUM_VOTES_BPS = 2_000; // 2,000 basis points or 20%
+    /// @notice The maximum setable quorum votes
+    uint256 public constant MAX_QUORUM_VOTES = 2_000; // 2,000 basis points or 20%
 
     /// @notice The maximum number of actions that can be included in a proposal
     uint256 public constant proposalMaxOperations = 10; // 10 actions
@@ -56,8 +56,8 @@ contract GovernanceStorage {
     // @todo get proposal threshold value from the team
     uint256 public proposalThreshold;
 
-    /// @notice The basis point number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed. *DIFFERS from GovernerBravo
-    uint256 public quorumVotesBPS;
+    // @todo get quorum threshold value from the team
+    uint256 public quorumVotes;
 
     /// @notice Whether or not gas is refunded for casting votes.
     bool public votingRefund;
