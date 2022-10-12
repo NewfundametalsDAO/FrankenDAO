@@ -336,7 +336,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         newProposal.forVotes = 0;
         newProposal.againstVotes = 0;
         newProposal.abstainVotes = 0;
-        newProposal.verified = true;
+        newProposal.verified = false;
         newProposal.canceled = false;
         newProposal.executed = false;
         newProposal.vetoed = false;
