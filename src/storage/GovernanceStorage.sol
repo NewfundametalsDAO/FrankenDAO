@@ -85,6 +85,8 @@ contract GovernanceStorage {
     /// @notice The official record of all proposals ever proposed
     mapping(uint256 => Proposal) public proposals;
 
+    uint256[] public activeProposals;
+
     /// @notice The latest proposal for each proposer
     mapping(address => uint256) public latestProposalIds;
 
@@ -126,6 +128,8 @@ contract GovernanceStorage {
         uint256 againstVotes;
         /// @notice Current number of votes for abstaining for this proposal
         uint256 abstainVotes;
+        /// @notice Flag marking whether a proposal has been verified
+        bool verified;
         /// @notice Flag marking whether the proposal has been canceled
         bool canceled;
         /// @notice Flag marking whether the proposal has been vetoed

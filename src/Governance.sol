@@ -141,11 +141,11 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         Proposal storage proposal = proposals[proposalId];
         if (proposal.vetoed) {
             return ProposalState.Vetoed;
-        } else if (proposal.canceled) {
+        } else if (proposal.canceled || (!verified && block.number > proposal.endBlock)) {
             return ProposalState.Canceled;
-        } else if (block.number <= proposal.startBlock) {
+        }  else if (block.number <= proposal.startBlock || !proposal.verified) {
             return ProposalState.Pending;
-        } else if (block.number <= proposal.endBlock) {
+        } else if (block.number <= proposal.endBlock && proposal.verified) {
             return ProposalState.Active;
         } else if (
             proposal.forVotes <= proposal.againstVotes ||
@@ -264,10 +264,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         bytes[] memory calldatas,
         string memory description
     ) internal returns (uint256) {
-        uint256 userProposalCount = ++getCommunityScoreData[msg.sender].proposalsCreated;
-        // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
-        totalCommunityVotingPowerBreakdown.proposalsCreated += 1;
-
         ProposalTemp memory temp;
 
         temp.totalSupply = staking.totalVotingPower();
@@ -332,6 +328,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         newProposal.forVotes = 0;
         newProposal.againstVotes = 0;
         newProposal.abstainVotes = 0;
+        newProposal.verified = false;
         newProposal.canceled = false;
         newProposal.executed = false;
         newProposal.vetoed = false;
@@ -369,6 +366,31 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         return newProposal.id;
     }
 
+    /// @notice Function for verifying a proposal
+    /// @param _id Id of the proposal to verify
+    function verifyProposal(uint _id) external onlyVetoers {
+        // Can't verify a proposal that's been vetoed, canceled,
+        ProposalState state = state(_id);
+        require(
+            state == ProposalState.Pending,
+            "FrankenDAOGovernance::verifyProposal: proposal can't be verified"
+        );
+
+        Proposal proposal = proposals[_id];
+
+        // verify proposal
+        proposal.verified = true;
+
+        // update community score data
+        uint256 userProposalCount = ++getCommunityScoreData[proposal.proposer].proposalsCreated;
+        // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
+        totalCommunityVotingPowerBreakdown.proposalsCreated += 1;
+
+
+        // Add ID to activeProposals list
+        activeProposals.push(_id);
+    }
+
     /////////////////
     //// Execute ////
     /////////////////
@@ -393,6 +415,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             );
         }
         proposal.eta = eta;
+
+        // @todo Remove from activeProposals list
+        _removeFromActiveProposals(proposalId);
+
         emit ProposalQueued(proposalId, eta);
     }
 
@@ -456,8 +482,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         Proposal storage proposal = proposals[proposalId];
         require(
             msg.sender == proposal.proposer ||
-                staking.getPriorVotes(proposal.proposer, block.number - 1) <
-                proposal.proposalThreshold,
+            staking.getPriorVotes(proposal.proposer, block.number - 1) < proposal.proposalThreshold ||
+            !proposal.verified && block.number > proposal.endBlock
+            ,
             "FrankenDAO::cancel: proposer above threshold"
         );
 
@@ -471,6 +498,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
                 proposal.eta
             );
         }
+
+        // @todo Remove from activeProposals list
+        _removeFromActiveProposals(proposalId);
 
         emit ProposalCanceled(proposalId);
     }
@@ -502,6 +532,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
                 proposal.eta
             );
         }
+
+        // @todo Remove from activeProposals list
+        _removeFromActiveProposals(proposalId);
 
         emit ProposalVetoed(proposalId);
     }
@@ -689,6 +722,20 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         emit QuorumVotesBPSSet(oldQuorumVotesBPS, quorumVotesBPS);
     }
 
+    function _removeFromActiveProposals(uint256 _id) private {
+        uint256 index;
+
+        for (uint256 i = 0; i < array.length; i++) {
+            if(activeProposals[i] == _id) {
+                index = i;
+                break;
+            }
+        }
+
+        activeProposals[index] = activeProposals[activeProposals.length - 1];
+        activeProposals.pop();
+    }
+    
     function updateTotalCommunityVotingPowerBreakdown(
         uint64 _votes,
         uint64 _proposalsCreated,
