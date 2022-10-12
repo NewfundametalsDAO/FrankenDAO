@@ -14,7 +14,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
 
     /**
      * @notice Used to initialize the contract during delegator contructor
-     * @param timelock_ The address of the FrankenDAOExecutor
+     * @param executor_ The address of the FrankenDAOExecutor
      * @param staking_ The address of the staked FrankenPunks tokens
      * @param founders_ The address of the founder's multi-sig
      * @param council_ The address of the council's multi-sig
@@ -24,7 +24,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * * @param quorumVotesBPS_ The initial quorum votes threshold in basis points
      */
     function initialize(
-        address payable timelock_,
+        address payable executor_,
         address staking_,
         address founders_,
         address council_,
@@ -33,56 +33,28 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         uint256 proposalThresholdBPS_,
         uint256 quorumVotesBPS_
     ) public virtual {
+        // @todo don't need both of these, let's just make sure it's solid or maybe use Initializable?
         require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
-        require(
-            address(timelock) == address(0),
-            "FrankenDAO::initialize: can only initialize once"
-        );
-        require(
-            timelock_ != address(0),
-            "FrankenDAO::initialize: invalid timelock address"
-        );
-        require(
-            staking_ != address(0),
-            "FrankenDAO::initialize: invalid staking address"
-        );
-        require(
-            votingPeriod_ >= MIN_VOTING_PERIOD &&
-                votingPeriod_ <= MAX_VOTING_PERIOD,
-            "FrankenDAO::initialize: invalid voting period"
-        );
-        require(
-            votingDelay_ >= MIN_VOTING_DELAY &&
-                votingDelay_ <= MAX_VOTING_DELAY,
-            "FrankenDAO::initialize: invalid voting delay"
-        );
-        require(
-            proposalThresholdBPS_ >= MIN_PROPOSAL_THRESHOLD_BPS &&
-                proposalThresholdBPS_ <= MAX_PROPOSAL_THRESHOLD_BPS,
-            "FrankenDAO::initialize: invalid proposal threshold"
-        );
-        require(
-            quorumVotesBPS_ >= MIN_QUORUM_VOTES_BPS &&
-                quorumVotesBPS_ <= MAX_QUORUM_VOTES_BPS,
-            "FrankenDAO::initialize: invalid proposal threshold"
-        );
+        require(address(executor) == address(0), "FrankenDAO::initialize: can only initialize once");
+        require(executor_ != address(0),"FrankenDAO::initialize: invalid executor address");
+        require(staking_ != address(0),"FrankenDAO::initialize: invalid staking address");
+        require(votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD, "FrankenDAO::initialize: invalid voting period");
+        require(votingDelay_ >= MIN_VOTING_DELAY && votingDelay_ <= MAX_VOTING_DELAY, "FrankenDAO::initialize: invalid voting delay");
+        require(proposalThresholdBPS_ >= MIN_PROPOSAL_THRESHOLD_BPS && proposalThresholdBPS_ <= MAX_PROPOSAL_THRESHOLD_BPS, "FrankenDAO::initialize: invalid proposal threshold" );
+        require(quorumVotesBPS_ >= MIN_QUORUM_VOTES_BPS && quorumVotesBPS_ <= MAX_QUORUM_VOTES_BPS, "FrankenDAO::initialize: invalid proposal threshold" );
 
         emit VotingPeriodSet(votingPeriod, votingPeriod_);
         emit VotingDelaySet(votingDelay, votingDelay_);
-        emit ProposalThresholdBPSSet(
-            proposalThresholdBPS,
-            proposalThresholdBPS_
-        );
+        emit ProposalThresholdBPSSet( proposalThresholdBPS, proposalThresholdBPS_ );
         emit QuorumVotesBPSSet(quorumVotesBPS, quorumVotesBPS_);
 
-        timelock = Executor(timelock_);
         staking = Staking(staking_);
         votingPeriod = votingPeriod_;
         votingDelay = votingDelay_;
         proposalThresholdBPS = proposalThresholdBPS_;
         quorumVotesBPS = quorumVotesBPS_;
 
-        executor = timelock_;
+        executor = Executor(executor_);
         founders = founders_;
         council = council_;
 
@@ -100,18 +72,30 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @return signatures
      * @return calldatas
      */
-    function getActions(uint256 proposalId)
-        external
-        view
-        returns (
-            address[] memory targets,
-            uint256[] memory values,
-            string[] memory signatures,
-            bytes[] memory calldatas
-        )
-    {
+    function getActions(uint256 proposalId) external view returns (
+        address[] memory targets,
+        uint256[] memory values,
+        string[] memory signatures,
+        bytes[] memory calldatas
+    ) {
         Proposal storage p = proposals[proposalId];
         return (p.targets, p.values, p.signatures, p.calldatas);
+    }
+
+    function getProposalData(uint256 id_) public view returns (uint256, address, uint256, uint256) {
+        Proposal storage proposal = proposals[id_];
+        return (proposal.id, proposal.proposer, proposal.proposalThreshold, proposal.quorumVotes);
+    }
+
+    /// @notice get the status of a proposal
+    function getProposalStatus(uint256 id_) public view returns (bool, bool, bool) {
+        Proposal storage proposal = proposals[id_];
+        return (proposal.canceled, proposal.vetoed, proposal.executed);
+    }
+
+    function getProposalVotes(uint256 id_) public view returns (uint256, uint256, uint256) {
+        Proposal storage proposal = proposals[id_];
+        return (proposal.forVotes, proposal.againstVotes, proposal.abstainVotes);
     }
 
     /**
@@ -120,11 +104,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param voter The address of the voter
      * @return The voting receipt
      */
-    function getReceipt(uint256 proposalId, address voter)
-        external
-        view
-        returns (Receipt memory)
-    {
+    function getReceipt(uint256 proposalId, address voter) external view returns (Receipt memory) {
         return proposals[proposalId].receipts[voter];
     }
 
@@ -134,29 +114,24 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @return Proposal state
      */
     function state(uint256 proposalId) public view returns (ProposalState) {
-        require(
-            proposalCount >= proposalId,
-            "FrankenDAO::state: invalid proposal id"
-        );
-        Proposal storage proposal = proposals[proposalId];
+        require(proposalCount >= proposalId, "FrankenDAO::state: invalid proposal id");
+        Proposal memory proposal = proposals[proposalId];
         if (proposal.vetoed) {
             return ProposalState.Vetoed;
-        } else if (proposal.canceled || (!verified && block.number > proposal.endBlock)) {
+            // @todo tell them if they do this (ignore verification) they need to cancel to clear it out. same with expired.
+        } else if (proposal.canceled || (!proposal.verified && block.number > proposal.endBlock)) {
             return ProposalState.Canceled;
         }  else if (block.number <= proposal.startBlock || !proposal.verified) {
             return ProposalState.Pending;
-        } else if (block.number <= proposal.endBlock && proposal.verified) {
+        } else if (block.number <= proposal.endBlock) {
             return ProposalState.Active;
-        } else if (
-            proposal.forVotes <= proposal.againstVotes ||
-            proposal.forVotes < proposal.quorumVotes
-        ) {
+        } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < proposal.quorumVotes) {
             return ProposalState.Defeated;
         } else if (proposal.eta == 0) {
             return ProposalState.Succeeded;
         } else if (proposal.executed) {
             return ProposalState.Executed;
-        } else if (block.timestamp >= proposal.eta + timelock.GRACE_PERIOD()) {
+        } else if (block.timestamp >= proposal.eta + executor.GRACE_PERIOD()) {
             return ProposalState.Expired;
         } else {
             return ProposalState.Queued;
@@ -168,7 +143,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * Differs from `GovernerBravo` which uses fixed amount
      */
     function proposalThreshold() public view returns (uint256) {
-        return bps2Uint(proposalThresholdBPS, staking.totalVotingPower());
+        return bps2Uint(proposalThresholdBPS, staking.getTotalVotingPower());
     }
 
     /**
@@ -176,36 +151,23 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * Differs from `GovernerBravo` which uses fixed amount
      */
     function quorumVotes() public view returns (uint256) {
-        return bps2Uint(quorumVotesBPS, staking.totalVotingPower());
+        return bps2Uint(quorumVotesBPS, staking.getTotalVotingPower());
     }
 
-    function bps2Uint(uint256 bps, uint256 number)
-        internal
-        pure
-        returns (uint256)
-    {
+    function bps2Uint(uint256 bps, uint256 number) internal pure returns (uint256) {
         return (number * bps) / 10000;
     }
 
-    function getChainIdInternal() internal view returns (uint256) {
-        uint256 chainId;
-        assembly {
-            chainId := chainid()
-        }
-        return chainId;
-    }
+    // @todo unused, should be fine to delete?
+    // function getChainIdInternal() internal view returns (uint256) {
+    //     uint256 chainId;
+    //     assembly { chainId := chainid() }
+    //     return chainId;
+    // }
 
     ///////////////////
     //// Proposals ////
     ///////////////////
-
-    struct ProposalTemp {
-        uint256 totalSupply;
-        uint256 proposalThreshold;
-        uint256 latestProposalId;
-        uint256 startBlock;
-        uint256 endBlock;
-    }
 
     /**
      * @notice Function used to propose a new proposal. Sender must have delegates above the proposal threshold
@@ -223,14 +185,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         bytes[] memory calldatas,
         string memory description
     ) public returns (uint256) {
-        uint256 proposalId = _propose(
-            targets,
-            values,
-            signatures,
-            calldatas,
-            description
-        );
-
+        uint256 proposalId = _propose(targets, values, signatures, calldatas, description);
         return proposalId;
     }
 
@@ -241,19 +196,8 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         bytes[] memory calldatas,
         string memory description
     ) public refundable returns (uint256) {
-        require(
-            proposalRefund,
-            "FrankenDAO::proposeWithRefund: refunding gas is turned off"
-        );
-
-        uint256 proposalId = _propose(
-            targets,
-            values,
-            signatures,
-            calldatas,
-            description
-        );
-
+        require(proposalRefund, "FrankenDAO::proposeWithRefund: refunding gas is turned off");
+        uint256 proposalId = _propose(targets, values, signatures, calldatas, description);
         return proposalId;
     }
 
@@ -266,53 +210,34 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     ) internal returns (uint256) {
         ProposalTemp memory temp;
 
-        temp.totalSupply = staking.totalVotingPower();
-
-        temp.proposalThreshold = bps2Uint(
-            proposalThresholdBPS,
-            temp.totalSupply
-        );
-
-        require(
-            staking.getPriorVotes(msg.sender, block.number - 1) >
-                temp.proposalThreshold,
+        temp.totalSupply = staking.getTotalVotingPower();
+        temp.proposalThreshold = bps2Uint(proposalThresholdBPS, temp.totalSupply);
+        require(staking.getVotes(msg.sender) > temp.proposalThreshold,
             "FrankenDAO::propose: proposer votes below proposal threshold"
         );
+
+        require(targets.length != 0, "FrankenDAO::propose: must provide actions");
+        require(targets.length <= proposalMaxOperations, "FrankenDAO::propose: too many actions");
         require(
             targets.length == values.length &&
-                targets.length == signatures.length &&
-                targets.length == calldatas.length,
+            targets.length == signatures.length &&
+            targets.length == calldatas.length,
             "FrankenDAO::propose: proposal function information arity mismatch"
-        );
-        require(
-            targets.length != 0,
-            "FrankenDAO::propose: must provide actions"
-        );
-        require(
-            targets.length <= proposalMaxOperations,
-            "FrankenDAO::propose: too many actions"
         );
 
         temp.latestProposalId = latestProposalIds[msg.sender];
         if (temp.latestProposalId != 0) {
-            ProposalState proposersLatestProposalState = state(
-                temp.latestProposalId
-            );
+            ProposalState proposersLatestProposalState = state(temp.latestProposalId);
             require(
-                proposersLatestProposalState != ProposalState.Active,
-                "FrankenDAO::propose: one live proposal per proposer, found an already active proposal"
-            );
-            require(
-                proposersLatestProposalState != ProposalState.Pending,
-                "FrankenDAO::propose: one live proposal per proposer, found an already pending proposal"
+                proposersLatestProposalState != ProposalState.Active && proposersLatestProposalState != ProposalState.Pending,
+                "FrankenDAO::propose: one active / pending proposal per proposer"
             );
         }
 
         temp.startBlock = block.number + votingDelay;
         temp.endBlock = temp.startBlock + votingPeriod;
 
-        proposalCount++;
-        Proposal storage newProposal = proposals[proposalCount];
+        Proposal storage newProposal = proposals[++proposalCount];
 
         newProposal.id = proposalCount;
         newProposal.proposer = msg.sender;
@@ -334,19 +259,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         newProposal.vetoed = false;
 
         latestProposalIds[newProposal.proposer] = newProposal.id;
-
-        /// @notice Maintains backwards compatibility with GovernorBravo events
-        emit ProposalCreated(
-            newProposal.id,
-            msg.sender,
-            targets,
-            values,
-            signatures,
-            calldatas,
-            newProposal.startBlock,
-            newProposal.endBlock,
-            description
-        );
+        activeProposals.push(_id);
 
         /// @notice Updated event with `proposalThreshold` and `quorumVotes`
         emit ProposalCreatedWithRequirements(
@@ -368,15 +281,14 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
 
     /// @notice Function for verifying a proposal
     /// @param _id Id of the proposal to verify
-    function verifyProposal(uint _id) external onlyVetoers {
+    function verifyProposal(uint _proposalId) external onlyVetoers {
         // Can't verify a proposal that's been vetoed, canceled,
-        ProposalState state = state(_id);
         require(
-            state == ProposalState.Pending,
-            "FrankenDAOGovernance::verifyProposal: proposal can't be verified"
+            state(_proposalId) == ProposalState.Pending,
+            "FrankenDAOGovernance::verifyProposal: proposal must be pending to be verified"
         );
 
-        Proposal proposal = proposals[_id];
+        Proposal proposal = proposals[_proposalId];
 
         // verify proposal
         proposal.verified = true;
@@ -385,10 +297,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         uint256 userProposalCount = ++getCommunityScoreData[proposal.proposer].proposalsCreated;
         // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
         totalCommunityVotingPowerBreakdown.proposalsCreated += 1;
-
-
-        // Add ID to activeProposals list
-        activeProposals.push(_id);
     }
 
     /////////////////
@@ -404,19 +312,15 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             "FrankenDAO::queue: proposal can only be queued if it is succeeded"
         );
         Proposal storage proposal = proposals[proposalId];
-        uint256 eta = block.timestamp + timelock.delay();
-        for (uint256 i = 0; i < proposal.targets.length; i++) {
+        uint256 eta = block.timestamp + executor.delay();
+        uint numTargets = proposal.targets.length;
+        for (uint256 i = 0; i < numTargets; i++) {
             queueOrRevertInternal(
-                proposal.targets[i],
-                proposal.values[i],
-                proposal.signatures[i],
-                proposal.calldatas[i],
-                eta
+                proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta
             );
         }
         proposal.eta = eta;
 
-        // @todo Remove from activeProposals list
         _removeFromActiveProposals(proposalId);
 
         emit ProposalQueued(proposalId, eta);
@@ -429,13 +333,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         bytes memory data,
         uint256 eta
     ) internal {
-        require(
-            !timelock.queuedTransactions(
-                keccak256(abi.encode(target, value, signature, data, eta))
-            ),
+        require(!executor.queuedTransactions(keccak256(abi.encode(target, value, signature, data, eta))),
             "FrankenDAO::queueOrRevertInternal: identical proposal action already queued at eta"
         );
-        timelock.queueTransaction(target, value, signature, data, eta);
+        executor.queueTransaction(target, value, signature, data, eta);
     }
 
     /**
@@ -455,12 +356,8 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
-            timelock.executeTransaction(
-                proposal.targets[i],
-                proposal.values[i],
-                proposal.signatures[i],
-                proposal.calldatas[i],
-                proposal.eta
+            executor.executeTransaction(
+                proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta
             );
         }
         emit ProposalExecuted(proposalId);
@@ -474,33 +371,23 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param proposalId The id of the proposal to cancel
      */
     function cancel(uint256 proposalId) external {
+        Proposal memory proposal = proposals[proposalId];
         require(
-            state(proposalId) != ProposalState.Executed,
-            "FrankenDAO::cancel: cannot cancel executed proposal"
+            !proposal.executed && !proposal.canceled && !proposal.vetoed,
+            "FrankenDAO::cancel: cannot cancel executed, vetoed, or canceled proposal"
         );
 
-        Proposal storage proposal = proposals[proposalId];
         require(
             msg.sender == proposal.proposer ||
-            staking.getPriorVotes(proposal.proposer, block.number - 1) < proposal.proposalThreshold ||
-            !proposal.verified && block.number > proposal.endBlock
-            ,
-            "FrankenDAO::cancel: proposer above threshold"
+            staking.getVotes(proposal.proposer) < proposal.proposalThreshold ||
+            !proposal.verified && block.number > proposal.endBlock || 
+            state(proposalId) == ProposalState.Expired,
+            "FrankenDAO::cancel: cancel requirements not met"
         );
 
-        proposal.canceled = true;
-        for (uint256 i = 0; i < proposal.targets.length; i++) {
-            timelock.cancelTransaction(
-                proposal.targets[i],
-                proposal.values[i],
-                proposal.signatures[i],
-                proposal.calldatas[i],
-                proposal.eta
-            );
-        }
+        _removeTransactionIfQueued(proposal);
 
-        // @todo Remove from activeProposals list
-        _removeFromActiveProposals(proposalId);
+        proposals[proposalId].canceled = true;        
 
         emit ProposalCanceled(proposalId);
     }
@@ -509,34 +396,37 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @notice Vetoes a proposal only if sender has ability to veto a proposal
      * @param proposalId The id of the proposal to veto
      */
-    // @todo - only things to add here is the vetoer logic
-    // - Veto ability which allows `veteor` to halt any proposal at any stage unless the proposal is executed.
-    //   The `veto(uint proposalId)` logic is a modified version of `cancel(uint proposalId)`
-    //   A `vetoed` flag was added to the `Proposal` struct to support this.
-    // we'll probably just copy and edit the Compound contracts directly rather than import and edit
     function veto(uint256 proposalId) external onlyVetoers {
+        Proposal memory proposal = proposals[proposalId];
         require(
-            state(proposalId) != ProposalState.Executed,
-            "FrankenDAO::veto: cannot veto executed proposal"
+            !proposal.executed && !proposal.canceled && !proposal.vetoed,
+            "FrankenDAO::veto: cannot veto executed, vetoed, or canceled proposal"
         );
 
-        Proposal storage proposal = proposals[proposalId];
+        _removeTransactionIfQueuedOrExpired(proposal);
 
-        proposal.vetoed = true;
-        for (uint256 i = 0; i < proposal.targets.length; i++) {
-            timelock.cancelTransaction(
-                proposal.targets[i],
-                proposal.values[i],
-                proposal.signatures[i],
-                proposal.calldatas[i],
-                proposal.eta
-            );
-        }
-
-        // @todo Remove from activeProposals list
-        _removeFromActiveProposals(proposalId);
+        proposals[proposalId].vetoed = true;
 
         emit ProposalVetoed(proposalId);
+    }
+
+    function _removeTransactionIfQueuedOrExpired(Proposal memory proposal) internal {
+        if (
+            state(proposal.id) == ProposalState.Queued || 
+            state(proposal.id) == ProposalState.Expired
+        ) {
+            for (uint256 i = 0; i < proposal.targets.length; i++) {
+                executor.cancelTransaction(
+                    proposal.targets[i],
+                    proposal.values[i],
+                    proposal.signatures[i],
+                    proposal.calldatas[i],
+                    proposal.eta
+                );
+            }
+        } else {
+            _removeFromActiveProposals(proposal.id);
+        }
     }
 
     ////////////////
@@ -548,12 +438,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param support The support value for the vote. 0=against, 1=for, 2=abstain
      */
     function castVote(uint256 proposalId, uint8 support) external {
-        emit VoteCast(
-            msg.sender,
-            proposalId,
-            support,
-            castVoteInternal(msg.sender, proposalId, support)
-       );
+        emit VoteCast( 
+            msg.sender, proposalId, support, castVoteInternal(msg.sender, proposalId, support) 
+        );
     }
 
     /**
@@ -566,15 +453,11 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param support_ The support value for the vote. 0=against, 1=for, 2=abstain
      * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
      */
-    function castRefundableVote(uint256 proposalId_, uint8 support_) external
-    refundable {
-        // @todo why doesn't refundable vote emit event?
-        require(
-            votingRefund,
-            "FrankenDAO::castRefundableVote: refunding gas is turned off"
+    function castRefundableVote(uint256 proposalId, uint8 support) external refundable {
+        require(votingRefund, "FrankenDAO::castRefundableVote: refunding gas is turned off");
+        emit VoteCast(
+            msg.sender, proposalId, support, castVoteInternal(msg.sender, proposalId, support)
         );
-        uint96 votes = castVoteInternal(msg.sender, proposalId_, support_);
-        emit VoteCast(msg.sender, proposalId_, support_, votes);
     }
     /**
      * @notice Internal function that caries out voting logic
@@ -583,35 +466,19 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param support The support value for the vote. 0=against, 1=for, 2=abstain
      * @return The number of votes cast
      */
-    function castVoteInternal(
-        address voter,
-        uint256 proposalId,
-        uint8 support
-    ) internal returns (uint96) {
-        uint256 userVoteCount = ++getCommunityScoreData[voter].votes;
-        // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
+    function castVoteInternal(address voter, uint256 proposalId, uint8 support) internal returns (uint96) {
+        // we can do this with no check because if you can vote, it means you have votes so you haven't delegated
         totalCommunityVotingPowerBreakdown.votes += 1;
+        uint256 userVoteCount = ++getCommunityScoreData[voter].votes;
 
-        require(
-            state(proposalId) == ProposalState.Active,
-            "FrankenDAO::castVoteInternal: voting is closed"
-        );
-        require(
-            support <= 2,
-            "FrankenDAO::castVoteInternal: invalid vote type"
-        );
+        require(state(proposalId) == ProposalState.Active, "FrankenDAO::castVoteInternal: voting is closed");
+        require(support <= 2, "FrankenDAO::castVoteInternal: invalid vote type");
+        
         Proposal storage proposal = proposals[proposalId];
         Receipt storage receipt = proposal.receipts[voter];
-        require(
-            receipt.hasVoted == false,
-            "FrankenDAO::castVoteInternal: voter already voted"
-        );
+        require(receipt.hasVoted == false, "FrankenDAO::castVoteInternal: voter already voted");
 
-        /// @notice: Unlike GovernerBravo, votes are considered from the block the proposal was created in order to normalize quorumVotes and proposalThreshold metrics
-        uint96 votes = staking.getPriorVotes(
-            voter,
-            proposal.startBlock - votingDelay
-        );
+        uint96 votes = staking.getVotes(voter);
 
         if (support == 0) {
             proposal.againstVotes = proposal.againstVotes + votes;
@@ -724,9 +591,10 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
 
     function _removeFromActiveProposals(uint256 _id) private {
         uint256 index;
+        uint[] actives = activeProposals;
 
-        for (uint256 i = 0; i < array.length; i++) {
-            if(activeProposals[i] == _id) {
+        for (uint256 i = 0; i < actives.length; i++) {
+            if(actives[i] == _id) {
                 index = i;
                 break;
             }
@@ -750,10 +618,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         totalCommunityVotingPowerBreakdown.proposalsPassed = _proposalsPassed;
         totalCommunityVotingPowerBreakdown.votes = _votes;
 
-        emit TotalCommunityVotingPowerBreakdownUpdated(
-            _proposalsCreated,
-            _proposalsPassed,
-            _votes
-        );
+        emit TotalCommunityVotingPowerBreakdownUpdated(_proposalsCreated, _proposalsPassed, _votes);
     }
 }

@@ -1,30 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "../interfaces/IAdmin.sol";
+import "../Executor.sol";
 
-contract Admin {
+contract Admin is IAdmin {
     /// @notice Administrator roles for this contract
     address public founders;
     address public council;
 
     /// @notice Executor (Timelock) contract address
-    address public executor;
+    Executor public executor;
 
     /// @notice Pending administrator addresses for this contract
     address public pendingFounders;
     address public pendingCouncil;
-
-    /// @notice Emitted when pendingFounders or pendingCouncil is changed
-    event NewPendingFounders(address oldPendingFounders, address newPendingFounders);
-    event NewPendingCouncil(address oldPendingCouncil, address newPendingCouncil);
-
-    /// @notice Emitted when pendingFounders or pendingCouncil is accepted,
-    ///         which means admin roles updated
-    event NewFounders(address oldFounders, address newFounders);
-    event NewCouncil(address oldCouncil, address newCouncil);
-
-    /// @notice Error emitted when an auth condition is not met
-    error Unauthorized();
 
     /**
      * @notice Begins transfer of founder rights. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
@@ -116,14 +106,14 @@ contract Admin {
 
     /// @notice Modifier for function that can only be called by the Executor (Timelock) contract
     modifier onlyExecutor() {
-        if(msg.sender != executor ) revert Unauthorized();
+        if(msg.sender != address(executor) ) revert Unauthorized();
         _;
     }
 
     /// @notice Modifier for functions that can only be called by the Executor
     ///         (Timelock) contract or the founder role
     modifier onlyAdmin() {
-        if (msg.sender != executor || msg.sender != founders) revert Unauthorized();
+        if (msg.sender != address(executor) || msg.sender != founders) revert Unauthorized();
         _;
     }
     

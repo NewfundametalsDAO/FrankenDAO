@@ -42,7 +42,7 @@ contract Executor is ExecutorEvents, Admin {
         uint256 eta
     ) public onlyAdmin returns (bytes32) {
         require(
-            eta >= getBlockTimestamp() + delay,
+            eta >= block.timestamp + delay,
             'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
         );
 
@@ -82,11 +82,11 @@ contract Executor is ExecutorEvents, Admin {
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         require(queuedTransactions[txHash], "FrankenDAOExecutor::executeTransaction: Transaction hasn't been queued.");
         require(
-            getBlockTimestamp() >= eta,
+            block.timestamp >= eta,
             "FrankenDAOExecutor::executeTransaction: Transaction hasn't surpassed time lock."
         );
         require(
-            getBlockTimestamp() <= eta + GRACE_PERIOD,
+            block.timestamp <= eta + GRACE_PERIOD,
             'FrankenDAOExecutor::executeTransaction: Transaction is stale.'
         );
 
@@ -107,11 +107,6 @@ contract Executor is ExecutorEvents, Admin {
         emit ExecuteTransaction(txHash, target, value, signature, data, eta);
 
         return returnData;
-    }
-
-    function getBlockTimestamp() internal view returns (uint256) {
-        // solium-disable-next-line security/no-block-members
-        return block.timestamp;
     }
 
     receive() external payable {}

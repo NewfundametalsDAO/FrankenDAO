@@ -7,17 +7,6 @@ interface IGovernance {
     event NewPendingAdmin(address oldPendingAdmin, address newPendingAdmin);
     event NewVetoer(address newVetoer);
     event ProposalCanceled(uint256 id);
-    event ProposalCreated(
-        uint256 id,
-        address proposer,
-        address[] targets,
-        uint256[] values,
-        string[] signatures,
-        bytes[] calldatas,
-        uint256 startBlock,
-        uint256 endBlock,
-        string description
-    );
     event ProposalCreatedWithRequirements(
         uint256 id,
         address proposer,
@@ -46,10 +35,82 @@ interface IGovernance {
     event VotingPeriodSet(uint256 oldVotingPeriod, uint256 newVotingPeriod);
     event VotingRefundSet(bool status);
 
+    struct ProposalTemp {
+        uint256 totalSupply;
+        uint256 proposalThreshold;
+        uint256 latestProposalId;
+        uint256 startBlock;
+        uint256 endBlock;
+    }
+
+    struct CommunityScoreData {
+        uint64 proposalsCreated;
+        uint64 proposalsPassed;
+        uint64 votes;
+    }
+
+    struct Proposal {
+        /// @notice Unique id for looking up a proposal
+        uint256 id;
+        /// @notice Creator of the proposal
+        address proposer;
+        /// @notice The number of votes needed to create a proposal at the time of proposal creation. *DIFFERS from GovernerBravo
+        uint256 proposalThreshold;
+        /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed at the time of proposal creation. *DIFFERS from GovernerBravo
+        uint256 quorumVotes;
+        /// @notice The timestamp that the proposal will be available for execution, set once the vote succeeds
+        uint256 eta;
+        /// @notice the ordered list of target addresses for calls to be made
+        address[] targets;
+        /// @notice The ordered list of values (i.e. msg.value) to be passed to the calls to be made
+        uint256[] values;
+        /// @notice The ordered list of function signatures to be called
+        string[] signatures;
+        /// @notice The ordered list of calldata to be passed to each call
+        bytes[] calldatas;
+        /// @notice The block at which voting begins: holders must delegate their votes prior to this block
+        uint256 startBlock;
+        /// @notice The block at which voting ends: votes must be cast prior to this block
+        uint256 endBlock;
+        /// @notice Current number of votes in favor of this proposal
+        uint256 forVotes;
+        /// @notice Current number of votes in opposition to this proposal
+        uint256 againstVotes;
+        /// @notice Current number of votes for abstaining for this proposal
+        uint256 abstainVotes;
+        /// @notice Flag marking whether a proposal has been verified
+        bool verified;
+        /// @notice Flag marking whether the proposal has been canceled
+        bool canceled;
+        /// @notice Flag marking whether the proposal has been vetoed
+        bool vetoed;
+        /// @notice Flag marking whether the proposal has been executed
+        bool executed;
+        /// @notice Receipts of ballots for the entire set of voters
+        mapping(address => Receipt) receipts;
+    }
+
+    /// @notice Ballot receipt record for a voter
     struct Receipt {
+        /// @notice Whether or not a vote has been cast
         bool hasVoted;
+        /// @notice Whether or not the voter supports the proposal or abstains
         uint8 support;
+        /// @notice The number of votes the voter had, which were cast
         uint96 votes;
+    }
+
+    /// @notice Possible states that a proposal may be in
+    enum ProposalState {
+        Pending,
+        Active,
+        Canceled,
+        Defeated,
+        Succeeded,
+        Queued,
+        Expired,
+        Executed,
+        Vetoed
     }
 
     function BALLOT_TYPEHASH() external view returns (bytes32);

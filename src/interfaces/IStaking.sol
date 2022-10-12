@@ -8,7 +8,17 @@ interface IStaking {
         uint64 proposalsPassed;
     }
 
-    enum Refund { NoRefunds, StakingRefund, DelegatingRefund, StakingAndDelegatingRefund }
+    struct StakingSettings {
+        uint128 maxStakeBonusTime;
+        uint128 maxStakeBonusAmount;
+    }
+
+    enum RefundStatus { 
+        NoRefunds, 
+        StakingRefund, 
+        DelegatingRefund, 
+        StakingAndDelegatingRefund 
+    }
 
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
