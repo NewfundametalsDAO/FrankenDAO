@@ -149,11 +149,11 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         Proposal storage proposal = proposals[proposalId];
         if (proposal.vetoed) {
             return ProposalState.Vetoed;
-        } else if (proposal.canceled) {
+        } else if (proposal.canceled || (!verified && block.number > proposal.endBlock)) {
             return ProposalState.Canceled;
-        } else if (block.number <= proposal.startBlock) {
+        }  else if (block.number <= proposal.startBlock || !proposal.verified) {
             return ProposalState.Pending;
-        } else if (block.number <= proposal.endBlock) {
+        } else if (block.number <= proposal.endBlock && proposal.verified) {
             return ProposalState.Active;
         } else if (
             proposal.forVotes <= proposal.againstVotes ||
@@ -380,7 +380,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         // Can't verify a proposal that's been vetoed, canceled,
         ProposalState state = state(_id);
         require(
-            state == ProposalState.Pending || state == ProposalState.Active,
+            state == ProposalState.Pending,
             "FrankenDAOGovernance::verifyProposal: proposal can't be verified"
         );
 
@@ -490,8 +490,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         Proposal storage proposal = proposals[proposalId];
         require(
             msg.sender == proposal.proposer ||
-                staking.getPriorVotes(proposal.proposer, block.number - 1) <
-                proposal.proposalThreshold,
+            staking.getPriorVotes(proposal.proposer, block.number - 1) < proposal.proposalThreshold ||
+            !proposal.verified && block.number > proposal.endBlock
+            ,
             "FrankenDAO::cancel: proposer above threshold"
         );
 
