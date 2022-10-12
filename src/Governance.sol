@@ -272,10 +272,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         bytes[] memory calldatas,
         string memory description
     ) internal returns (uint256) {
-        uint256 userProposalCount = ++getCommunityScoreData[msg.sender].proposalsCreated;
-        // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
-        totalCommunityVotingPowerBreakdown.proposalsCreated += 1;
-
         ProposalTemp memory temp;
 
         temp.totalSupply = staking.totalVotingPower();
@@ -388,7 +384,16 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             "FrankenDAOGovernance::verifyProposal: proposal can't be verified"
         );
 
-        proposals[_id].verified = true;
+        Proposal proposal = proposals[_id];
+
+        // verify proposal
+        proposal.verified = true;
+
+        // update community score data
+        uint256 userProposalCount = ++getCommunityScoreData[proposal.proposer].proposalsCreated;
+        // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
+        totalCommunityVotingPowerBreakdown.proposalsCreated += 1;
+
 
         // Add ID to activeProposals list
         activeProposals.push(_id);
