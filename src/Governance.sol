@@ -763,7 +763,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             }
         }
 
-        delete activeProposals[index];
         activeProposals[index] = activeProposals[activeProposals.length - 1];
         activeProposals.pop();
     }
