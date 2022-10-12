@@ -80,4 +80,11 @@ contract GovernanceEvents {
 
     event VotingRefundSet(bool status);
     event ProposalRefundSet(bool status);
+
+    event TotalCommunityVotingPowerBreakdownUpdated(
+        uint64 proposalsCreated,
+        uint64 proposalsPassed,
+        uint64 votes
+    );
+
 }
