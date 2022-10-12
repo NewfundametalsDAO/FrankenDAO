@@ -31,14 +31,8 @@ contract Admin {
      * @dev Founders function to begin change of founder. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
      * @param newPendingFounders New pending founder.
      */
-    function _setPendingFounders(address newPendingFounders) external {
-        // @todo only the executor can set the founder role? (aside from in
-        //       intialize)
-        // Check caller = executor
-        require(
-            isAdmin(),
-            "FrankenDAO::_setPendingFounders: executor only"
-        );
+    function _setPendingFounders(address newPendingFounders) external onlyAdmin {
+        // @todo only the executor can set the founder role? (aside from in intialize)
 
         // Save current value, if any, for inclusion in log
         address oldPendingFounders = pendingFounders;
@@ -81,13 +75,8 @@ contract Admin {
      * @dev Council function to begin change of council. The newPendingCouncil must call `_acceptCouncil` to finalize the transfer.
      * @param newPendingCouncil New pending council.
      */
-    function _setPendingCouncil(address newPendingCouncil) external {
+    function _setPendingCouncil(address newPendingCouncil) external onlyVetoers {
         // @todo only the executor can set the council address? (aside from in intialize)
-        // Check caller = executor
-        require(
-            canVeto,
-            "FrankenDAO::_setPendingCouncil: executor only"
-        );
 
         // Save current value, if any, for inclusion in log
         address oldPendingCouncil = pendingCouncil;
@@ -123,19 +112,6 @@ contract Admin {
 
         emit NewCouncil(oldCouncil, council);
         emit NewPendingCouncil(oldPendingCouncil, pendingCouncil);
-    }
-
-    /// @notice Helper that returns true if msg.sender is one of the admin
-    ///         addresses on this contract (executor or founders);
-    function isAdmin() internal returns (bool) {
-        return (msg.sender == executor || msg.sender == founders);
-    }
-
-    /// @notice Helper that returns true if msg.sender has the power to veto
-    function canVeto() internal returns (bool) {
-        return (
-            msg.sender == founders || msg.sender == council
-        );
     }
 
     /// @notice Modifier for function that can only be called by the Executor (Timelock) contract

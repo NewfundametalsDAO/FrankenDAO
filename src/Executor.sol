@@ -26,8 +26,7 @@ contract Executor is ExecutorEvents, Admin {
         initialized = true;
     }
 
-    function setDelay(uint256 delay_) public {
-        require(isAdmin(), 'FrankenDAOExecutor::setDelay: Call must come from admin.');
+    function setDelay(uint256 delay_) public onlyAdmin {
         require(delay_ >= MINIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must exceed minimum delay.');
         require(delay_ <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must not exceed maximum delay.');
         delay = delay_;
@@ -41,8 +40,7 @@ contract Executor is ExecutorEvents, Admin {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public returns (bytes32) {
-        require(isAdmin(), 'FrankenDAOExecutor::queueTransaction: Call must come from admin.');
+    ) public onlyAdmin returns (bytes32) {
         require(
             eta >= getBlockTimestamp() + delay,
             'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
@@ -63,8 +61,7 @@ contract Executor is ExecutorEvents, Admin {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public {
-        require(isAdmin(), 'FrankenDAOExecutor::cancelTransaction: Call must come from admin.');
+    ) public onlyAdmin {
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
@@ -78,10 +75,9 @@ contract Executor is ExecutorEvents, Admin {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public returns (bytes memory) {
+    ) public onlyAdmin returns (bytes memory) {
         // @todo SHouldn't anyone willing to pay the gas be able to execute?
         // @todo Does this need to update community voting power in Staking?
-        require(isAdmin(), 'FrankenDAOExecutor::executeTransaction: Call must come from admin.');
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         require(queuedTransactions[txHash], "FrankenDAOExecutor::executeTransaction: Transaction hasn't been queued.");

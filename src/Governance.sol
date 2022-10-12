@@ -15,8 +15,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     /**
      * @notice Used to initialize the contract during delegator contructor
      * @param timelock_ The address of the FrankenDAOExecutor
-     * @param staking_ The address of the NOUN tokens
-     * @param vetoers_ List of addresses allowed to unilaterally veto proposals
+     * @param staking_ The address of the staked FrankenPunks tokens
+     * @param founders_ The address of the founder's multi-sig
+     * @param council_ The address of the council's multi-sig
      * @param votingPeriod_ The initial voting period
      * @param votingDelay_ The initial voting delay
      * @param proposalThresholdBPS_ The initial proposal threshold in basis points
@@ -27,7 +28,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         address staking_,
         address founders_,
         address council_,
-        address[] memory vetoers_,
         uint256 votingPeriod_,
         uint256 votingDelay_,
         uint256 proposalThresholdBPS_,
@@ -85,14 +85,6 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
         executor = timelock_;
         founders = founders_;
         council = council_;
-
-        // TODO: move to constructor?
-        _setupRole(VETOER, msg.sender);
-        emit NewVetoer(msg.sender);
-
-        for (uint256 index = 0; index < vetoers_.length; index++) {
-            _addVetoer(vetoers_[index]);
-        }
 
         initialized = true;
     }
@@ -484,7 +476,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     }
 
     /**
-     * @notice Vetoes a proposal only if sender has the VETOER role and the proposal has not been executed.
+     * @notice Vetoes a proposal only if sender has ability to veto a proposal
      * @param proposalId The id of the proposal to veto
      */
     // @todo - only things to add here is the vetoer logic
@@ -492,8 +484,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
     //   The `veto(uint proposalId)` logic is a modified version of `cancel(uint proposalId)`
     //   A `vetoed` flag was added to the `Proposal` struct to support this.
     // we'll probably just copy and edit the Compound contracts directly rather than import and edit
-    function veto(uint256 proposalId) external {
-        require(canVeto(), "FrankenDAO::veto: only vetoer");
+    function veto(uint256 proposalId) external onlyVetoers {
         require(
             state(proposalId) != ProposalState.Executed,
             "FrankenDAO::veto: cannot veto executed proposal"
@@ -611,12 +602,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @notice Admin function for setting turning gas refunds
      * on voting on and off
      */
-    function setProposalRefund(bool _proposing) external {
-        require(
-            isAdmin(),
-            "FrankenDAO::setProposalRefund: admin only"
-        );
-
+    function setProposalRefund(bool _proposing) external onlyAdmin {
         proposalRefund = _proposing;
 
         emit VotingRefundSet(_proposing);
@@ -626,12 +612,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @notice Admin function for setting turning gas refunds
      * on voting on and off
      */
-    function setVotingRefund(bool _voting) external {
-        require(
-        isAdmin(),
-            "FrankenDAO::setVotingRefund: admin only"
-        );
-
+    function setVotingRefund(bool _voting) external onlyAdmin {
         votingRefund = _voting;
 
         emit ProposalRefundSet(_voting);
@@ -641,8 +622,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @notice Admin function for setting the voting delay
      * @param newVotingDelay new voting delay, in blocks
      */
-    function _setVotingDelay(uint256 newVotingDelay) external {
-        require(isAdmin(), "FrankenDAO::_setVotingDelay: admin only");
+    function _setVotingDelay(uint256 newVotingDelay) external onlyAdmin {
         require(
             newVotingDelay >= MIN_VOTING_DELAY &&
                 newVotingDelay <= MAX_VOTING_DELAY,
@@ -658,11 +638,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @notice Admin function for setting the voting period
      * @param newVotingPeriod new voting period, in blocks
      */
-    function _setVotingPeriod(uint256 newVotingPeriod) external {
-        require(
-            isAdmin(),
-            "FrankenDAO::_setVotingPeriod: admin only"
-        );
+    function _setVotingPeriod(uint256 newVotingPeriod) external onlyAdmin {
         require(
             newVotingPeriod >= MIN_VOTING_PERIOD &&
                 newVotingPeriod <= MAX_VOTING_PERIOD,
@@ -680,12 +656,8 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @param newProposalThresholdBPS new proposal threshold
      */
     function _setProposalThresholdBPS(uint256 newProposalThresholdBPS)
-        external
+        external onlyAdmin
     {
-        require(
-            isAdmin(),
-            "FrankenDAO::_setProposalThresholdBPS: admin only"
-        );
         require(
             newProposalThresholdBPS >= MIN_PROPOSAL_THRESHOLD_BPS &&
                 newProposalThresholdBPS <= MAX_PROPOSAL_THRESHOLD_BPS,
@@ -705,11 +677,7 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
      * @dev newQuorumVotesBPS must be greater than the hardcoded min
      * @param newQuorumVotesBPS new proposal threshold
      */
-    function _setQuorumVotesBPS(uint256 newQuorumVotesBPS) external {
-        require(
-            isAdmin(),
-            "FrankenDAO::_setQuorumVotesBPS: admin only"
-        );
+    function _setQuorumVotesBPS(uint256 newQuorumVotesBPS) external onlyAdmin {
         require(
             newQuorumVotesBPS >= MIN_QUORUM_VOTES_BPS &&
                 newQuorumVotesBPS <= MAX_QUORUM_VOTES_BPS,
