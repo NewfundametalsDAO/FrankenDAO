@@ -158,19 +158,19 @@ contract Governance is IGovernance, Admin, Refund {
     }
 
     function getProposalData(uint256 id_) public view returns (uint256, address, uint256, uint256) {
-        Proposal storage proposal = proposals[id_];
-        return (proposal.id, proposal.proposer, proposal.proposalThreshold, proposal.quorumVotes);
+        Proposal storage p = proposals[id_];
+        return (p.id, p.proposer, p.proposalThreshold, p.quorumVotes);
     }
 
     /// @notice get the status of a proposal
     function getProposalStatus(uint256 id_) public view returns (bool, bool, bool) {
-        Proposal storage proposal = proposals[id_];
-        return (proposal.canceled, proposal.vetoed, proposal.executed);
+        Proposal storage p = proposals[id_];
+        return (p.canceled, p.vetoed, p.executed);
     }
 
     function getProposalVotes(uint256 id_) public view returns (uint256, uint256, uint256) {
-        Proposal storage proposal = proposals[id_];
-        return (proposal.forVotes, proposal.againstVotes, proposal.abstainVotes);
+        Proposal storage p = proposals[id_];
+        return (p.forVotes, p.againstVotes, p.abstainVotes);
     }
 
     function getActiveProposals() public view returns (uint256[] memory) {
@@ -194,7 +194,7 @@ contract Governance is IGovernance, Admin, Refund {
      */
     function state(uint256 proposalId) public view returns (ProposalState) {
         require(proposalCount >= proposalId, "FrankenDAO::state: invalid proposal id");
-        Proposal memory proposal = proposals[proposalId];
+        Proposal storage proposal = proposals[proposalId];
         if (proposal.vetoed) {
             return ProposalState.Vetoed;
         } else if (proposal.canceled || (!proposal.verified && block.number > proposal.endBlock)) {
@@ -442,7 +442,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param proposalId The id of the proposal to cancel
      */
     function cancel(uint256 proposalId) external {
-        Proposal memory proposal = proposals[proposalId];
+        Proposal storage proposal = proposals[proposalId];
         require(
             !proposal.executed && !proposal.canceled && !proposal.vetoed,
             "FrankenDAO::cancel: cannot cancel executed, vetoed, or canceled proposal"
@@ -458,7 +458,7 @@ contract Governance is IGovernance, Admin, Refund {
 
         _removeTransactionIfQueuedOrExpired(proposal);
 
-        proposals[proposalId].canceled = true;        
+        proposal.canceled = true;        
 
         emit ProposalCanceled(proposalId);
     }
@@ -468,7 +468,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param proposalId The id of the proposal to veto
      */
     function veto(uint256 proposalId) external onlyVetoers {
-        Proposal memory proposal = proposals[proposalId];
+        Proposal storage proposal = proposals[proposalId];
         require(
             !proposal.executed && !proposal.canceled && !proposal.vetoed,
             "FrankenDAO::veto: cannot veto executed, vetoed, or canceled proposal"
@@ -476,12 +476,12 @@ contract Governance is IGovernance, Admin, Refund {
 
         _removeTransactionIfQueuedOrExpired(proposal);
 
-        proposals[proposalId].vetoed = true;
+        proposal.vetoed = true;
 
         emit ProposalVetoed(proposalId);
     }
 
-    function _removeTransactionIfQueuedOrExpired(Proposal memory proposal) internal {
+    function _removeTransactionIfQueuedOrExpired(Proposal storage proposal) internal {
         if (
             state(proposal.id) == ProposalState.Queued || 
             state(proposal.id) == ProposalState.Expired
@@ -537,7 +537,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param support The support value for the vote. 0=against, 1=for, 2=abstain
      * @return The number of votes cast
      */
-    function castVoteInternal(address voter, uint256 proposalId, uint8 support) internal returns (uint96) {
+    function castVoteInternal(address voter, uint256 proposalId, uint8 support) internal returns (uint) {
         // we can do this with no check because if you can vote, it means you have votes so you haven't delegated
         totalCommunityScoreData.votes += 1;
         uint256 userVoteCount = ++userCommunityScoreData[voter].votes;
@@ -549,7 +549,7 @@ contract Governance is IGovernance, Admin, Refund {
         Receipt storage receipt = proposal.receipts[voter];
         require(receipt.hasVoted == false, "FrankenDAO::castVoteInternal: voter already voted");
 
-        uint96 votes = staking.getVotes(voter);
+        uint votes = staking.getVotes(voter);
 
         if (support == 0) {
             proposal.againstVotes = proposal.againstVotes + votes;
@@ -561,7 +561,8 @@ contract Governance is IGovernance, Admin, Refund {
 
         receipt.hasVoted = true;
         receipt.support = support;
-        receipt.votes = votes;
+        // Can't overflow because there will never be more than 2 ** 96 votes in the system.
+        receipt.votes = uint96(votes);
 
         return votes;
     }
@@ -586,7 +587,7 @@ contract Governance is IGovernance, Admin, Refund {
     }
     
     function updateTotalCommunityScoreData(uint64 _votes, uint64 _proposalsCreated, uint64 _proposalsPassed) external {
-        require(msg.sender == staking, "FrankenDAO::updateTotalCommunityScoreData: only staking");
+        require(msg.sender == address(staking), "FrankenDAO::updateTotalCommunityScoreData: only staking");
 
         totalCommunityScoreData.proposalsCreated = _proposalsCreated;
         totalCommunityScoreData.proposalsPassed = _proposalsPassed;

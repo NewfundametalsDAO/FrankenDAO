@@ -29,7 +29,7 @@ interface IGovernance {
     event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole);
     event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
     event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
-    event VoteCast(address indexed voter, uint256 proposalId, uint8 support, uint256 votes, string reason);
+    event VoteCast(address indexed voter, uint256 proposalId, uint8 support, uint256 votes);
     event VotingDelaySet(uint256 oldVotingDelay, uint256 newVotingDelay);
     event VotingPeriodSet(uint256 oldVotingPeriod, uint256 newVotingPeriod);
 
@@ -169,15 +169,16 @@ interface IGovernance {
     // function getRoleAdmin(bytes32 role) external view returns (bytes32);
     // function grantRole(bytes32 role, address account) external;
     // function hasRole(bytes32 role, address account) external view returns (bool);
-    // function initialize(
-    //     address timelock_,
-    //     address staking_,
-    //     address[] memory vetoers_,
-    //     uint256 votingPeriod_,
-    //     uint256 votingDelay_,
-    //     uint256 proposalThresholdBPS_,
-    //     uint256 quorumVotesBPS_
-    // ) external;
+    function initialize(
+        address payable executor_,
+        address staking_,
+        address founders_,
+        address council_,
+        uint256 votingPeriod_,
+        uint256 votingDelay_,
+        uint256 proposalThresholdBPS_,
+        uint256 quorumVotesBPS_
+    ) external; 
     // function latestProposalIds(address) external view returns (uint256);
     // function name() external view returns (string memory);
     // function pendingAdmin() external view returns (address);

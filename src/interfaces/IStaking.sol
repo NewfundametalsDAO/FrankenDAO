@@ -35,15 +35,15 @@ interface IStaking {
     // function balanceOf(address owner) external view returns (uint256);
     // function changeStakeAmount(uint256 _newMaxStakeBonusAmount) external;
     // function changeStakeTime(uint256 _newMaxStakeBonusTime) external;
-    // function checkpoints(address, uint32) external view returns (uint32 fromBlock, uint96 votes);
+    // function checkpoints(address, uint32) external view returns (uint32 fromBlock, uint votes);
     // function delegate(address delegatee) external;
     // function delegateWithRefund(address delegatee) external;
     // function delegates(address delegator) external view returns (address);
     // function delegatingRefund() external view returns (bool);
     // function getApproved(uint256 tokenId) external view returns (address);
     function getCommunityVotingPower(address _voter) external view returns (uint256);
-    // function getCurrentVotes(address account) external view returns (uint96);
-    // function getPriorVotes(address account, uint256 blockNumber) external view returns (uint96);
+    // function getCurrentVotes(address account) external view returns (uint);
+    // function getPriorVotes(address account, uint256 blockNumber) external view returns (uint);
     function getTokenVotingPower(uint256 _tokenId) external view returns (uint256);
     // function incrementTotalCommunityVotingPower(uint256 _amount) external;
     // function isApprovedForAll(address owner, address operator) external view returns (bool);
@@ -72,11 +72,11 @@ interface IStaking {
     // function tokenURI(uint256 _tokenId) external view returns (string memory);
     // function totalSupply() external view returns (uint256);
     function getTotalVotingPower() external view returns (uint256);
-    function getVotes(address account) external view returns (uint96);
+    function getVotes(address account) external view returns (uint);
     // function transferFrom(address from, address to, uint256 tokenId) external;
     // function unlockTime(uint256) external view returns (uint256);
     // function unstake(uint256[] memory _tokenIds, address _to) external;
     // function unstakeWithRefund(uint256[] memory _tokenIds, address _to) external;
     // function votesFromOwnedTokens(address) external view returns (uint256);
-    // function votesToDelegate(address delegator) external view returns (uint96);
+    // function votesToDelegate(address delegator) external view returns (uint);
 }

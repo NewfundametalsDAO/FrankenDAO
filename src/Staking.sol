@@ -110,11 +110,11 @@ contract Staking is IStaking, ERC721, Refund {
   /// @notice The total voting power earned by each user's staked tokens
   /// @dev In other words, this is the amount of voting power that would move if they redelegated
   /// @dev They don't necessarily have this many votes, because they may have delegated them
-  mapping(address => uint96) public votesFromOwnedTokens;
+  mapping(address => uint) public votesFromOwnedTokens;
 
   /// @notice The total voting power each user has, after adjusting for delegation
   /// @dev This represents the actual token voting power of each user
-  mapping(address => uint96) public tokenVotingPower;
+  mapping(address => uint) public tokenVotingPower;
 
   /// @notice The total token voting power of the system
   uint public totalTokenVotingPower;
@@ -252,7 +252,7 @@ contract Staking is IStaking, ERC721, Refund {
 
     // Set the _delegates mapping to the correct address, subbing in address(0) if they are delegating to themselves
     _delegates[delegator] = delegatee == delegator ? address(0) : delegatee;
-    uint96 amount = votesFromOwnedTokens[delegator];
+    uint amount = votesFromOwnedTokens[delegator];
 
     // If the delegator has no votes, then this function will not do anything
     // This is explicitly blocked to ensure that users without votes cannot abuse the refund mechanism
@@ -384,7 +384,7 @@ contract Staking is IStaking, ERC721, Refund {
     uint numTokens = _tokenIds.length;
     require(numTokens > 0, "unstake at least one token");
     
-    uint96 lostVotingPower;
+    uint lostVotingPower;
     for (uint i = 0; i < numTokens; i++) {
         lostVotingPower += _unstakeToken(_tokenIds[i], _to);
     }
@@ -434,7 +434,7 @@ contract Staking is IStaking, ERC721, Refund {
     /// @param account The address of the account to get voting power for
     /// @return The total voting power for the account
     /// @dev This is used by governance to calculate the voting power of an account
-    function getVotes(address account) public view returns (uint96) {
+    function getVotes(address account) public view returns (uint) {
         return tokenVotingPower[account] + getCommunityVotingPower(account);
     }
     
@@ -490,7 +490,8 @@ contract Staking is IStaking, ERC721, Refund {
     /// @param _tokenId The id of the token to get the evil bonus for
     /// @return The evil bonus for the token
     /// @dev The evil bonus is 10 if the token is sufficiently evil, 0 otherwise
-    function evilBonus(uint _tokenId) internal view returns (uint) {
+    // @todo switch this back to internal after testing?
+    function evilBonus(uint _tokenId) public view returns (uint) {
       if (_tokenId >= 10000) return 0; 
       return (EVIL_BITMAPS[_tokenId >> 8] >> (_tokenId & 255)) & 1 * 10;
     }

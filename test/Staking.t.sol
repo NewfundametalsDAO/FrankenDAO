@@ -21,10 +21,16 @@ contract StakingTest is Test {
         );
     }
 
-    function testEvilScores() public {
-        assert(true);
+    // Test only exists for sample data, where all evens are evil. Redo with JSON call once we have final.
+    function testEvilScores(uint tokenId) public {
+        vm.assume(tokenId < 20000);
+        if (tokenId % 2 == 1 || tokenId >= 10000) {
+            assert(staking.evilBonus(tokenId) == 0);
+        } else {
+            assert(staking.evilBonus(tokenId) == 10);
+        }
+        
     }
-
 
     // make sure transferFrom blocks all token transfers (safe with both sigs)
     // test evil bonus
