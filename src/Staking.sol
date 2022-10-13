@@ -13,14 +13,13 @@ import "./interfaces/IGovernance.sol";
 /// @title FrankenDAO Staking Contract
 /// @author Zach Obront & Zakk Fleischmann
 /// @notice Contract for staking FrankenPunks & calculating voting power for governance
-contract Staking is IStaking, ERC721, Refund, Admin {
+contract Staking is IStaking, ERC721, Refund {
   using Strings for uint256;
 
   IERC721 frankenpunks;
   IERC721 frankenmonsters;
   IGovernance governance;
   address executor;
-
 
   StakingSettings public stakingSettings;
   CommunityPowerMultipliers public communityPowerMultipliers;
@@ -50,6 +49,11 @@ contract Staking is IStaking, ERC721, Refund, Admin {
       require(!governance.getReceipt(activeProposals[i], delegates(msg.sender)).hasVoted, "Staking: Cannot stake while votes are cast");
       require(!governance.proposals(activeProposals[i]).proposer == delegates(msg.sender), "Staking: Cannot stake while votes are cast");
     }
+    _;
+  }
+
+  modifier onlyExecutor() {
+    require(msg.sender == executor, "Staking: only executor");
     _;
   }
 
@@ -295,30 +299,23 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   //////// OWNER OPERATIONS ///////
   /////////////////////////////////
 
-  function changeStakeTime(uint _newMaxStakeBonusTime) public {
-    require(msg.sender == executor, "only executor can change max stake bonus time");
+  function changeStakeTime(uint _newMaxStakeBonusTime) external onlyExecutor {
     stakingSettings.maxStakeBonusTime = _newMaxStakeBonusTime;
   }
 
-  function changeStakeAmount(uint _newMaxStakeBonusAmount) public {
-    require(msg.sender == executor, "only executor can change max stake bonus amount");
+  function changeStakeAmount(uint _newMaxStakeBonusAmount) external onlyExecutor {
     stakingSettings.maxStakeBonusAmount = _newMaxStakeBonusAmount;
   }
 
-  function setPause(bool _paused) external {
-    require(msg.sender == executor, "only executor can pause"); 
-    paused = _paused;
-    emit StakingPause(_paused);
+  function setPause(bool _paused) external onlyExecutor {
+    emit StakingPause(paused = _paused);
   }
 
-  function setRefund(Refund _refundStatus) external {
-    require(msg.sender == executor, "only executor set staking refund"); 
-    refund = _refundStatus;
-    emit RefundSet(_refundStatus);
+  function setRefund(Refund _refundStatus) external onlyExecutor {
+    emit RefundSet(refund = _refundStatus);
   }
 
-  function setBaseURI(string calldata baseURI_) external {
-    require(msg.sender == executor, "only executor can set base URI");
+  function setBaseURI(string calldata baseURI_) external onlyExecutor {
     _baseTokenURI = baseURI_;
   }
 }
