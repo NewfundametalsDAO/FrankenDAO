@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./events/ExecutorEvents.sol";
+import "./interfaces/IExecutor.sol";
 import "./utils/Admin.sol";
 
-contract Executor is ExecutorEvents, Admin {
+contract Executor is IExecutor, Admin {
     uint256 public constant GRACE_PERIOD = 14 days; // @todo - do we want this editable?
     uint256 public constant MINIMUM_DELAY = 2 days;
     uint256 public constant MAXIMUM_DELAY = 30 days;

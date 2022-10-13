@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "oz/token/ERC721/ERC721.sol";
-import "./utils/Refund.sol";
+import "solmate/tokens/ERC721.sol";
 import "oz/utils/Strings.sol";
+import "./utils/Refund.sol";
+import "./utils/Admin.sol";
+
 import "./interfaces/IERC721.sol";
 import "./interfaces/IStaking.sol";
-import "./Governance.sol";
+import "./interfaces/IGovernance.sol";
 
 /// @title FrankenDAO Staking Contract
 /// @author Zach Obront & Zakk Fleischmann
 /// @notice Contract for staking FrankenPunks & calculating voting power for governance
-contract Staking is ERC721, Refund, Admin {
+contract Staking is IStaking, ERC721, Refund, Admin {
   using Strings for uint256;
 
   IERC721 frankenpunks;
   IERC721 frankenmonsters;
-  Governance governance;
+  IGovernance governance;
   address executor;
 
 
@@ -68,7 +70,7 @@ contract Staking is ERC721, Refund, Admin {
   ) ERC721("Staked FrankenPunks", "sFP") {
     frankenpunks = IERC721(_frankenpunks);
     frankenmonsters = IERC721(_frankenmonsters);
-    governance = Governance( _governance );
+    governance = IGovernance( _governance );
     executor = _executor;
 
     stakingSettings = StakingSettings({
