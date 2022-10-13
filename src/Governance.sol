@@ -573,7 +573,9 @@ contract Governance is Admin, GovernanceStorage, GovernanceEvents, Refund {
             votingRefund,
             "FrankenDAO::castRefundableVote: refunding gas is turned off"
         );
+
         uint96 votes = castVoteInternal(msg.sender, proposalId_, support_);
+
         emit VoteCast(msg.sender, proposalId_, support_, votes);
     }
     /**

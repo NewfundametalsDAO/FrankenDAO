@@ -62,7 +62,6 @@ contract Executor is ExecutorEvents, Admin {
         bytes memory data,
         uint256 eta
     ) public onlyAdmin {
-
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
 

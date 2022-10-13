@@ -170,7 +170,7 @@ contract GovernanceStorage {
         )
     {
         Proposal storage proposal = proposals[id_];
-        return (proposal.canceled, proposal.vetoed, proposal.executed);
+        return (proposal.verified, proposal.canceled, proposal.vetoed, proposal.executed);
     }
 
     function getProposalVotes(uint256 id_)
