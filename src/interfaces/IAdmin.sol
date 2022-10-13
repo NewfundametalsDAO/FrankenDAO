@@ -1,4 +1,4 @@
-interface Admin {
+interface IAdmin {
     /// @notice Emitted when pendingFounders or pendingCouncil is changed
     event NewPendingFounders(address oldPendingFounders, address newPendingFounders);
     event NewPendingCouncil(address oldPendingCouncil, address newPendingCouncil);

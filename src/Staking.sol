@@ -3,8 +3,10 @@ pragma solidity ^0.8.0;
 
 import "solmate/tokens/ERC721.sol";
 import "oz/utils/Strings.sol";
+import "oz/utils/math/SafeCast.sol";
 import "./utils/Refund.sol";
 import "./utils/Admin.sol";
+
 
 import "./interfaces/IERC721.sol";
 import "./interfaces/IStaking.sol";
@@ -16,6 +18,7 @@ import "./interfaces/IGovernance.sol";
 /// @notice These ERC721s are used to calculate voting power for DAO governance
 contract Staking is IStaking, ERC721, Refund {
   using Strings for uint256;
+  using SafeCast for uint256;
 
   /// @notice The original ERC721 FrankenPunks contract
   IERC721 frankenpunks;
@@ -29,14 +32,14 @@ contract Staking is IStaking, ERC721, Refund {
   /// @notice The DAO executor contract (where governance actions are executed)
   address executor;
 
-  /// @param maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
-  /// @param maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
+  /// @return maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
+  /// @return maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
   StakingSettings public stakingSettings;
 
   /// @notice Multipliers (expressed as percentage) for calculating community voting power from user stats
-  /// @param votes The multiplier for extra voting power earned per DAO vote cast
-  /// @param proposalsCreated The multiplier for extra voting power earned per proposal created
-  /// @param proposalsPassed The multiplier for extra voting power earned per proposal passed
+  /// @return votes The multiplier for extra voting power earned per DAO vote cast
+  /// @return proposalsCreated The multiplier for extra voting power earned per proposal created
+  /// @return proposalsPassed The multiplier for extra voting power earned per proposal passed
   CommunityPowerMultipliers public communityPowerMultipliers;
 
   /// @notice Constant to calculate voting power based on multipliers above
@@ -50,7 +53,48 @@ contract Staking is IStaking, ERC721, Refund {
   
   /// @notice Bitmaps representing whether each FrankenPunk has a sufficient "evil score" for a bonus.
   /// @dev 40 words * 256 bits = 10,240 bits, which is sufficient to hold values for 10k FrankenPunks
-  uint[40] EVIL_BITMAPS;
+  uint[40] EVIL_BITMAPS = [
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290,
+    77194726158210796949047323339125271902179989777093709359638389338608753093290
+  ];
   
   /// @notice The allowed unlock time for each staked token (tokenId => timestamp)
   mapping(uint => uint) public unlockTime;
@@ -85,11 +129,12 @@ contract Staking is IStaking, ERC721, Refund {
   /// @dev To avoid needing to checkpoint voting power, tokens are locked while users have active votes cast
   /// @dev If a user creates a proposal or casts a vote, this modifier prevents them from unstaking or delegating
   /// @dev Once the proposal is completed, it is removed from getActiveProposals and their tokens are unlocked
-  modifier lockedWhileVotesCast(uint[] _tokenIds) {
-    uint[] activeProposals = governance.getActiveProposals();
+  modifier lockedWhileVotesCast() {
+    uint[] memory activeProposals = governance.getActiveProposals();
     for (uint i = 0; i < activeProposals.length; i++) {
       require(!governance.getReceipt(activeProposals[i], delegates(msg.sender)).hasVoted, "Staking: Cannot stake while votes are cast");
-      require(!governance.proposals(activeProposals[i]).proposer == delegates(msg.sender), "Staking: Cannot stake while votes are cast");
+      (, address proposer,,) = governance.getProposalData(activeProposals[i]);
+      require(!(proposer == delegates(msg.sender)), "Staking: Cannot stake while votes are cast");
     }
     _;
   }
@@ -130,14 +175,14 @@ contract Staking is IStaking, ERC721, Refund {
     executor = _executor;
 
     stakingSettings = StakingSettings({
-      maxStakeBonusTime: _maxStakeBonusTime, // 4 weeks
-      maxStakeBonusAmount: _maxStakeBonusAmount // 20
+      maxStakeBonusTime: _maxStakeBonusTime.toUint128(), // 4 weeks
+      maxStakeBonusAmount: _maxStakeBonusAmount.toUint128() // 20
     });
 
     communityPowerMultipliers = CommunityPowerMultipliers({
-      votes: _votesMultiplier, // 100
-      proposalsCreated: _proposalsMultiplier, // 200
-      proposalsPassed: _executedMultiplier //200
+      votes: _votesMultiplier.toUint64(), // 100
+      proposalsCreated: _proposalsMultiplier.toUint64(), // 200
+      proposalsPassed: _executedMultiplier.toUint64() //200
     });
   }
 
@@ -158,7 +203,7 @@ contract Staking is IStaking, ERC721, Refund {
   /// @notice Token URI to find metadata for each tokenId
   /// @dev The metadata will be a variation on the metadata of the underlying token
   function tokenURI(uint256 _tokenId) public view virtual override returns (string memory) {
-    _requireMinted(_tokenId);
+    require(ownerOf(_tokenId) != address(0), "Staking:tokenURI: URI query for nonexistent token");
 
     string memory baseURI = _baseTokenURI;
     return bytes(baseURI).length > 0
@@ -230,7 +275,7 @@ contract Staking is IStaking, ERC721, Refund {
   /// @notice Updates the total community voting power totals
   /// @param delegator The address of the user who called the function and owns the votes being delegated
   /// @param currentDelegate The address of the user who previously had the votes
-  /// @param newDelegate The address of the user who will now receive the votes
+  /// @param delegatee The address of the user who will now receive the votes
   /// @dev This function is called by _delegate, _stake, and _unstake
   /// @dev Because currentDelegate != delegatee, we know that at most one of the situations will be true
   function _updateTotalCommunityVotingPower(address delegator, address currentDelegate, address delegatee) internal {
@@ -279,7 +324,7 @@ contract Staking is IStaking, ERC721, Refund {
     // This is required to ensure the gas refunds are not abused
     require(numTokens > 0, "stake at least one token");
     
-    uint96 newVotingPower;
+    uint newVotingPower;
     for (uint i = 0; i < numTokens; i++) {
         newVotingPower += _stakeToken(_tokenIds[i], _unlockTime);
     }
@@ -301,10 +346,10 @@ contract Staking is IStaking, ERC721, Refund {
   /// @notice Internal function to stake a single token and get voting power
   /// @param _tokenId The id of the token being staked
   /// @param _unlockTime The timestamp of when the token will be unlocked
-  function _stakeToken(uint _tokenId, uint _unlockTime) internal returns(uint) {
+  function _stakeToken(uint _tokenId, uint _unlockTime) internal returns (uint) {
     if (_unlockTime > 0) {
       unlockTime[_tokenId] = _unlockTime;
-      uint fullStakedTimeBonus = (_unlockTime - block.timestamp) * maxStakeBonusAmount / maxStakeBonusTime;
+      uint fullStakedTimeBonus = (_unlockTime - block.timestamp) * stakingSettings.maxStakeBonusAmount / stakingSettings.maxStakeBonusTime;
       stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : fullStakedTimeBonus / 2;
     }
 
@@ -363,7 +408,8 @@ contract Staking is IStaking, ERC721, Refund {
   /// @param _tokenId The id of the token being unstaked
   /// @param _to The address to send the underlying NFT to
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
-    require(_isApprovedOrOwner(msg.sender, _tokenId));
+    address owner = ownerOf(_tokenId);
+    require(msg.sender == owner || isApprovedForAll[owner][msg.sender] || msg.sender == getApproved[_tokenId], "NOT_AUTHORIZED");
     require(unlockTime[_tokenId] <= block.timestamp, "token is locked");
 
     // Transfer the underlying asset to the address specified
@@ -414,7 +460,7 @@ contract Staking is IStaking, ERC721, Refund {
       uint64 proposalsPassed;
       
       // We allow this function to be called with the max uint value to get the total community voting power
-      if (_voter == type(uint).max) {
+      if (_voter == address(type(uint160).max)) {
         (votes, proposalsCreated, proposalsPassed) = governance.totalCommunityScoreData();
       } else {
         // If a user no longer has any staked tokens, they forfeit their community voting power 
@@ -425,7 +471,7 @@ contract Staking is IStaking, ERC721, Refund {
         (votes, proposalsCreated, proposalsPassed) = governance.userCommunityScoreData(_voter);
       }
 
-      CommunityPowerMultipliers cpMultipliers = communityPowerMultipliers;
+      CommunityPowerMultipliers memory cpMultipliers = communityPowerMultipliers;
       
       return 
         (votes * cpMultipliers.votes / PERCENT) + 
@@ -434,10 +480,10 @@ contract Staking is IStaking, ERC721, Refund {
     }
 
     /// @notice Get the total voting power of the entire system
-    /// @returns The total votes in the system
+    /// @return The total votes in the system
     /// @dev This is used to calculate the quorum and proposal thresholds
     function getTotalVotingPower() public view returns (uint) {
-      return totalTokenVotingPower + getCommunityVotingPower(type(uint).max);
+      return totalTokenVotingPower + getCommunityVotingPower(address(type(uint160).max));
     }
 
     /// @notice Get the evil bonus for a given token
@@ -455,16 +501,16 @@ contract Staking is IStaking, ERC721, Refund {
   /////////////////////////////////
 
   /// @notice Set the max staking time needed to get the max bonus
-  /// @param _newMaxStakingTime The new max staking time
+  /// @param _newMaxStakeBonusTime The new max staking time
   /// @dev This function can only be called by the executor based on a governance proposal
-  function changeStakeTime(uint _newMaxStakeBonusTime) external onlyExecutor {
+  function changeStakeTime(uint128 _newMaxStakeBonusTime) external onlyExecutor {
     stakingSettings.maxStakeBonusTime = _newMaxStakeBonusTime;
   }
 
   /// @notice Set the max staking bonus earned if a token is staked for the max time
   /// @param _newMaxStakeBonusAmount The new max staking bonus
   /// @dev This function can only be called by the executor based on a governance proposal
-  function changeStakeAmount(uint _newMaxStakeBonusAmount) external onlyExecutor {
+  function changeStakeAmount(uint128 _newMaxStakeBonusAmount) external onlyExecutor {
     stakingSettings.maxStakeBonusAmount = _newMaxStakeBonusAmount;
   }
 
@@ -477,7 +523,7 @@ contract Staking is IStaking, ERC721, Refund {
 
   /// @notice Turn on or off gas refunds for staking and delegating
   /// @param _refundStatus Are refunds on for staking, delegating, both, or neither?
-  function setRefund(Refund _refundStatus) external onlyExecutor {
+  function setRefund(RefundStatus _refundStatus) external onlyExecutor {
     emit RefundSet(refund = _refundStatus);
   }
 

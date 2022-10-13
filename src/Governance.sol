@@ -173,6 +173,10 @@ contract Governance is IGovernance, Admin, Refund {
         return (proposal.forVotes, proposal.againstVotes, proposal.abstainVotes);
     }
 
+    function getActiveProposals() public view returns (uint256[] memory) {
+        return activeProposals;
+    }
+
     /**
      * @notice Gets the receipt for a voter on a given proposal
      * @param proposalId the id of proposal
@@ -326,7 +330,7 @@ contract Governance is IGovernance, Admin, Refund {
         newProposal.vetoed = false;
 
         latestProposalIds[newProposal.proposer] = newProposal.id;
-        activeProposals.push(_id);
+        activeProposals.push(newProposal.id);
 
         /// @notice Updated event with `proposalThreshold` and `quorumVotes`
         emit ProposalCreatedWithRequirements(
@@ -347,7 +351,7 @@ contract Governance is IGovernance, Admin, Refund {
     }
 
     /// @notice Function for verifying a proposal
-    /// @param _id Id of the proposal to verify
+    /// @param _proposalId Id of the proposal to verify
     function verifyProposal(uint _proposalId) external onlyVetoers {
         // Can't verify a proposal that's been vetoed, canceled,
         require(
@@ -355,7 +359,7 @@ contract Governance is IGovernance, Admin, Refund {
             "FrankenDAOGovernance::verifyProposal: proposal must be pending to be verified"
         );
 
-        Proposal proposal = proposals[_proposalId];
+        Proposal storage proposal = proposals[_proposalId];
 
         // verify proposal
         proposal.verified = true;
@@ -452,7 +456,7 @@ contract Governance is IGovernance, Admin, Refund {
             "FrankenDAO::cancel: cancel requirements not met"
         );
 
-        _removeTransactionIfQueued(proposal);
+        _removeTransactionIfQueuedOrExpired(proposal);
 
         proposals[proposalId].canceled = true;        
 
@@ -516,8 +520,8 @@ contract Governance is IGovernance, Admin, Refund {
      * Refunds are partial when the DAO's balance is insufficient.
      * No refund is sent when the DAO's balance is empty. No refund is sent to users with no votes.
      * Voting takes place regardless of refund success.
-     * @param proposalId_ The id of the proposal to vote on
-     * @param support_ The support value for the vote. 0=against, 1=for, 2=abstain
+     * @param proposalId The id of the proposal to vote on
+     * @param support The support value for the vote. 0=against, 1=for, 2=abstain
      * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
      */
     function castRefundableVote(uint256 proposalId, uint8 support) external refundable {
@@ -568,7 +572,7 @@ contract Governance is IGovernance, Admin, Refund {
     /////////////////
     function _removeFromActiveProposals(uint256 _id) private {
         uint256 index;
-        uint[] actives = activeProposals;
+        uint[] memory actives = activeProposals;
 
         for (uint256 i = 0; i < actives.length; i++) {
             if(actives[i] == _id) {
@@ -577,7 +581,7 @@ contract Governance is IGovernance, Admin, Refund {
             }
         }
 
-        activeProposals[index] = activeProposals[activeProposals.length - 1];
+        activeProposals[index] = activeProposals[actives.length - 1];
         activeProposals.pop();
     }
     
