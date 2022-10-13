@@ -27,7 +27,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   RefundStatus public refund;
   bool public paused;
   
-  uint[40] EVIL_BITMAPS; // @todo check if cheaper to make immutable in constructor or insert manually into contract
+  uint[40] EVIL_BITMAPS;
 
   mapping(uint => uint) public unlockTime; // token => unlock timestamp
   mapping(uint => uint) public stakedTimeBonus; // token => amount of staked bonus they got
@@ -43,7 +43,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /////////// MODIFIERS ///////////
   /////////////////////////////////
 
-  // @todo test if it's cheaper to just send back all data from governance once
+
   modifier lockedWhileVotesCast(uint[] _tokenIds) {
     uint[] activeProposals = governance.getActiveProposals();
     for (uint i = 0; i < activeProposals.length; i++) {
@@ -89,8 +89,8 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   // OVERRIDE & REVERT TRANSFERS //
   /////////////////////////////////  
 
-  // @todo - make sure this blocks everything. think through rest. i think we leave approvals on so people can unstake for one another. mint and burn don't use transfer.
-  function _transfer(address _from, address _to, uint256 _tokenId) internal virtual override {
+  // this will also block safeTransferFrom, because it calls it behind the scenes
+  function transferFrom(address from, address to, uint256 id) public override {
     revert("staked tokens cannot be transferred");
   }
 
@@ -145,17 +145,16 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     emit DelegateChanged(delegator, currentDelegate, delegatee);
   }
 
-  // @todo rename functions?
   function _updateTotalCommunityVotingPower(address delegator, address currentDelegate, address delegatee) internal {
     if (currentDelegate == delegator) {
-      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.getCommunityScoreData(delegator);
-      (uint64 totalVotes, uint64 totalProposalsCreated, uint64 totalProposalsPassed) = governance.totalCommunityVotingPowerBreakdown();
+      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.userCommunityScoreData(delegator);
+      (uint64 totalVotes, uint64 totalProposalsCreated, uint64 totalProposalsPassed) = governance.totalCommunityScoreData();
       // Can't underflow. Totals will always be higher than individual scores.
-      governance.updateTotalCommunityVotingPowerBreakdown(totalVotes - votes, totalProposalsCreated - proposalsCreated, totalProposalsPassed - proposalsPassed);
+      governance.updateTotalCommunityScoreData(totalVotes - votes, totalProposalsCreated - proposalsCreated, totalProposalsPassed - proposalsPassed);
     } else if (delegatee == delegator) {
-      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.getCommunityScoreData(delegator);
-      (uint64 totalVotes, uint64 totalProposalsCreated, uint64 totalProposalsPassed) = governance.totalCommunityVotingPowerBreakdown();
-      governance.updateTotalCommunityVotingPowerBreakdown(totalVotes + votes, totalProposalsCreated + proposalsCreated, totalProposalsPassed + proposalsPassed);
+      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.userCommunityScoreData(delegator);
+      (uint64 totalVotes, uint64 totalProposalsCreated, uint64 totalProposalsPassed) = governance.totalCommunityScoreData();
+      governance.updateTotalCommunityScoreData(totalVotes + votes, totalProposalsCreated + proposalsCreated, totalProposalsPassed + proposalsPassed);
     }
   }
 
@@ -210,7 +209,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     _unstake(_tokenIds, _to);
   }
 
-  // @todo ask them: probably don't want to make unstake refundable?
+  // @todo delete or uncomment depending on their decision
   // function unstakeWithRefund(uint[] calldata _tokenIds, address _to) public refundable {
   //   require(refund == RefundStatus.StakingRefund || refund == RefundStatus.StakingAndDelegatingRefund, "Staking: Staking refunds are not enabled");
   //   _unstake(_tokenIds, _to);
@@ -258,7 +257,6 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     }
     
     function getTokenVotingPower(uint _tokenId) public override view returns (uint) {
-      // @todo confirm the exact token numbers with them. punks go to 9999?
       if (_tokenId < 10000) {
         return 20 + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
       } else {
@@ -272,12 +270,12 @@ contract Staking is IStaking, ERC721, Refund, Admin {
       uint64 proposalsPassed;
       
       if (_voter == type(uint).max) {
-        (votes, proposalsCreated, proposalsPassed) = governance.totalCommunityVotingPowerBreakdown();
+        (votes, proposalsCreated, proposalsPassed) = governance.totalCommunityScoreData();
       } else {
         if (balanceOf(_voter) == 0) return 0;
         if (delegates(_voter) != _voter) return 0;
 
-        (votes, proposalsCreated, proposalsPassed) = governance.getCommunityScoreData(_voter);
+        (votes, proposalsCreated, proposalsPassed) = governance.userCommunityScoreData(_voter);
       }
       CommunityPowerMultipliers cpMultipliers = communityPowerMultipliers;
       return (votes * cpMultipliers.votes / 100) + (proposalsCreated * cpMultipliers.proposalsCreated / 100) + (proposalsPassed * cpMultipliers.proposalsPassed / 100);
@@ -296,8 +294,6 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /////////////////////////////////
   //////// OWNER OPERATIONS ///////
   /////////////////////////////////
-  
-  // @todo ask them: divide these up between multisig, executor, or either
 
   function changeStakeTime(uint _newMaxStakeBonusTime) public {
     require(msg.sender == executor, "only executor can change max stake bonus time");

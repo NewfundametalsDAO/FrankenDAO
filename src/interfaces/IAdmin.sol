@@ -29,7 +29,6 @@ interface Admin {
     //  * @param newPendingFounders New pending founder.
     //  */
     // function _setPendingFounders(address newPendingFounders) external onlyAdmin {
-    //     // @todo only the executor can set the founder role? (aside from in intialize)
 
     //     // Save current value, if any, for inclusion in log
     //     address oldPendingFounders = pendingFounders;
@@ -47,7 +46,6 @@ interface Admin {
     //  */
     // function _acceptFounders() external {
     //     // Check caller is pendingFounders and pendingFounders ≠ address(0)
-    //     // @todo why is the zero addr check needed? msg.sender will never be addr(0), can it?
     //     require(
     //         msg.sender == pendingFounders && msg.sender != address(0),
     //         "FrankenDAO::_acceptFounders: pending founder only"
@@ -73,7 +71,6 @@ interface Admin {
     //  * @param newPendingCouncil New pending council.
     //  */
     // function _setPendingCouncil(address newPendingCouncil) external onlyVetoers {
-    //     // @todo only the executor can set the council address? (aside from in intialize)
 
     //     // Save current value, if any, for inclusion in log
     //     address oldPendingCouncil = pendingCouncil;
@@ -91,7 +88,6 @@ interface Admin {
     //  */
     // function _acceptCouncil() external {
     //     // Check caller is pendingCouncil and pendingCouncil ≠ address(0)
-    //     // @todo why is the zero addr check needed? msg.sender will never be addr(0), can it?
     //     require(
     //         msg.sender == pendingCouncil && msg.sender != address(0),
     //         "FrankenDAO::_acceptCouncil: pending council only"

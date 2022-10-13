@@ -114,7 +114,7 @@ interface IGovernance {
     event VotingRefundSet(bool status);
     event ProposalRefundSet(bool status);
 
-    event TotalCommunityVotingPowerBreakdownUpdated(
+    event TotalCommunityScoreDataUpdated(
         uint64 proposalsCreated,
         uint64 proposalsPassed,
         uint64 votes
@@ -238,7 +238,7 @@ interface IGovernance {
             string[] memory signatures,
             bytes[] memory calldatas
         );
-    function getCommunityScoreData(address)
+    function userCommunityScoreData(address)
         external
         view
         returns (uint64 proposalsCreated, uint64 proposalsPassed, uint64 votes);

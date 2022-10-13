@@ -5,33 +5,30 @@ import "./interfaces/IExecutor.sol";
 import "./utils/Admin.sol";
 
 contract Executor is IExecutor, Admin {
-    uint256 public constant GRACE_PERIOD = 14 days; // @todo - do we want this editable?
+    uint256 public constant GRACE_PERIOD = 14 days;
     uint256 public constant MINIMUM_DELAY = 2 days;
     uint256 public constant MAXIMUM_DELAY = 30 days;
 
-    bool public initialized;
-    
+    address governance;
     uint256 public delay;
+    bool public initialized;
     
     mapping(bytes32 => bool) public queuedTransactions;
 
-    function initialize(address _founders, address _council, uint256 _delay) public {
+    modifier onlyGovernance() {
+        require(msg.sender == governance, "FrankenDAO::onlyGovernance: admin only");
+        _;
+    }
+
+    function initialize(address _governance, uint256 _delay) public {
         require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
         require(_delay >= MINIMUM_DELAY, 'FrankenDAOExecutor::initialize: Delay must exceed minimum delay.');
         require(_delay <= MAXIMUM_DELAY, 'FrankenDAOExecutor::initialize: Delay must not exceed maximum delay.');
+        require(_governance != address(0), 'FrankenDAOExecutor::initialize: Governance address cannot be zero address.');
 
-        founders = _founders;
-        council = _council;
+        governance = _governance;
         delay = _delay;
         initialized = true;
-    }
-
-    function setDelay(uint256 delay_) public onlyAdmin {
-        require(delay_ >= MINIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must exceed minimum delay.');
-        require(delay_ <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must not exceed maximum delay.');
-        delay = delay_;
-
-        emit NewDelay(delay);
     }
 
     function queueTransaction(
@@ -40,15 +37,14 @@ contract Executor is IExecutor, Admin {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public onlyAdmin returns (bytes32) {
+    ) public onlyGovernance returns (bytes32) {
         require(
             eta >= block.timestamp + delay,
             'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
         );
 
-        // @todo only issue with no description is two identical being queued back to back. maybe block that if already true so they can execute first, then queue next one?
-        // i think this is fine but new nouns includes description hash for extra security (in case of malicious conflict). lemme think through it.
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        require(queuedTransactions[txHash] == false, "FrankenDAOExecutor::queueTransaction: identical tx already queued");
         queuedTransactions[txHash] = true;
 
         emit QueueTransaction(txHash, target, value, signature, data, eta);
@@ -61,7 +57,7 @@ contract Executor is IExecutor, Admin {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public onlyAdmin {
+    ) public onlyGovernance {
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
@@ -75,10 +71,7 @@ contract Executor is IExecutor, Admin {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public onlyAdmin returns (bytes memory) {
-        // @todo SHouldn't anyone willing to pay the gas be able to execute?
-        // @todo Does this need to update community voting power in Staking?
-
+    ) public onlyGovernance returns (bytes memory) {
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         require(queuedTransactions[txHash], "FrankenDAOExecutor::executeTransaction: Transaction hasn't been queued.");
         require(
@@ -107,6 +100,18 @@ contract Executor is IExecutor, Admin {
         emit ExecuteTransaction(txHash, target, value, signature, data, eta);
 
         return returnData;
+    }
+
+    /////////////////////////////////
+    //////// OWNER OPERATIONS ///////
+    /////////////////////////////////
+
+    function setDelay(uint256 delay_) public {
+        require(msg.sender == address(this), "FrankenDAOExecutor::setDelay: self only");
+        require(delay_ >= MINIMUM_DELAY, 'FrankenDAOExecutor::setDelay: delay must exceed minimum delay.');
+        require(delay_ <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: delay must not exceed maximum delay.');
+        
+        emit NewDelay(delay = delay_);
     }
 
     receive() external payable {}

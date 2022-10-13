@@ -45,7 +45,7 @@ contract Governance is IGovernance, Admin, Refund {
     uint256 public constant MAX_QUORUM_VOTES_BPS = 2_000; // 2,000 basis points or 20%
 
     /// @notice The maximum number of actions that can be included in a proposal
-    uint256 public constant proposalMaxOperations = 10; // 10 actions
+    uint256 public constant PROPOSAL_MAX_OPERATIONS = 10; // 10 actions
 
     ///////////////////////////
     //// Voting Parameters ////
@@ -84,8 +84,9 @@ contract Governance is IGovernance, Admin, Refund {
     /// @notice The latest proposal for each proposer
     mapping(address => uint256) public latestProposalIds;
 
-    mapping(address => CommunityScoreData) public getCommunityScoreData;
-    CommunityScoreData public totalCommunityVotingPowerBreakdown;
+    mapping(address => CommunityScoreData) public userCommunityScoreData;
+    // note: this is only the data that is currently live, if a user is delegates / unstaked it's removed from here (but still counted above)
+    CommunityScoreData public totalCommunityScoreData;
 
 
     /**
@@ -109,9 +110,7 @@ contract Governance is IGovernance, Admin, Refund {
         uint256 proposalThresholdBPS_,
         uint256 quorumVotesBPS_
     ) public virtual {
-        // @todo don't need both of these, let's just make sure it's solid or maybe use Initializable?
         require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
-        require(address(executor) == address(0), "FrankenDAO::initialize: can only initialize once");
         require(executor_ != address(0),"FrankenDAO::initialize: invalid executor address");
         require(staking_ != address(0),"FrankenDAO::initialize: invalid staking address");
         require(votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD, "FrankenDAO::initialize: invalid voting period");
@@ -194,7 +193,6 @@ contract Governance is IGovernance, Admin, Refund {
         Proposal memory proposal = proposals[proposalId];
         if (proposal.vetoed) {
             return ProposalState.Vetoed;
-            // @todo tell them if they do this (ignore verification) they need to cancel to clear it out. same with expired.
         } else if (proposal.canceled || (!proposal.verified && block.number > proposal.endBlock)) {
             return ProposalState.Canceled;
         }  else if (block.number <= proposal.startBlock || !proposal.verified) {
@@ -233,13 +231,6 @@ contract Governance is IGovernance, Admin, Refund {
     function bps2Uint(uint256 bps, uint256 number) internal pure returns (uint256) {
         return (number * bps) / 10000;
     }
-
-    // @todo unused, should be fine to delete?
-    // function getChainIdInternal() internal view returns (uint256) {
-    //     uint256 chainId;
-    //     assembly { chainId := chainid() }
-    //     return chainId;
-    // }
 
     ///////////////////
     //// Proposals ////
@@ -293,7 +284,7 @@ contract Governance is IGovernance, Admin, Refund {
         );
 
         require(targets.length != 0, "FrankenDAO::propose: must provide actions");
-        require(targets.length <= proposalMaxOperations, "FrankenDAO::propose: too many actions");
+        require(targets.length <= PROPOSAL_MAX_OPERATIONS, "FrankenDAO::propose: too many actions");
         require(
             targets.length == values.length &&
             targets.length == signatures.length &&
@@ -370,9 +361,9 @@ contract Governance is IGovernance, Admin, Refund {
         proposal.verified = true;
 
         // update community score data
-        uint256 userProposalCount = ++getCommunityScoreData[proposal.proposer].proposalsCreated;
+        uint256 userProposalCount = ++userCommunityScoreData[proposal.proposer].proposalsCreated;
         // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
-        totalCommunityVotingPowerBreakdown.proposalsCreated += 1;
+        totalCommunityScoreData.proposalsCreated += 1;
     }
 
     /////////////////
@@ -426,9 +417,9 @@ contract Governance is IGovernance, Admin, Refund {
         );
         Proposal storage proposal = proposals[proposalId];
 
-        uint256 userSuccessfulProposalCount = ++getCommunityScoreData[proposal.proposer].proposalsPassed;
+        uint256 userSuccessfulProposalCount = ++userCommunityScoreData[proposal.proposer].proposalsPassed;
         // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
-        totalCommunityVotingPowerBreakdown.proposalsPassed += 1;
+        totalCommunityScoreData.proposalsPassed += 1;
         
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
@@ -544,8 +535,8 @@ contract Governance is IGovernance, Admin, Refund {
      */
     function castVoteInternal(address voter, uint256 proposalId, uint8 support) internal returns (uint96) {
         // we can do this with no check because if you can vote, it means you have votes so you haven't delegated
-        totalCommunityVotingPowerBreakdown.votes += 1;
-        uint256 userVoteCount = ++getCommunityScoreData[voter].votes;
+        totalCommunityScoreData.votes += 1;
+        uint256 userVoteCount = ++userCommunityScoreData[voter].votes;
 
         require(state(proposalId) == ProposalState.Active, "FrankenDAO::castVoteInternal: voting is closed");
         require(support <= 2, "FrankenDAO::castVoteInternal: invalid vote type");
@@ -680,20 +671,20 @@ contract Governance is IGovernance, Admin, Refund {
         activeProposals.pop();
     }
     
-    function updateTotalCommunityVotingPowerBreakdown(
+    function updateTotalCommunityScoreData(
         uint64 _votes,
         uint64 _proposalsCreated,
         uint64 _proposalsPassed
     ) external {
         require(
             msg.sender == staking,
-            "FrankenDAO::updateTotalCommunityVotingPowerBreakdown: only staking"
+            "FrankenDAO::updateTotalCommunityScoreData: only staking"
         );
 
-        totalCommunityVotingPowerBreakdown.proposalsCreated = _proposalsCreated;
-        totalCommunityVotingPowerBreakdown.proposalsPassed = _proposalsPassed;
-        totalCommunityVotingPowerBreakdown.votes = _votes;
+        totalCommunityScoreData.proposalsCreated = _proposalsCreated;
+        totalCommunityScoreData.proposalsPassed = _proposalsPassed;
+        totalCommunityScoreData.votes = _votes;
 
-        emit TotalCommunityVotingPowerBreakdownUpdated(_proposalsCreated, _proposalsPassed, _votes);
+        emit TotalCommunityScoreDataUpdated(_proposalsCreated, _proposalsPassed, _votes);
     }
 }

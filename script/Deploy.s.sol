@@ -7,7 +7,7 @@ import "src/Executor.sol";
 import "src/Staking.sol";
 import "src/Governance.sol";
 
-contract CounterScript is Script {
+contract DeployScript is Script {
     Executor executorImpl;
     Executor executorProxy;
     Staking staking;
@@ -16,8 +16,9 @@ contract CounterScript is Script {
 
     address FOUNDER_MULTISIG; // FILL THIS IN
     address COUNCIL_MULTISIG; // FILL THIS IN
-    address FRANKENPUNKS;
-    address FRANKENMONSTERS;
+    address FRANKENPUNKS; // FILL THIS IN
+    address FRANKENMONSTERS; // FILL THIS IN
+    uint SALT = 1234;
 
     function run() public {
         vm.startBroadcast();
@@ -41,13 +42,32 @@ contract CounterScript is Script {
         govImpl = new Governance();
         govImpl.initialize(address(0), address(0), address(0), [address(0), address(0)], 10000, 10000, 100, 100);
 
+        // precompute staking address
+        bytes memory bytecode = abi.encodePacked(
+            type(Staking).creationCode,
+            abi.encode(
+                FRANKENPUNKS,
+                FRANKENMONSTERS,
+                address(govProxy),
+                address(executorProxy),
+                4 weeks,
+                20,
+                100,
+                200,
+                200
+            )
+        );
+        address stakingAddr = address(uint160(keccak256(
+            abi.encodePacked(bytes1(0xff), address(this), SALT, keccak256(bytecode))
+        )));
+
         // create governance proxy and initialize
         govProxy = new Proxy(
             govImpl,
             abi.encodeWithSignature(
                 "initialize(address,address,address,address[],uint256,uint256,uint256,uint256)",
                 address(executorProxy),
-                address(0),
+                stakingAddr,
                 FOUNDER_MULTISIG,
                 COUNCIL_MULTISIG,
                 [address(0), address(0)], // vetoers, i think we're removing
@@ -59,7 +79,7 @@ contract CounterScript is Script {
         );
 
         // create staking 
-        staking = new Staking(
+        staking = new Staking{salt: SALT}(
             FRANKENPUNKS,
             FRANKENMONSTERS,
             address(govProxy),
@@ -71,7 +91,12 @@ contract CounterScript is Script {
             200
         );
 
-        govProxy.setStakingAddress(address(staking)); // @todo make this function or figure out how to predetermine address for above
+        console.log("executorImpl", address(executorImpl));
+        console.log("executorProxy", address(executorProxy));
+        console.log("govImpl", address(govImpl));
+        console.log("govProxy", address(govProxy));
+        console.log("predicted staking", stakingAddr);
+        console.log("staking", address(staking));
 
         vm.stopBroadcast();
     }

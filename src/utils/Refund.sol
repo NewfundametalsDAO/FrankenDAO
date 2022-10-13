@@ -16,7 +16,6 @@ contract Refund {
      *         the contract's balance. Lifted straight from NounsDAO: https://github.com/nounsDAO/nouns-monorepo/blob/master/packages/nouns-contracts/contracts/governance/NounsDAOLogicV2.sol#L1033-L1046
      * @param _startGas Amount of gas to refund
      */
-    // @todo should we do this as a modifier that grabs the startGas as the start? we'd need to require( total votes > 0) or whatever
     function _refundGas(uint256 _startGas) internal {
         require(
             address(this).balance >= _startGas,
