@@ -562,6 +562,35 @@ contract Governance is IGovernance, Admin, Refund {
         return votes;
     }
 
+
+    /////////////////
+    //// Helpers ////
+    /////////////////
+    function _removeFromActiveProposals(uint256 _id) private {
+        uint256 index;
+        uint[] actives = activeProposals;
+
+        for (uint256 i = 0; i < actives.length; i++) {
+            if(actives[i] == _id) {
+                index = i;
+                break;
+            }
+        }
+
+        activeProposals[index] = activeProposals[activeProposals.length - 1];
+        activeProposals.pop();
+    }
+    
+    function updateTotalCommunityScoreData(uint64 _votes, uint64 _proposalsCreated, uint64 _proposalsPassed) external {
+        require(msg.sender == staking, "FrankenDAO::updateTotalCommunityScoreData: only staking");
+
+        totalCommunityScoreData.proposalsCreated = _proposalsCreated;
+        totalCommunityScoreData.proposalsPassed = _proposalsPassed;
+        totalCommunityScoreData.votes = _votes;
+
+        emit TotalCommunityScoreDataUpdated(_proposalsCreated, _proposalsPassed, _votes);
+    }
+
     ///////////////
     //// Admin ////
     ///////////////
@@ -570,9 +599,7 @@ contract Governance is IGovernance, Admin, Refund {
      * on voting on and off
      */
     function setProposalRefund(bool _proposing) external onlyAdmin {
-        proposalRefund = _proposing;
-
-        emit VotingRefundSet(_proposing);
+        emit VotingRefundSet(proposalRefund = _proposing);
     }
 
     /**
@@ -580,9 +607,7 @@ contract Governance is IGovernance, Admin, Refund {
      * on voting on and off
      */
     function setVotingRefund(bool _voting) external onlyAdmin {
-        votingRefund = _voting;
-
-        emit ProposalRefundSet(_voting);
+        emit ProposalRefundSet(votingRefund = _voting);
     }
 
     /**
@@ -591,8 +616,7 @@ contract Governance is IGovernance, Admin, Refund {
      */
     function _setVotingDelay(uint256 newVotingDelay) external onlyAdmin {
         require(
-            newVotingDelay >= MIN_VOTING_DELAY &&
-                newVotingDelay <= MAX_VOTING_DELAY,
+            newVotingDelay >= MIN_VOTING_DELAY && newVotingDelay <= MAX_VOTING_DELAY,
             "FrankenDAO::_setVotingDelay: invalid voting delay"
         );
         uint256 oldVotingDelay = votingDelay;
@@ -607,8 +631,7 @@ contract Governance is IGovernance, Admin, Refund {
      */
     function _setVotingPeriod(uint256 newVotingPeriod) external onlyAdmin {
         require(
-            newVotingPeriod >= MIN_VOTING_PERIOD &&
-                newVotingPeriod <= MAX_VOTING_PERIOD,
+            newVotingPeriod >= MIN_VOTING_PERIOD && newVotingPeriod <= MAX_VOTING_PERIOD,
             "FrankenDAO::_setVotingPeriod: invalid voting period"
         );
         uint256 oldVotingPeriod = votingPeriod;
@@ -627,16 +650,13 @@ contract Governance is IGovernance, Admin, Refund {
     {
         require(
             newProposalThresholdBPS >= MIN_PROPOSAL_THRESHOLD_BPS &&
-                newProposalThresholdBPS <= MAX_PROPOSAL_THRESHOLD_BPS,
+            newProposalThresholdBPS <= MAX_PROPOSAL_THRESHOLD_BPS,
             "FrankenDAO::_setProposalThreshold: invalid proposal threshold"
         );
         uint256 oldProposalThresholdBPS = proposalThresholdBPS;
         proposalThresholdBPS = newProposalThresholdBPS;
 
-        emit ProposalThresholdBPSSet(
-            oldProposalThresholdBPS,
-            proposalThresholdBPS
-        );
+        emit ProposalThresholdBPSSet(oldProposalThresholdBPS, proposalThresholdBPS);
     }
 
     /**
@@ -647,44 +667,12 @@ contract Governance is IGovernance, Admin, Refund {
     function _setQuorumVotesBPS(uint256 newQuorumVotesBPS) external onlyAdmin {
         require(
             newQuorumVotesBPS >= MIN_QUORUM_VOTES_BPS &&
-                newQuorumVotesBPS <= MAX_QUORUM_VOTES_BPS,
+            newQuorumVotesBPS <= MAX_QUORUM_VOTES_BPS,
             "FrankenDAO::_setProposalThreshold: invalid proposal threshold"
         );
         uint256 oldQuorumVotesBPS = quorumVotesBPS;
         quorumVotesBPS = newQuorumVotesBPS;
 
         emit QuorumVotesBPSSet(oldQuorumVotesBPS, quorumVotesBPS);
-    }
-
-    function _removeFromActiveProposals(uint256 _id) private {
-        uint256 index;
-        uint[] actives = activeProposals;
-
-        for (uint256 i = 0; i < actives.length; i++) {
-            if(actives[i] == _id) {
-                index = i;
-                break;
-            }
-        }
-
-        activeProposals[index] = activeProposals[activeProposals.length - 1];
-        activeProposals.pop();
-    }
-    
-    function updateTotalCommunityScoreData(
-        uint64 _votes,
-        uint64 _proposalsCreated,
-        uint64 _proposalsPassed
-    ) external {
-        require(
-            msg.sender == staking,
-            "FrankenDAO::updateTotalCommunityScoreData: only staking"
-        );
-
-        totalCommunityScoreData.proposalsCreated = _proposalsCreated;
-        totalCommunityScoreData.proposalsPassed = _proposalsPassed;
-        totalCommunityScoreData.votes = _votes;
-
-        emit TotalCommunityScoreDataUpdated(_proposalsCreated, _proposalsPassed, _votes);
     }
 }
