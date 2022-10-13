@@ -13,7 +13,7 @@ import "./interfaces/IGovernance.sol";
 /// @title FrankenDAO Staking Contract
 /// @author Zach Obront & Zakk Fleischmann
 /// @notice Users stake FrankenPunks & FrankenMonsters and get ERC721s in return
-/// @notice These ERC721s are used to calculating voting power for DAO governance
+/// @notice These ERC721s are used to calculate voting power for DAO governance
 contract Staking is IStaking, ERC721, Refund {
   using Strings for uint256;
 
