@@ -63,6 +63,8 @@ contract Governance is IGovernance, Admin, Refund {
     /// @notice The basis point number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed. *DIFFERS from GovernerBravo
     uint256 public quorumVotesBPS;
 
+    RefundStatus public refund;
+
     /// @notice Whether or not gas is refunded for casting votes.
     bool public votingRefund;
 
@@ -268,9 +270,18 @@ contract Governance is IGovernance, Admin, Refund {
         bytes[] memory _calldatas,
         string memory _description
     ) public refundable returns (uint256) {
-        require(proposalRefund, "FrankenDAO::proposeWithRefund: refunding gas is turned off");
-        uint256 proposalId = _propose(_targets, _values, _signatures,
-                                      _calldatas, _description);
+        require(
+            refund == RefundStatus.ProposalRefund ||
+                refund == RefundStatus.VotingAndProposalRefund,
+            "FrankenDAO::proposeWithRefund: refunding gas is turned off"
+        );
+        uint256 proposalId = _propose(
+            _targets,
+            _values,
+            _signatures,
+            _calldatas,
+            _description
+        );
         return proposalId;
     }
 
@@ -527,12 +538,23 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _support The support value for the vote. 0=against, 1=for, 2=abstain
      * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
      */
-    function castRefundableVote(uint256 _proposalId, uint8 _support) external refundable {
-        require(votingRefund, "FrankenDAO::castRefundableVote: refunding gas is turned off");
+    function castRefundableVote(uint256 _proposalId, uint8 _support)
+        external
+        refundable
+    {
+        require(
+            refund == RefundStatus.VotingRefund ||
+                refund == RefundStatus.VotingAndProposalRefund,
+            "FrankenDAO::castRefundableVote: refunding gas is turned off"
+        );
         emit VoteCast(
-            msg.sender, _proposalId, _support, castVoteInternal(msg.sender, _proposalId, _support)
+            msg.sender,
+            _proposalId,
+            _support,
+            castVoteInternal(msg.sender, _proposalId, _support)
         );
     }
+
     /**
      * @notice Internal function that caries out voting logic
      * @param _voter The voter that is casting their vote
@@ -604,18 +626,13 @@ contract Governance is IGovernance, Admin, Refund {
     ///////////////
     /**
      * @notice Admin function for setting turning gas refunds
-     * on voting on and off
+     * on voting on and official
+     * @param _refundStatus RefundStatus value
      */
-    function setProposalRefund(bool _proposing) external onlyAdmin {
-        emit VotingRefundSet(proposalRefund = _proposing);
-    }
-
-    /**
-     * @notice Admin function for setting turning gas refunds
-     * on voting on and off
-     */
-    function setVotingRefund(bool _voting) external onlyAdmin {
-        emit ProposalRefundSet(votingRefund = _voting);
+    function setRefund(RefundStatus _refundStatus) external {
+        require(msg.sender == executor, "only executor can set the refund");
+        refund = _refundStatus;
+        emit RefundStatus(_refundStatus);
     }
 
     /**

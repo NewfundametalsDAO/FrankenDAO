@@ -41,6 +41,12 @@ interface IGovernance {
         uint64 votes
     );
 
+    enum RefundStatus {
+        NoRefunds,
+        VotingRefund,
+        ProposalRefund,
+        VotingAndProposalRefund
+    }
 
     struct ProposalTemp {
         uint256 totalSupply;
