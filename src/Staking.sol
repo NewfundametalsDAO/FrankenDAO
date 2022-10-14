@@ -29,6 +29,9 @@ contract Staking is IStaking, ERC721, Refund {
   /// @notice The DAO governance contract (where voting occurs)
   IGovernance governance;
 
+  /// @notice The DAO executor contract (where governance actions are executed)
+  address executor;
+
   /// @return maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
   /// @return maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
   StakingSettings public stakingSettings;
@@ -189,7 +192,7 @@ contract Staking is IStaking, ERC721, Refund {
 
   /// @notice Transferring of staked tokens is prohibited, so all transfers will revert
   /// @dev This will also block safeTransferFrom, because of solmate's implementation
-  function transferFrom(address _from, address _to, uint256 _id) public override {
+  function transferFrom(address _from, address _to, uint256 _id) public pure override {
     revert("staked tokens cannot be transferred");
   }
 

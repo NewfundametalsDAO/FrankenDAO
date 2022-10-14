@@ -630,9 +630,9 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _refundStatus RefundStatus value
      */
     function setRefund(RefundStatus _refundStatus) external {
-        require(msg.sender == executor, "only executor can set the refund");
+        require(msg.sender == address( executor ), "only executor can set the refund");
         refund = _refundStatus;
-        emit RefundStatus(_refundStatus);
+        emit RefundSet(_refundStatus);
     }
 
     /**

@@ -25,7 +25,6 @@ interface IStaking {
     event DelegatingRefundingSet(bool status);
     event StakingPause(bool status);
     event RefundSet(RefundStatus status);
-    event IssueRefund(address refunded, uint256 ammount, bool sent);
     
     // function DELEGATION_TYPEHASH() external view returns (bytes32);
     // function DOMAIN_TYPEHASH() external view returns (bytes32);

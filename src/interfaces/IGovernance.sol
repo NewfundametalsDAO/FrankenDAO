@@ -1,40 +1,9 @@
 pragma solidity ^0.8.13;
 
 interface IGovernance {
-    event NewAdmin(address oldAdmin, address newAdmin);
-    event NewImplementation(address oldImplementation, address newImplementation);
-    event NewPendingAdmin(address oldPendingAdmin, address newPendingAdmin);
-    event NewVetoer(address newVetoer);
-    event ProposalCanceled(uint256 id);
-    event ProposalCreatedWithRequirements(
-        uint256 id,
-        address proposer,
-        address[] targets,
-        uint256[] values,
-        string[] signatures,
-        bytes[] calldatas,
-        uint256 startBlock,
-        uint256 endBlock,
-        uint256 proposalThreshold,
-        uint256 quorumVotes,
-        string description
-    );
-    event ProposalExecuted(uint256 id);
-    event ProposalQueued(uint256 id, uint256 eta);
-    event ProposalThresholdBPSSet(uint256 oldProposalThresholdBPS, uint256 newProposalThresholdBPS);
-    event ProposalVetoed(uint256 id);
-    event QuorumVotesBPSSet(uint256 oldQuorumVotesBPS, uint256 newQuorumVotesBPS);
-    event RenounceVetoer(address oldVetoer);
-    event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole);
-    event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
-    event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
-    event VoteCast(address indexed voter, uint256 proposalId, uint8 support, uint256 votes);
-    event VotingDelaySet(uint256 oldVotingDelay, uint256 newVotingDelay);
-    event VotingPeriodSet(uint256 oldVotingPeriod, uint256 newVotingPeriod);
-
     event RefundSet(RefundStatus status);
 
-       /// @notice An event emitted when a new proposal is created
+    /// @notice An event emitted when a new proposal is created
     event ProposalCreated(
         uint256 id,
         address proposer,
