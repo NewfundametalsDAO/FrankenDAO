@@ -7,16 +7,16 @@ import "oz/utils/math/SafeCast.sol";
 import "./utils/Refund.sol";
 import "./utils/Admin.sol";
 
-
 import "./interfaces/IERC721.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IGovernance.sol";
+import "./interfaces/IExecutor.sol";
 
 /// @title FrankenDAO Staking Contract
 /// @author Zach Obront & Zakk Fleischmann
 /// @notice Users stake FrankenPunks & FrankenMonsters and get ERC721s in return
 /// @notice These ERC721s are used for voting power for FrankenDAO governance
-contract Staking is IStaking, ERC721, Refund {
+contract Staking is IStaking, ERC721, Refund, Admin {
   using Strings for uint256;
   using SafeCast for uint256;
 
@@ -28,9 +28,6 @@ contract Staking is IStaking, ERC721, Refund {
 
   /// @notice The DAO governance contract (where voting occurs)
   IGovernance governance;
-
-  /// @notice The DAO executor contract (where governance actions are executed)
-  address executor;
 
   /// @return maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
   /// @return maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
@@ -153,6 +150,8 @@ contract Staking is IStaking, ERC721, Refund {
   /// @param _frankenmonsters The address of the original ERC721 FrankenMonsters contract
   /// @param _governance The address of the DAO governance contract
   /// @param _executor The address of the DAO executor contract
+  /// @param _founders The address of the founder multisig for restricted functions
+  /// @param _council The address of the council multisig for restricted functions
   /// @param _maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
   /// @param _maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
   /// @param _votesMultiplier The multiplier for extra voting power earned per DAO vote cast
@@ -163,6 +162,8 @@ contract Staking is IStaking, ERC721, Refund {
     address _frankenmonsters,
     address _governance, 
     address _executor, 
+    address _founders,
+    address _council,
     uint _maxStakeBonusTime, 
     uint _maxStakeBonusAmount,
     uint _votesMultiplier, 
@@ -172,7 +173,10 @@ contract Staking is IStaking, ERC721, Refund {
     frankenpunks = IERC721(_frankenpunks);
     frankenmonsters = IERC721(_frankenmonsters);
     governance = IGovernance( _governance );
-    executor = _executor;
+
+    executor = IExecutor(_executor);
+    founders = _founders;
+    council = _council;
 
     stakingSettings = StakingSettings({
       maxStakeBonusTime: _maxStakeBonusTime.toUint128(), // 4 weeks
@@ -372,11 +376,6 @@ contract Staking is IStaking, ERC721, Refund {
     _unstake(_tokenIds, _to);
   }
 
-  // function unstakeWithRefund(uint[] calldata _tokenIds, address _to) public refundable {
-  //   require(refund == RefundStatus.StakingRefund || refund == RefundStatus.StakingAndDelegatingRefund, "Staking: Staking refunds are not enabled");
-  //   _unstake(_tokenIds, _to);
-  // }
-
   /// @notice Internal function to unstake tokens and surrender voting power
   /// @param _tokenIds An array of the ids of the tokens being unstaked
   /// @param _to The address to send the underlying NFT to
@@ -443,6 +442,7 @@ contract Staking is IStaking, ERC721, Refund {
     /// @return The voting power for the token
     /// @dev Voting power is calculated as 20 + staking bonus (0 to max staking bonus) + evil bonus (0 or 10)
     function getTokenVotingPower(uint _tokenId) public override view returns (uint) {
+      require(ownerOf(_tokenId) != address(0), "Staking:getTokenVotingPower: URI query for nonexistent token");
       // Only FrankenPunks are eligible for the evil bonus
       if (_tokenId < 10000) {
         return 20 + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
@@ -496,11 +496,6 @@ contract Staking is IStaking, ERC721, Refund {
       return (EVIL_BITMAPS[_tokenId >> 8] >> (255 - (_tokenId & 255)) & 1) * 10;
     }
 
-    function getEvilBitmap() public view returns (uint[40] memory) {
-      return EVIL_BITMAPS;
-    }
-
-
   /////////////////////////////////
   //////// OWNER OPERATIONS ///////
   /////////////////////////////////
@@ -519,22 +514,22 @@ contract Staking is IStaking, ERC721, Refund {
     stakingSettings.maxStakeBonusAmount = _newMaxStakeBonusAmount;
   }
 
-  /// @notice Pause or unpause staking
-  /// @param _paused Whether staking should be paused or not
-  /// @dev This will be used to open and close staking windows to incentivize participation
-  function setPause(bool _paused) external onlyExecutor { // @todo This will probably switch to be admins
-    emit StakingPause(paused = _paused);
-  }
-
   /// @notice Turn on or off gas refunds for staking and delegating
   /// @param _refundStatus Are refunds on for staking, delegating, both, or neither?
   function setRefund(RefundStatus _refundStatus) external onlyExecutor {
     emit RefundSet(refund = _refundStatus);
   }
 
+  /// @notice Pause or unpause staking
+  /// @param _paused Whether staking should be paused or not
+  /// @dev This will be used to open and close staking windows to incentivize participation
+  function setPause(bool _paused) external onlyAdmins {
+    emit StakingPause(paused = _paused);
+  }
+
   /// @notice Set hte base URI for the metadata for the staked token
   /// @param _baseURI The new base URI
-  function setBaseURI(string calldata _baseURI) external onlyExecutor {
+  function setBaseURI(string calldata _baseURI) external onlyAdmins {
     _baseTokenURI = _baseURI;
   }
 }

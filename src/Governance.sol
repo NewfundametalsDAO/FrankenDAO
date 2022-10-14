@@ -3,14 +3,14 @@ pragma solidity ^0.8.13;
 
 import "./interfaces/IGovernance.sol";
 import "./Staking.sol";
-import "./Executor.sol";
+import "./interfaces/IExecutor.sol";
 import "./utils/Admin.sol";
 import "./utils/Refund.sol";
 
 contract Governance is IGovernance, Admin, Refund {
     bool public initialized;
 
-       /// @notice The name of this contract
+    /// @notice The name of this contract
     string public constant name = "Franken DAO";
 
     /// @notice The address of staked the Franken tokens
@@ -103,8 +103,8 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _quorumVotesBPS The initial quorum votes threshold in basis points
      */
     function initialize(
-        address payable _executor,
         address _staking,
+        address payable _executor,
         address _founders,
         address _council,
         uint256 _votingPeriod,
@@ -113,17 +113,15 @@ contract Governance is IGovernance, Admin, Refund {
         uint256 _quorumVotesBPS
     ) public virtual {
         require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
-        require(_executor != address(0),"FrankenDAO::initialize: invalid executor address");
         require(_staking != address(0),"FrankenDAO::initialize: invalid staking address");
         require(_votingPeriod >= MIN_VOTING_PERIOD && _votingPeriod <= MAX_VOTING_PERIOD, "FrankenDAO::initialize: invalid voting period");
         require(_votingDelay >= MIN_VOTING_DELAY && _votingDelay <= MAX_VOTING_DELAY, "FrankenDAO::initialize: invalid voting delay");
         require(_proposalThresholdBPS >= MIN_PROPOSAL_THRESHOLD_BPS && _proposalThresholdBPS <= MAX_PROPOSAL_THRESHOLD_BPS, "FrankenDAO::initialize: invalid proposal threshold" );
         require(_quorumVotesBPS >= MIN_QUORUM_VOTES_BPS && _quorumVotesBPS <= MAX_QUORUM_VOTES_BPS, "FrankenDAO::initialize: invalid proposal threshold" );
 
-        emit VotingPeriodSet(votingPeriod, _votingPeriod);
-        emit VotingDelaySet(votingDelay, _votingDelay);
-        emit ProposalThresholdBPSSet( proposalThresholdBPS, _proposalThresholdBPS );
-        emit QuorumVotesBPSSet(quorumVotesBPS, _quorumVotesBPS);
+        executor = IExecutor(_executor);
+        founders = _founders;
+        council = _council;
 
         staking = Staking(_staking);
         votingPeriod = _votingPeriod;
@@ -131,11 +129,12 @@ contract Governance is IGovernance, Admin, Refund {
         proposalThresholdBPS = _proposalThresholdBPS;
         quorumVotesBPS = _quorumVotesBPS;
 
-        executor = Executor(_executor);
-        founders = _founders;
-        council = _council;
-
         initialized = true;
+
+        emit VotingPeriodSet(votingPeriod, _votingPeriod);
+        emit VotingDelaySet(votingDelay, _votingDelay);
+        emit ProposalThresholdBPSSet( proposalThresholdBPS, _proposalThresholdBPS );
+        emit QuorumVotesBPSSet(quorumVotesBPS, _quorumVotesBPS);
     }
 
     ///////////////
@@ -480,7 +479,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @notice Vetoes a proposal only if sender has ability to veto a proposal
      * @param _proposalId The id of the proposal to veto
      */
-    function veto(uint256 _proposalId) external onlyVetoers {
+    function veto(uint256 _proposalId) external onlyAdmins {
         Proposal storage proposal = proposals[_proposalId];
         require(
             !proposal.executed && !proposal.canceled && !proposal.vetoed,
@@ -629,17 +628,15 @@ contract Governance is IGovernance, Admin, Refund {
      * on voting on and official
      * @param _refundStatus RefundStatus value
      */
-    function setRefund(RefundStatus _refundStatus) external {
-        require(msg.sender == address( executor ), "only executor can set the refund");
-        refund = _refundStatus;
-        emit RefundSet(_refundStatus);
+    function setRefund(RefundStatus _refundStatus) external onlyExecutor {
+        emit RefundSet(refund = _refundStatus);
     }
 
     /**
      * @notice Admin function for setting the voting delay
      * @param _newVotingDelay new voting delay, in blocks
      */
-    function _setVotingDelay(uint256 _newVotingDelay) external onlyAdmin {
+    function _setVotingDelay(uint256 _newVotingDelay) external onlyExecutor {
         require(
             _newVotingDelay >= MIN_VOTING_DELAY && _newVotingDelay <= MAX_VOTING_DELAY,
             "FrankenDAO::_setVotingDelay: invalid voting delay"
@@ -654,7 +651,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @notice Admin function for setting the voting period
      * @param _newVotingPeriod new voting period, in blocks
      */
-    function _setVotingPeriod(uint256 _newVotingPeriod) external onlyAdmin {
+    function _setVotingPeriod(uint256 _newVotingPeriod) external onlyExecutor {
         require(
             _newVotingPeriod >= MIN_VOTING_PERIOD && _newVotingPeriod <= MAX_VOTING_PERIOD,
             "FrankenDAO::_setVotingPeriod: invalid voting period"
@@ -670,9 +667,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @dev _newProposalThresholdBPS must be greater than the hardcoded min
      * @param _newProposalThresholdBPS new proposal threshold
      */
-    function _setProposalThresholdBPS(uint256 _newProposalThresholdBPS)
-        external onlyAdmin
-    {
+    function _setProposalThresholdBPS(uint256 _newProposalThresholdBPS) external onlyExecutorOrAdmins {
         require(
             _newProposalThresholdBPS >= MIN_PROPOSAL_THRESHOLD_BPS &&
             _newProposalThresholdBPS <= MAX_PROPOSAL_THRESHOLD_BPS,
@@ -689,7 +684,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @dev _newQuorumVotesBPS must be greater than the hardcoded min
      * @param _newQuorumVotesBPS new proposal threshold
      */
-    function _setQuorumVotesBPS(uint256 _newQuorumVotesBPS) external onlyAdmin {
+    function _setQuorumVotesBPS(uint256 _newQuorumVotesBPS) external onlyExecutorOrAdmins {
         require(
             _newQuorumVotesBPS >= MIN_QUORUM_VOTES_BPS &&
             _newQuorumVotesBPS <= MAX_QUORUM_VOTES_BPS,

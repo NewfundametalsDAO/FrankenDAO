@@ -2,34 +2,35 @@
 pragma solidity ^0.8.13;
 
 import "./interfaces/IExecutor.sol";
-import "./utils/Admin.sol";
 
-contract Executor is IExecutor, Admin {
+contract Executor is IExecutor {
+    uint256 public constant DELAY = 2 days;
     uint256 public constant GRACE_PERIOD = 14 days;
-    uint256 public constant MINIMUM_DELAY = 2 days;
-    uint256 public constant MAXIMUM_DELAY = 30 days;
-
-    address governance;
-    uint256 public delay;
-    bool public initialized;
     
+    address governance;
     mapping(bytes32 => bool) public queuedTransactions;
 
-    modifier onlyGovernance() {
-        require(msg.sender == governance, "FrankenDAO::onlyGovernance: admin only");
+    /////////////////////////////////
+    ////////// CONSTRUCTOR //////////
+    /////////////////////////////////
+
+    function constructor(address _governance) public {
+        if (_governance == address(0)) revert ZeroAddress();
+        governance = _governance;
+    }
+
+    /////////////////////////////////
+    /////////// MODIFIERS ///////////
+    /////////////////////////////////
+
+        modifier onlyGovernance() {
+        if (msg.sender != governance) revert Unauthorized();
         _;
     }
 
-    function initialize(address _governance, uint256 _delay) public {
-        require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
-        require(_delay >= MINIMUM_DELAY, 'FrankenDAOExecutor::initialize: Delay must exceed minimum delay.');
-        require(_delay <= MAXIMUM_DELAY, 'FrankenDAOExecutor::initialize: Delay must not exceed maximum delay.');
-        require(_governance != address(0), 'FrankenDAOExecutor::initialize: Governance address cannot be zero address.');
-
-        governance = _governance;
-        delay = _delay;
-        initialized = true;
-    }
+    /////////////////////////////////
+    ////////// TX EXECUTION /////////
+    /////////////////////////////////
 
     function queueTransaction(
         address _target,
@@ -103,18 +104,6 @@ contract Executor is IExecutor, Admin {
         emit ExecuteTransaction(txHash, _target, _value, _signature, _data, _eta);
 
         return returnData;
-    }
-
-    /////////////////////////////////
-    //////// OWNER OPERATIONS ///////
-    /////////////////////////////////
-
-    function setDelay(uint256 _delay) public {
-        require(msg.sender == address(this), "FrankenDAOExecutor::setDelay: self only");
-        require(_delay >= MINIMUM_DELAY, 'FrankenDAOExecutor::setDelay: delay must exceed minimum delay.');
-        require(_delay <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: delay must not exceed maximum delay.');
-        
-        emit NewDelay(delay = _delay);
     }
 
     receive() external payable {}
