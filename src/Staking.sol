@@ -15,7 +15,7 @@ import "./interfaces/IGovernance.sol";
 /// @title FrankenDAO Staking Contract
 /// @author Zach Obront & Zakk Fleischmann
 /// @notice Users stake FrankenPunks & FrankenMonsters and get ERC721s in return
-/// @notice These ERC721s are used to calculate voting power for DAO governance
+/// @notice These ERC721s are used for voting power for FrankenDAO governance
 contract Staking is IStaking, ERC721, Refund {
   using Strings for uint256;
   using SafeCast for uint256;
@@ -101,7 +101,7 @@ contract Staking is IStaking, ERC721, Refund {
 
   /// @notice The staked time bonus for each staked token (tokenId => bonus votes)
   /// @dev This needs to be tracked because users will select how much time to lock for, so bonus is variable
-  mapping(uint => uint) public stakedTimeBonus; 
+  mapping(uint => uint) stakedTimeBonus; 
 
   /// @notice Addresses that each user delegates votes to
   /// @dev This should only be accessed via delegates() function, which overrides address(0) with self
@@ -117,7 +117,7 @@ contract Staking is IStaking, ERC721, Refund {
   mapping(address => uint) public tokenVotingPower;
 
   /// @notice The total token voting power of the system
-  uint public totalTokenVotingPower;
+  uint totalTokenVotingPower;
 
   /// @notice Base token URI for the ERC721s representing the staked position
   string public _baseTokenURI;
@@ -134,7 +134,7 @@ contract Staking is IStaking, ERC721, Refund {
     for (uint i = 0; i < activeProposals.length; i++) {
       require(!governance.getReceipt(activeProposals[i], delegates(msg.sender)).hasVoted, "Staking: Cannot stake while votes are cast");
       (, address proposer,,) = governance.getProposalData(activeProposals[i]);
-      require(!(proposer == delegates(msg.sender)), "Staking: Cannot stake while votes are cast");
+      require(proposer != delegates(msg.sender), "Staking: Cannot stake while votes are cast");
     }
     _;
   }
