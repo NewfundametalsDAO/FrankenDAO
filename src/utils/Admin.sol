@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.13;
 
 import "../interfaces/IAdmin.sol";
 import "../Executor.sol";
@@ -19,17 +19,17 @@ contract Admin is IAdmin {
     /**
      * @notice Begins transfer of founder rights. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
      * @dev Founders function to begin change of founder. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
-     * @param newPendingFounders New pending founder.
+     * @param _newPendingFounders New pending founder.
      */
-    function _setPendingFounders(address newPendingFounders) external onlyAdmin {
+    function _setPendingFounders(address _newPendingFounders) external onlyAdmin {
         // Save current value, if any, for inclusion in log
         address oldPendingFounders = pendingFounders;
 
-        // Store pendingFounders with value newPendingFounders
-        pendingFounders = newPendingFounders;
+        // Store pendingFounders with value _newPendingFounders
+        pendingFounders = _newPendingFounders;
 
         // Emit NewPendingFounders(oldPendingFounders, newPendingFounders)
-        emit NewPendingFounders(oldPendingFounders, newPendingFounders);
+        emit NewPendingFounders(oldPendingFounders, _newPendingFounders);
     }
 
     /**
@@ -57,17 +57,17 @@ contract Admin is IAdmin {
     /**
      * @notice Begins transfer of council rights. The newPendingCouncil must call `_acceptCouncil` to finalize the transfer.
      * @dev Council function to begin change of council. The newPendingCouncil must call `_acceptCouncil` to finalize the transfer.
-     * @param newPendingCouncil New pending council.
+     * @param _newPendingCouncil New pending council.
      */
-    function _setPendingCouncil(address newPendingCouncil) external onlyVetoers {
+    function _setPendingCouncil(address _newPendingCouncil) external onlyVetoers {
         // Save current value, if any, for inclusion in log
         address oldPendingCouncil = pendingCouncil;
 
-        // Store pendingCouncil with value newPendingCouncil
-        pendingCouncil = newPendingCouncil;
+        // Store pendingCouncil with value _newPendingCouncil
+        pendingCouncil = _newPendingCouncil;
 
         // Emit NewPendingCouncil(oldPendingCouncil, newPendingCouncil)
-        emit NewPendingCouncil(oldPendingCouncil, newPendingCouncil);
+        emit NewPendingCouncil(oldPendingCouncil, _newPendingCouncil);
     }
 
     /**

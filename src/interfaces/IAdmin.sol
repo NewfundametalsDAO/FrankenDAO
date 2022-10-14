@@ -1,3 +1,5 @@
+pragma solidity ^0.8.13;
+
 interface IAdmin {
     /// @notice Emitted when pendingFounders or pendingCouncil is changed
     event NewPendingFounders(address oldPendingFounders, address newPendingFounders);

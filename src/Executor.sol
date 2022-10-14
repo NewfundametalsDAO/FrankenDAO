@@ -32,54 +32,57 @@ contract Executor is IExecutor, Admin {
     }
 
     function queueTransaction(
-        address target,
-        uint256 value,
-        string memory signature,
-        bytes memory data,
-        uint256 eta
+        address _target,
+        uint256 _value,
+        string memory _signature,
+        bytes memory _data,
+        uint256 _eta
     ) public onlyGovernance returns (bytes32) {
         require(
-            eta >= block.timestamp + delay,
+            _eta >= block.timestamp + delay,
             'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
         );
 
-        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature,
+                                              _data, _eta));
         require(queuedTransactions[txHash] == false, "FrankenDAOExecutor::queueTransaction: identical tx already queued");
         queuedTransactions[txHash] = true;
 
-        emit QueueTransaction(txHash, target, value, signature, data, eta);
+        emit QueueTransaction(txHash, _target, _value, _signature, _data, _eta);
         return txHash;
     }
 
     function cancelTransaction(
-        address target,
-        uint256 value,
-        string memory signature,
-        bytes memory data,
-        uint256 eta
+        address _target,
+        uint256 _value,
+        string memory _signature,
+        bytes memory _data,
+        uint256 _eta
     ) public onlyGovernance {
 
-        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature,
+                                              _data, _eta));
         queuedTransactions[txHash] = false;
 
-        emit CancelTransaction(txHash, target, value, signature, data, eta);
+        emit CancelTransaction(txHash, _target, _value, _signature, _data, _eta);
     }
 
     function executeTransaction(
-        address target,
-        uint256 value,
-        string memory signature,
-        bytes memory data,
-        uint256 eta
+        address _target,
+        uint256 _value,
+        string memory _signature,
+        bytes memory _data,
+        uint256 _eta
     ) public onlyGovernance returns (bytes memory) {
-        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature,
+                                              _data, _eta));
         require(queuedTransactions[txHash], "FrankenDAOExecutor::executeTransaction: Transaction hasn't been queued.");
         require(
-            block.timestamp >= eta,
+            block.timestamp >= _eta,
             "FrankenDAOExecutor::executeTransaction: Transaction hasn't surpassed time lock."
         );
         require(
-            block.timestamp <= eta + GRACE_PERIOD,
+            block.timestamp <= _eta + GRACE_PERIOD,
             'FrankenDAOExecutor::executeTransaction: Transaction is stale.'
         );
 
@@ -87,17 +90,17 @@ contract Executor is IExecutor, Admin {
 
         bytes memory callData;
 
-        if (bytes(signature).length == 0) {
-            callData = data;
+        if (bytes(_signature).length == 0) {
+            callData = _data;
         } else {
-            callData = abi.encodePacked(bytes4(keccak256(bytes(signature))), data);
+            callData = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
         }
 
         // solium-disable-next-line security/no-call-value
-        (bool success, bytes memory returnData) = target.call{ value: value }(callData);
+        (bool success, bytes memory returnData) = _target.call{ value: _value }(callData);
         require(success, 'FrankenDAOExecutor::executeTransaction: Transaction execution reverted.');
 
-        emit ExecuteTransaction(txHash, target, value, signature, data, eta);
+        emit ExecuteTransaction(txHash, _target, _value, _signature, _data, _eta);
 
         return returnData;
     }
@@ -106,12 +109,12 @@ contract Executor is IExecutor, Admin {
     //////// OWNER OPERATIONS ///////
     /////////////////////////////////
 
-    function setDelay(uint256 delay_) public {
+    function setDelay(uint256 _delay) public {
         require(msg.sender == address(this), "FrankenDAOExecutor::setDelay: self only");
-        require(delay_ >= MINIMUM_DELAY, 'FrankenDAOExecutor::setDelay: delay must exceed minimum delay.');
-        require(delay_ <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: delay must not exceed maximum delay.');
+        require(_delay >= MINIMUM_DELAY, 'FrankenDAOExecutor::setDelay: delay must exceed minimum delay.');
+        require(_delay <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: delay must not exceed maximum delay.');
         
-        emit NewDelay(delay = delay_);
+        emit NewDelay(delay = _delay);
     }
 
     receive() external payable {}

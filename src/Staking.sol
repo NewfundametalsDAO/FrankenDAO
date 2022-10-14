@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.13;
 
 import "solmate/tokens/ERC721.sol";
 import "oz/utils/Strings.sol";
@@ -192,7 +192,7 @@ contract Staking is IStaking, ERC721, Refund {
 
   /// @notice Transferring of staked tokens is prohibited, so all transfers will revert
   /// @dev This will also block safeTransferFrom, because of solmate's implementation
-  function transferFrom(address from, address to, uint256 id) public override {
+  function transferFrom(address _from, address _to, uint256 _id) public override {
     revert("staked tokens cannot be transferred");
   }
 
@@ -216,43 +216,43 @@ contract Staking is IStaking, ERC721, Refund {
   /////////////////////////////////
 
   /// @notice Return the address that a given address delegates to
-  /// @param delegator The address to check 
+  /// @param _delegator The address to check 
   /// @return The address that the delegator has delegated to
   /// @dev If the delegator has not delegated, this function will return their own address
-  function delegates(address delegator) public view returns (address) {
-    address current = _delegates[delegator];
-    return current == address(0) ? delegator : current;
+  function delegates(address _delegator) public view returns (address) {
+    address current = _delegates[_delegator];
+    return current == address(0) ? _delegator : current;
   }
 
   /// @notice Delegate votes to another address
-  /// @param delegatee The address you wish to delegate to
-  function delegate(address delegatee) public {
-    if (delegatee == address(0)) delegatee = msg.sender;
-    return _delegate(msg.sender, delegatee);
+  /// @param _delegatee The address you wish to delegate to
+  function delegate(address _delegatee) public {
+    if (_delegatee == address(0)) _delegatee = msg.sender;
+    return _delegate(msg.sender, _delegatee);
   }
 
   /// @notice Delegate votes to another address and get your gas cost refunded
-  /// @param delegatee The address you wish to delegate to
-  function delegateWithRefund(address delegatee) public refundable {
+  /// @param _delegatee The address you wish to delegate to
+  function delegateWithRefund(address _delegatee) public refundable {
     require(
       refund == RefundStatus.DelegatingRefund || refund == RefundStatus.StakingAndDelegatingRefund, 
       "Staking: Delegating refunds are not enabled"
     );
-    if (delegatee == address(0)) delegatee = msg.sender;
-    return _delegate(msg.sender, delegatee);
+    if (_delegatee == address(0)) _delegatee = msg.sender;
+    return _delegate(msg.sender, _delegatee);
   }
 
   /// @notice Delegates votes from the sender to the delegatee
-  /// @param delegator The address of the user who called the function and owns the votes being delegated
-  /// @param delegatee The address of the user who will receive the votes
-  function _delegate(address delegator, address delegatee) internal lockedWhileVotesCast {
-    address currentDelegate = delegates(delegator);
-    // If currentDelegate == delegatee, then this function will not do anything
-    require(currentDelegate != delegatee, "ERC721Checkpointable::_delegate: already delegated to this address");
+  /// @param _delegator The address of the user who called the function and owns the votes being delegated
+  /// @param _delegatee The address of the user who will receive the votes
+  function _delegate(address _delegator, address _delegatee) internal lockedWhileVotesCast {
+    address currentDelegate = delegates(_delegator);
+    // If currentDelegate == _delegatee, then this function will not do anything
+    require(currentDelegate != _delegatee, "ERC721Checkpointable::_delegate: already delegated to this address");
 
     // Set the _delegates mapping to the correct address, subbing in address(0) if they are delegating to themselves
-    _delegates[delegator] = delegatee == delegator ? address(0) : delegatee;
-    uint amount = votesFromOwnedTokens[delegator];
+    _delegates[_delegator] = _delegatee == _delegator ? address(0) : _delegatee;
+    uint amount = votesFromOwnedTokens[_delegator];
 
     // If the delegator has no votes, then this function will not do anything
     // This is explicitly blocked to ensure that users without votes cannot abuse the refund mechanism
@@ -263,31 +263,31 @@ contract Staking is IStaking, ERC721, Refund {
     // - currentDelegate calls delegates(), which replaces address(0) with the delegator's address
     // - delegatee is changed to msg.sender in the external functions if address(0) is passed
     tokenVotingPower[currentDelegate] -= amount;
-    tokenVotingPower[delegatee] += amount; 
+    tokenVotingPower[_delegatee] += amount; 
 
     // If a user has delegated their votes, then they will have no community voting power
     // This function updates the community voting power totals to ensure they reflect the current reality
-    _updateTotalCommunityVotingPower(delegator, currentDelegate, delegatee);
+    _updateTotalCommunityVotingPower(_delegator, currentDelegate, _delegatee);
 
-    emit DelegateChanged(delegator, currentDelegate, delegatee);
+    emit DelegateChanged(_delegator, currentDelegate, _delegatee);
   }
 
   /// @notice Updates the total community voting power totals
-  /// @param delegator The address of the user who called the function and owns the votes being delegated
-  /// @param currentDelegate The address of the user who previously had the votes
-  /// @param delegatee The address of the user who will now receive the votes
+  /// @param _delegator The address of the user who called the function and owns the votes being delegated
+  /// @param _currentDelegate The address of the user who previously had the votes
+  /// @param _delegatee The address of the user who will now receive the votes
   /// @dev This function is called by _delegate, _stake, and _unstake
-  /// @dev Because currentDelegate != delegatee, we know that at most one of the situations will be true
-  function _updateTotalCommunityVotingPower(address delegator, address currentDelegate, address delegatee) internal {
-    // If the delegator current owns their own votes, then they are forfeiting their community voting power
-    if (currentDelegate == delegator) {
-      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.userCommunityScoreData(delegator);
+  /// @dev Because _currentDelegate != _delegatee, we know that at most one of the situations will be true
+  function _updateTotalCommunityVotingPower(address _delegator, address _currentDelegate, address _delegatee) internal {
+    // If the _delegator current owns their own votes, then they are forfeiting their community voting power
+    if (_currentDelegate == _delegator) {
+      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.userCommunityScoreData(_delegator);
       (uint64 totalVotes, uint64 totalProposalsCreated, uint64 totalProposalsPassed) = governance.totalCommunityScoreData();
       governance.updateTotalCommunityScoreData(totalVotes - votes, totalProposalsCreated - proposalsCreated, totalProposalsPassed - proposalsPassed);
     
     // If the new delegator is the new delegatee, they are reclaiming their community voting power
-    } else if (delegatee == delegator) {
-      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.userCommunityScoreData(delegator);
+    } else if (_delegatee == _delegator) {
+      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.userCommunityScoreData(_delegator);
       (uint64 totalVotes, uint64 totalProposalsCreated, uint64 totalProposalsPassed) = governance.totalCommunityScoreData();
       governance.updateTotalCommunityScoreData(totalVotes + votes, totalProposalsCreated + proposalsCreated, totalProposalsPassed + proposalsPassed);
     }
@@ -431,11 +431,11 @@ contract Staking is IStaking, ERC721, Refund {
     //////////////////////////////////////////////
     
     /// @notice Get the total voting power (token + community) for an account
-    /// @param account The address of the account to get voting power for
+    /// @param _account The address of the account to get voting power for
     /// @return The total voting power for the account
     /// @dev This is used by governance to calculate the voting power of an account
-    function getVotes(address account) public view returns (uint) {
-        return tokenVotingPower[account] + getCommunityVotingPower(account);
+    function getVotes(address _account) public view returns (uint) {
+        return tokenVotingPower[_account] + getCommunityVotingPower(_account);
     }
     
     /// @notice Get the voting power for a specific token when staking or unstaking
@@ -529,8 +529,8 @@ contract Staking is IStaking, ERC721, Refund {
   }
 
   /// @notice Set hte base URI for the metadata for the staked token
-  /// @param baseURI_ The new base URI
-  function setBaseURI(string calldata baseURI_) external onlyExecutor {
-    _baseTokenURI = baseURI_;
+  /// @param _baseURI The new base URI
+  function setBaseURI(string calldata _baseURI) external onlyExecutor {
+    _baseTokenURI = _baseURI;
   }
 }
