@@ -29,9 +29,6 @@ contract Staking is IStaking, ERC721, Refund {
   /// @notice The DAO governance contract (where voting occurs)
   IGovernance governance;
 
-  /// @notice The DAO executor contract (where governance actions are executed)
-  address executor;
-
   /// @return maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
   /// @return maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
   StakingSettings public stakingSettings;
