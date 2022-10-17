@@ -14,7 +14,7 @@ contract Executor is IExecutor {
     ////////// CONSTRUCTOR //////////
     /////////////////////////////////
 
-    function constructor(address _governance) public {
+    constructor(address _governance) public {
         if (_governance == address(0)) revert ZeroAddress();
         governance = _governance;
     }
@@ -59,11 +59,11 @@ contract Executor is IExecutor {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public onlyAdmin {
+    ) public onlyGovernance {
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
 
-        emit CancelTransaction(txHash, _target, _value, _signature, _data, _eta);
+        emit CancelTransaction(txHash, target, value, signature, data, eta);
     }
 
     function executeTransaction(
@@ -73,8 +73,7 @@ contract Executor is IExecutor {
         bytes memory _data,
         uint256 _eta
     ) public onlyGovernance returns (bytes memory) {
-        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature,
-                                              _data, _eta));
+        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
         require(queuedTransactions[txHash], "FrankenDAOExecutor::executeTransaction: Transaction hasn't been queued.");
         require(
             block.timestamp >= _eta,
