@@ -238,7 +238,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @notice Delegate votes to another address and get your gas cost refunded
   /// @param _delegatee The address you wish to delegate to
   function delegateWithRefund(address _delegatee) public refundable {
-    if (refund != RefundStatus.DelegatingRefund || refund != RefundStatus.StakingAndDelegatingRefund) revert NotRefundable();
+    if (refund != RefundStatus.DelegatingRefund && refund != RefundStatus.StakingAndDelegatingRefund) revert NotRefundable();
     if (_delegatee == address(0)) _delegatee = msg.sender;
     return _delegate(msg.sender, _delegatee);
   }
@@ -310,7 +310,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _tokenIds An array of the id of the token you wish to stake
   /// @param _unlockTime The timestamp of the time your tokens will be unlocked
   function stakeWithRefund(uint[] calldata _tokenIds, uint _unlockTime) public refundable {
-    if (refund != RefundStatus.StakingRefund || refund != RefundStatus.StakingAndDelegatingRefund) revert NotRefundable();
+    if (refund != RefundStatus.StakingRefund && refund != RefundStatus.StakingAndDelegatingRefund) revert NotRefundable();
     _stake(_tokenIds, _unlockTime);
   }
 
@@ -319,8 +319,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _unlockTime The timestamp of when the tokens will be unlocked
   function _stake(uint[] calldata _tokenIds, uint _unlockTime) internal {
     if (paused) revert TokenLocked();
-    if (_unlockTime == 0) revert InvalidParameter();
-    if (_unlockTime < block.timestamp) revert InvalidParameter();
+    if (_unlockTime == 0 && _unlockTime < block.timestamp) revert InvalidParameter();
 
     uint numTokens = _tokenIds.length;
     // This is required to ensure the gas refunds are not abused
@@ -407,8 +406,8 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
     address owner = ownerOf(_tokenId);
     // NotAuthorized
-    if (msg.sender != owner || !isApprovedForAll[owner][msg.sender] || msg.sender != getApproved[_tokenId]) revert NotAuthorized();
-    if (unlockTime[_tokenId] >= block.timestamp) revert TokenLocked();
+    if (msg.sender != owner && !isApprovedForAll[owner][msg.sender] && msg.sender != getApproved[_tokenId]) revert NotAuthorized();
+    if (unlockTime[_tokenId] > block.timestamp) revert TokenLocked();
 
     // Transfer the underlying asset to the address specified
     IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;

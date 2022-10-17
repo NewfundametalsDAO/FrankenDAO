@@ -42,7 +42,7 @@ contract Executor is IExecutor {
         if (block.timestamp + DELAY <= _eta) revert DelayNotSatisfied();
 
         bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
-        if(queuedTransactions[txHash] == false) revert IdenticalTransactionAlreadyQueued();
+        if(queuedTransactions[txHash]) revert IdenticalTransactionAlreadyQueued();
         queuedTransactions[txHash] = true;
 
         emit QueueTransaction(txHash, _target, _value, _signature, _data, _eta);
@@ -72,7 +72,7 @@ contract Executor is IExecutor {
         bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
         if(!queuedTransactions[txHash]) revert TransactionNotQueued();
         if(_eta >= block.timestamp) revert TimelockNotMet();
-        if(_eta + GRACE_PERIOD >= block.timestamp) revert StaleTransaction();
+        if (block.timestamp >= _eta + GRACE_PERIOD) revert StaleTransaction();
 
         queuedTransactions[txHash] = false;
 
@@ -86,7 +86,6 @@ contract Executor is IExecutor {
 
         // solium-disable-next-line security/no-call-value
         (bool success, bytes memory returnData) = _target.call{ value: _value }(callData);
-        require(success, 'FrankenDAOExecutor::executeTransaction: Transaction execution reverted.');
         if (!success) revert TransactionReverted();
 
         emit ExecuteTransaction(txHash, _target, _value, _signature, _data, _eta);

@@ -114,7 +114,7 @@ contract Governance is IGovernance, Admin, Refund {
     ) public virtual {
         if (initialized) revert AlreadyInitialized();
         if(_staking == address(0)) revert ZeroAddress();
-        if (_votingPeriod < MIN_VOTING_PERIOD || _votingPeriod > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
+        if (_votingPeriod < MIN_VOTING_PERIOD || _votingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds();
         if (_votingDelay < MIN_VOTING_DELAY || _votingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
         if (_proposalThresholdBPS < MIN_PROPOSAL_THRESHOLD_BPS || _proposalThresholdBPS > MAX_PROPOSAL_THRESHOLD_BPS) revert ParameterOutOfBounds();
         if (_quorumVotesBPS < MIN_QUORUM_VOTES_BPS || _quorumVotesBPS > MAX_QUORUM_VOTES_BPS) revert ParameterOutOfBounds();
@@ -194,7 +194,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @return Proposal state
      */
     function state(uint256 _proposalId) public view returns (ProposalState) {
-        if(_proposalId >= proposalCount) revert InvalidId();
+        if(_proposalId > proposalCount) revert InvalidId();
         Proposal storage proposal = proposals[_proposalId];
         if (proposal.vetoed) {
             return ProposalState.Vetoed;
@@ -269,7 +269,7 @@ contract Governance is IGovernance, Admin, Refund {
         bytes[] memory _calldatas,
         string memory _description
     ) public refundable returns (uint256) {
-        if(refund != RefundStatus.ProposalRefund || refund != RefundStatus.VotingAndProposalRefund) revert NotRefundable();
+        if(refund != RefundStatus.ProposalRefund && refund != RefundStatus.VotingAndProposalRefund) revert NotRefundable();
         uint256 proposalId = _propose(
             _targets,
             _values,
@@ -435,11 +435,13 @@ contract Governance is IGovernance, Admin, Refund {
     function cancel(uint256 _proposalId) external {
         Proposal storage proposal = proposals[_proposalId];
         if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
-        if (msg.sender != proposal.proposer) revert NotEligible();
-        if (staking.getVotes(proposal.proposer) < proposal.proposalThreshold) revert NotEligible();
-        if (!proposal.verified) revert InvalidStatus();
-        if (block.number <= proposal.endBlock) revert NotEligible();
-        if (state(_proposalId) == ProposalState.Expired) revert InvalidStatus();
+        if(
+            msg.sender != proposal.proposer &&
+            staking.getVotes(proposal.proposer) < proposal.proposalThreshold && 
+            !proposal.verified &&
+            block.number < proposal.endBlock &&
+            state(_proposalId) == ProposalState.Expired
+        ) revert NotEligible();
 
         _removeTransactionIfQueuedOrExpired(proposal);
 
@@ -511,7 +513,7 @@ contract Governance is IGovernance, Admin, Refund {
         external
         refundable
     {
-        if (refund != RefundStatus.VotingRefund || refund != RefundStatus.VotingAndProposalRefund) revert NotRefundable();
+        if (refund != RefundStatus.VotingRefund && refund != RefundStatus.VotingAndProposalRefund) revert NotRefundable();
         emit VoteCast(
             msg.sender,
             _proposalId,
@@ -533,7 +535,7 @@ contract Governance is IGovernance, Admin, Refund {
         uint256 userVoteCount = ++userCommunityScoreData[_voter].votes;
 
         if (state(_proposalId) != ProposalState.Active) revert InvalidStatus();
-        if (_support >= 2 || _support < 0) revert InvalidInput();
+        if (_support > 2) revert InvalidInput();
         
         Proposal storage proposal = proposals[_proposalId];
         Receipt storage receipt = proposal.receipts[_voter];
