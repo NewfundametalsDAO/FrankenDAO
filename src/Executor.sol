@@ -54,15 +54,13 @@ contract Executor is IExecutor {
     }
 
     function cancelTransaction(
-        address _target,
-        uint256 _value,
-        string memory _signature,
-        bytes memory _data,
-        uint256 _eta
-    ) public onlyGovernance {
-
-        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature,
-                                              _data, _eta));
+        address target,
+        uint256 value,
+        string memory signature,
+        bytes memory data,
+        uint256 eta
+    ) public onlyAdmin {
+        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
 
         emit CancelTransaction(txHash, _target, _value, _signature, _data, _eta);

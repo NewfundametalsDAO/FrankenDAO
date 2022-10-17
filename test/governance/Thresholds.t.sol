@@ -1,0 +1,4 @@
+// proposalThreshold
+// quorumVotes
+// setProposalThreshold
+// setQuroumVotes
