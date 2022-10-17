@@ -29,7 +29,7 @@ contract DeployScript is Script {
         vm.stopBroadcast();
     }
 
-    function _deployAllContracts() internal {
+    function _deployAllContracts() internal return (address, address, address, address) {
         // address expectedGovProxyAddr = address(uint160(keccak256(
         //     abi.encodePacked(bytes1(0xff), address(this), SALT, keccak256(type(Governance).creationCode;))
         // )));
@@ -75,6 +75,8 @@ contract DeployScript is Script {
 
         // assert(address(govProxy) == expectedGovProxyAddr, "governance proxy address mismatch");
 
+        // return (address(executor), address(govImpl), address(govProxy), address(staking));
+
         // console.log("executor deployed to: ", address(executor));
         // console.log("govImpl deployed to: ", address(govImpl));
         // console.log("govProxy deployed to: ", address(govProxy));
@@ -83,6 +85,6 @@ contract DeployScript is Script {
 
     // Harness so we can use the same script for testing.
     function deployAllContracts() public {
-        _deployAllContracts();
+        return _deployAllContracts();
     }
 }
