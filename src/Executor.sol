@@ -1,57 +1,55 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./events/ExecutorEvents.sol";
-import "./utils/Admin.sol";
+import "./interfaces/IExecutor.sol";
 
-contract Executor is ExecutorEvents, Admin {
-    uint256 public constant GRACE_PERIOD = 14 days; // @todo - do we want this editable?
-    uint256 public constant MINIMUM_DELAY = 2 days;
-    uint256 public constant MAXIMUM_DELAY = 30 days;
-
-    bool public initialized;
+contract Executor is IExecutor {
+    uint256 public constant DELAY = 2 days;
+    uint256 public constant GRACE_PERIOD = 14 days;
     
-    uint256 public delay;
-    
+    address governance;
     mapping(bytes32 => bool) public queuedTransactions;
 
-    function initialize(address _founders, address _council, uint256 _delay) public {
-        require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
-        require(_delay >= MINIMUM_DELAY, 'FrankenDAOExecutor::initialize: Delay must exceed minimum delay.');
-        require(_delay <= MAXIMUM_DELAY, 'FrankenDAOExecutor::initialize: Delay must not exceed maximum delay.');
+    /////////////////////////////////
+    ////////// CONSTRUCTOR //////////
+    /////////////////////////////////
 
-        founders = _founders;
-        council = _council;
-        delay = _delay;
-        initialized = true;
+    function constructor(address _governance) public {
+        if (_governance == address(0)) revert ZeroAddress();
+        governance = _governance;
     }
 
-    function setDelay(uint256 delay_) public onlyAdmin {
-        require(delay_ >= MINIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must exceed minimum delay.');
-        require(delay_ <= MAXIMUM_DELAY, 'FrankenDAOExecutor::setDelay: Delay must not exceed maximum delay.');
-        delay = delay_;
+    /////////////////////////////////
+    /////////// MODIFIERS ///////////
+    /////////////////////////////////
 
-        emit NewDelay(delay);
+        modifier onlyGovernance() {
+        if (msg.sender != governance) revert Unauthorized();
+        _;
     }
+
+    /////////////////////////////////
+    ////////// TX EXECUTION /////////
+    /////////////////////////////////
 
     function queueTransaction(
-        address target,
-        uint256 value,
-        string memory signature,
-        bytes memory data,
-        uint256 eta
-    ) public onlyAdmin returns (bytes32) {
+        address _target,
+        uint256 _value,
+        string memory _signature,
+        bytes memory _data,
+        uint256 _eta
+    ) public onlyGovernance returns (bytes32) {
         require(
-            eta >= getBlockTimestamp() + delay,
+            _eta >= block.timestamp + delay,
             'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
         );
 
-        // @todo only issue with no description is two identical being queued back to back. maybe block that if already true so they can execute first, then queue next one?
-        // i think this is fine but new nouns includes description hash for extra security (in case of malicious conflict). lemme think through it.
-        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature,
+                                              _data, _eta));
+        require(queuedTransactions[txHash] == false, "FrankenDAOExecutor::queueTransaction: identical tx already queued");
         queuedTransactions[txHash] = true;
 
-        emit QueueTransaction(txHash, target, value, signature, data, eta);
+        emit QueueTransaction(txHash, _target, _value, _signature, _data, _eta);
         return txHash;
     }
 
@@ -65,27 +63,25 @@ contract Executor is ExecutorEvents, Admin {
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
 
-        emit CancelTransaction(txHash, target, value, signature, data, eta);
+        emit CancelTransaction(txHash, _target, _value, _signature, _data, _eta);
     }
 
     function executeTransaction(
-        address target,
-        uint256 value,
-        string memory signature,
-        bytes memory data,
-        uint256 eta
-    ) public onlyAdmin returns (bytes memory) {
-        // @todo SHouldn't anyone willing to pay the gas be able to execute?
-        // @todo Does this need to update community voting power in Staking?
-
-        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        address _target,
+        uint256 _value,
+        string memory _signature,
+        bytes memory _data,
+        uint256 _eta
+    ) public onlyGovernance returns (bytes memory) {
+        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature,
+                                              _data, _eta));
         require(queuedTransactions[txHash], "FrankenDAOExecutor::executeTransaction: Transaction hasn't been queued.");
         require(
-            getBlockTimestamp() >= eta,
+            block.timestamp >= _eta,
             "FrankenDAOExecutor::executeTransaction: Transaction hasn't surpassed time lock."
         );
         require(
-            getBlockTimestamp() <= eta + GRACE_PERIOD,
+            block.timestamp <= _eta + GRACE_PERIOD,
             'FrankenDAOExecutor::executeTransaction: Transaction is stale.'
         );
 
@@ -93,24 +89,19 @@ contract Executor is ExecutorEvents, Admin {
 
         bytes memory callData;
 
-        if (bytes(signature).length == 0) {
-            callData = data;
+        if (bytes(_signature).length == 0) {
+            callData = _data;
         } else {
-            callData = abi.encodePacked(bytes4(keccak256(bytes(signature))), data);
+            callData = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
         }
 
         // solium-disable-next-line security/no-call-value
-        (bool success, bytes memory returnData) = target.call{ value: value }(callData);
+        (bool success, bytes memory returnData) = _target.call{ value: _value }(callData);
         require(success, 'FrankenDAOExecutor::executeTransaction: Transaction execution reverted.');
 
-        emit ExecuteTransaction(txHash, target, value, signature, data, eta);
+        emit ExecuteTransaction(txHash, _target, _value, _signature, _data, _eta);
 
         return returnData;
-    }
-
-    function getBlockTimestamp() internal view returns (uint256) {
-        // solium-disable-next-line security/no-block-members
-        return block.timestamp;
     }
 
     receive() external payable {}

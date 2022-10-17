@@ -1,47 +1,66 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "../interfaces/IAdmin.sol";
+import "../interfaces/IExecutor.sol";
 
-contract Admin {
-    /// @notice Administrator roles for this contract
+contract Admin is IAdmin {
+    /// @notice Founder multisig
     address public founders;
+
+    /// @notice Council multisig
     address public council;
 
-    /// @notice Executor (Timelock) contract address
-    address public executor;
+    /// @notice Executor contract address for passed governance proposals
+    IExecutor public executor;
 
     /// @notice Pending administrator addresses for this contract
     address public pendingFounders;
     address public pendingCouncil;
 
-    /// @notice Emitted when pendingFounders or pendingCouncil is changed
-    event NewPendingFounders(address oldPendingFounders, address newPendingFounders);
-    event NewPendingCouncil(address oldPendingCouncil, address newPendingCouncil);
+  /////////////////////////////////
+  /////////// MODIFIERS ///////////
+  /////////////////////////////////
 
-    /// @notice Emitted when pendingFounders or pendingCouncil is accepted,
-    ///         which means admin roles updated
-    event NewFounders(address oldFounders, address newFounders);
-    event NewCouncil(address oldCouncil, address newCouncil);
+    /// @notice Modifier for function that can only be called by the Executor (Timelock) contract
+    modifier onlyExecutor() {
+        if(msg.sender != address(executor)) revert Unauthorized();
+        _;
+    }
 
-    /// @notice Error emitted when an auth condition is not met
-    error Unauthorized();
+    modifier onlyAdmins() {
+        if(msg.sender != founders && msg.sender != council) revert Unauthorized();
+        _;
+    }
+
+    modifier onlyExecutorOrAdmins() {
+        if (
+            msg.sender != address(executor) && 
+            msg.sender != council && 
+            msg.sender != founders
+        ) revert Unauthorized();
+        _;
+    }
+
+    /////////////////////////////////
+    //////// ADMIN TRANSFERS ////////
+    /////////////////////////////////
 
     /**
      * @notice Begins transfer of founder rights. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
      * @dev Founders function to begin change of founder. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
-     * @param newPendingFounders New pending founder.
+     * @param _newPendingFounders New pending founder.
      */
-    function _setPendingFounders(address newPendingFounders) external onlyAdmin {
-        // @todo only the executor can set the founder role? (aside from in intialize)
-
+    function _setPendingFounders(address _newPendingFounders) external {
+        require(msg.sender == founders, "Admin: only founders can set pending founders");
         // Save current value, if any, for inclusion in log
         address oldPendingFounders = pendingFounders;
 
-        // Store pendingFounders with value newPendingFounders
-        pendingFounders = newPendingFounders;
+        // Store pendingFounders with value _newPendingFounders
+        pendingFounders = _newPendingFounders;
 
         // Emit NewPendingFounders(oldPendingFounders, newPendingFounders)
-        emit NewPendingFounders(oldPendingFounders, newPendingFounders);
+        emit NewPendingFounders(oldPendingFounders, _newPendingFounders);
     }
 
     /**
@@ -50,11 +69,7 @@ contract Admin {
      */
     function _acceptFounders() external {
         // Check caller is pendingFounders and pendingFounders ≠ address(0)
-        // @todo why is the zero addr check needed? msg.sender will never be addr(0), can it?
-        require(
-            msg.sender == pendingFounders && msg.sender != address(0),
-            "FrankenDAO::_acceptFounders: pending founder only"
-        );
+        require(msg.sender == pendingFounders, "FrankenDAO::_acceptFounders: pending founder only");
 
         // Save current values for inclusion in log
         address oldFounders = founders;
@@ -73,19 +88,17 @@ contract Admin {
     /**
      * @notice Begins transfer of council rights. The newPendingCouncil must call `_acceptCouncil` to finalize the transfer.
      * @dev Council function to begin change of council. The newPendingCouncil must call `_acceptCouncil` to finalize the transfer.
-     * @param newPendingCouncil New pending council.
+     * @param _newPendingCouncil New pending council.
      */
-    function _setPendingCouncil(address newPendingCouncil) external onlyVetoers {
-        // @todo only the executor can set the council address? (aside from in intialize)
-
+    function _setPendingCouncil(address _newPendingCouncil) external onlyAdmins {
         // Save current value, if any, for inclusion in log
         address oldPendingCouncil = pendingCouncil;
 
-        // Store pendingCouncil with value newPendingCouncil
-        pendingCouncil = newPendingCouncil;
+        // Store pendingCouncil with value _newPendingCouncil
+        pendingCouncil = _newPendingCouncil;
 
         // Emit NewPendingCouncil(oldPendingCouncil, newPendingCouncil)
-        emit NewPendingCouncil(oldPendingCouncil, newPendingCouncil);
+        emit NewPendingCouncil(oldPendingCouncil, _newPendingCouncil);
     }
 
     /**
@@ -94,11 +107,7 @@ contract Admin {
      */
     function _acceptCouncil() external {
         // Check caller is pendingCouncil and pendingCouncil ≠ address(0)
-        // @todo why is the zero addr check needed? msg.sender will never be addr(0), can it?
-        require(
-            msg.sender == pendingCouncil && msg.sender != address(0),
-            "FrankenDAO::_acceptCouncil: pending council only"
-        );
+        require(msg.sender == pendingCouncil, "FrankenDAO::_acceptCouncil: pending council only");
 
         // Save current values for inclusion in log
         address oldCouncil = council;
@@ -112,26 +121,6 @@ contract Admin {
 
         emit NewCouncil(oldCouncil, council);
         emit NewPendingCouncil(oldPendingCouncil, pendingCouncil);
-    }
-
-    /// @notice Modifier for function that can only be called by the Executor (Timelock) contract
-    modifier onlyExecutor() {
-        if(msg.sender != executor ) revert Unauthorized();
-        _;
-    }
-
-    /// @notice Modifier for functions that can only be called by the Executor
-    ///         (Timelock) contract or the founder role
-    modifier onlyAdmin() {
-        if (msg.sender != executor || msg.sender != founders) revert Unauthorized();
-        _;
-    }
-    
-    /// @notice Modifier for functions that can only be called by the founder
-    ///         role or the council
-    modifier onlyVetoers() {
-        if(msg.sender != founders || msg.sender != council) revert Unauthorized();
-        _;
     }
 }
 
