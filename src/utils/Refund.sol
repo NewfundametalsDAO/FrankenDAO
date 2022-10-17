@@ -11,6 +11,9 @@ contract Refund {
     /// @notice The vote refund gas overhead, including 7K for ETH transfer and 29K for general transaction overhead
     uint256 public constant REFUND_BASE_GAS = 36000;
 
+    /// @notice Error thrown when refunding is turned off
+    error NotRefundable();
+
     /**
      * @notice Take the amount of gas supplied and send that to the sender from
      *         the contract's balance. Lifted straight from NounsDAO: https://github.com/nounsDAO/nouns-monorepo/blob/master/packages/nouns-contracts/contracts/governance/NounsDAOLogicV2.sol#L1033-L1046

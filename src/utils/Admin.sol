@@ -18,6 +18,9 @@ contract Admin is IAdmin {
     address public pendingFounders;
     address public pendingCouncil;
 
+    /// @notice Error thrown for an unauthorized transaction
+    error NotAuthorized();
+
   /////////////////////////////////
   /////////// MODIFIERS ///////////
   /////////////////////////////////

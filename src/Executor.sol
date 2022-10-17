@@ -39,14 +39,10 @@ contract Executor is IExecutor {
         bytes memory _data,
         uint256 _eta
     ) public onlyGovernance returns (bytes32) {
-        require(
-            _eta >= block.timestamp + DELAY,
-            'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
-        );
+        if (block.timestamp + DELAY <= _eta) revert DelayNotSatisfied();
 
-        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature,
-                                              _data, _eta));
-        require(queuedTransactions[txHash] == false, "FrankenDAOExecutor::queueTransaction: identical tx already queued");
+        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
+        if(queuedTransactions[txHash] == false) revert IdenticalTransactionAlreadyQueued();
         queuedTransactions[txHash] = true;
 
         emit QueueTransaction(txHash, _target, _value, _signature, _data, _eta);
@@ -74,15 +70,9 @@ contract Executor is IExecutor {
         uint256 _eta
     ) public onlyGovernance returns (bytes memory) {
         bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
-        require(queuedTransactions[txHash], "FrankenDAOExecutor::executeTransaction: Transaction hasn't been queued.");
-        require(
-            block.timestamp >= _eta,
-            "FrankenDAOExecutor::executeTransaction: Transaction hasn't surpassed time lock."
-        );
-        require(
-            block.timestamp <= _eta + GRACE_PERIOD,
-            'FrankenDAOExecutor::executeTransaction: Transaction is stale.'
-        );
+        if(!queuedTransactions[txHash]) revert TransactionNotQueued();
+        if(_eta >= block.timestamp) revert TimelockNotMet();
+        if(_eta + GRACE_PERIOD >= block.timestamp) revert StaleTransaction();
 
         queuedTransactions[txHash] = false;
 
@@ -97,6 +87,7 @@ contract Executor is IExecutor {
         // solium-disable-next-line security/no-call-value
         (bool success, bytes memory returnData) = _target.call{ value: _value }(callData);
         require(success, 'FrankenDAOExecutor::executeTransaction: Transaction execution reverted.');
+        if (!success) revert TransactionReverted();
 
         emit ExecuteTransaction(txHash, _target, _value, _signature, _data, _eta);
 
