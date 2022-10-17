@@ -40,7 +40,7 @@ contract Executor is IExecutor {
         uint256 _eta
     ) public onlyGovernance returns (bytes32) {
         require(
-            _eta >= block.timestamp + delay,
+            _eta >= block.timestamp + DELAY,
             'FrankenDAOExecutor::queueTransaction: Estimated execution block must satisfy delay.'
         );
 
