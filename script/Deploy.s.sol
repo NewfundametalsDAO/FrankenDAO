@@ -29,7 +29,7 @@ contract DeployScript is Script {
         vm.stopBroadcast();
     }
 
-    function _deployAllContracts() internal return (address, address, address, address) {
+    function _deployAllContracts() internal returns (address, address, address, address) {
         // address expectedGovProxyAddr = address(uint160(keccak256(
         //     abi.encodePacked(bytes1(0xff), address(this), SALT, keccak256(type(Governance).creationCode;))
         // )));
