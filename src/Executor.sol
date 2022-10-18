@@ -39,7 +39,7 @@ contract Executor is IExecutor {
         bytes memory _data,
         uint256 _eta
     ) public onlyGovernance returns (bytes32) {
-        if (block.timestamp + DELAY <= _eta) revert DelayNotSatisfied();
+        if (block.timestamp + DELAY > _eta) revert DelayNotSatisfied();
 
         bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
         if(queuedTransactions[txHash]) revert IdenticalTransactionAlreadyQueued();
@@ -71,8 +71,8 @@ contract Executor is IExecutor {
     ) public onlyGovernance returns (bytes memory) {
         bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
         if(!queuedTransactions[txHash]) revert TransactionNotQueued();
-        if(_eta >= block.timestamp) revert TimelockNotMet();
-        if (block.timestamp >= _eta + GRACE_PERIOD) revert StaleTransaction();
+        if(_eta > block.timestamp) revert TimelockNotMet();
+        if (block.timestamp > _eta + GRACE_PERIOD) revert StaleTransaction();
 
         queuedTransactions[txHash] = false;
 

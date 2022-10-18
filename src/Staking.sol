@@ -257,7 +257,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
 
     // If the delegator has no votes, then this function will not do anything
     // This is explicitly blocked to ensure that users without votes cannot abuse the refund mechanism
-    if (amount <= 0) revert InvalidDelegation();
+    if (amount == 0) revert InvalidDelegation();
     
     // Move the votes from the currentDelegate to the new delegatee
     // Neither of these addresses can be address(0) because: 
@@ -319,11 +319,11 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _unlockTime The timestamp of when the tokens will be unlocked
   function _stake(uint[] calldata _tokenIds, uint _unlockTime) internal {
     if (paused) revert TokenLocked();
-    if (_unlockTime == 0 && _unlockTime < block.timestamp) revert InvalidParameter();
+    if (_unlockTime > 0 && _unlockTime < block.timestamp) revert InvalidParameter();
 
     uint numTokens = _tokenIds.length;
     // This is required to ensure the gas refunds are not abused
-    if (numTokens <= 0) revert InvalidParameter();
+    if (numTokens == 0) revert InvalidParameter();
     
     uint newVotingPower;
     for (uint i = 0; i < numTokens; i++) {
@@ -378,7 +378,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _to The address to send the underlying NFT to
   function _unstake(uint[] calldata _tokenIds, address _to) internal lockedWhileVotesCast {
     uint numTokens = _tokenIds.length;
-    if (numTokens <= 0) revert InvalidParameter();
+    if (numTokens == 0) revert InvalidParameter();
     
     uint lostVotingPower;
     for (uint i = 0; i < numTokens; i++) {

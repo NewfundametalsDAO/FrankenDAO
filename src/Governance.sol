@@ -435,12 +435,12 @@ contract Governance is IGovernance, Admin, Refund {
     function cancel(uint256 _proposalId) external {
         Proposal storage proposal = proposals[_proposalId];
         if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
-        if(
+        // @todo i think this is right but double check in testing
+        if (
             msg.sender != proposal.proposer &&
-            staking.getVotes(proposal.proposer) < proposal.proposalThreshold && 
-            !proposal.verified &&
-            block.number < proposal.endBlock &&
-            state(_proposalId) == ProposalState.Expired
+            staking.getVotes(proposal.proposer) > proposal.proposalThreshold && 
+            (proposal.verified || block.number < proposal.endBlock) &&
+            state(_proposalId) != ProposalState.Expired
         ) revert NotEligible();
 
         _removeTransactionIfQueuedOrExpired(proposal);
