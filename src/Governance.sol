@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import "./interfaces/IGovernance.sol";
-import "./Staking.sol";
 import "./interfaces/IExecutor.sol";
+import "./interfaces/IStaking.sol";
 import "./utils/Admin.sol";
 import "./utils/Refund.sol";
 
@@ -14,7 +14,7 @@ contract Governance is IGovernance, Admin, Refund {
     string public constant name = "Franken DAO";
 
     /// @notice The address of staked the Franken tokens
-    Staking public staking;
+    IStaking public staking;
 
     //////////////////////////
     //// Voting Constants ////
@@ -123,7 +123,7 @@ contract Governance is IGovernance, Admin, Refund {
         founders = _founders;
         council = _council;
 
-        staking = Staking(_staking);
+        staking = IStaking(_staking);
         votingPeriod = _votingPeriod;
         votingDelay = _votingDelay;
         proposalThresholdBPS = _proposalThresholdBPS;
@@ -291,7 +291,7 @@ contract Governance is IGovernance, Admin, Refund {
 
         temp.totalSupply = staking.getTotalVotingPower();
         temp.proposalThreshold = bps2Uint(proposalThresholdBPS, temp.totalSupply);
-        if(staking.getVotes(msg.sender) < tmp.proposalThreshold) revert NotEligible();
+        if(staking.getVotes(msg.sender) < temp.proposalThreshold) revert NotEligible();
 
         if (_targets.length == 0) revert InvalidProposal();
         if(_targets.length > PROPOSAL_MAX_OPERATIONS) revert InvalidProposal();
@@ -354,7 +354,7 @@ contract Governance is IGovernance, Admin, Refund {
 
     /// @notice Function for verifying a proposal
     /// @param _proposalId Id of the proposal to verify
-    function verifyProposal(uint _proposalId) external onlyVetoers {
+    function verifyProposal(uint _proposalId) external onlyAdmins {
         // Can't verify a proposal that's been vetoed, canceled,
         if(state(_proposalId) != ProposalState.Pending) revert InvalidStatus();
 
@@ -379,7 +379,7 @@ contract Governance is IGovernance, Admin, Refund {
     function queue(uint256 _proposalId) external {
         if(state(_proposalId) != ProposalState.Succeeded) revert InvalidStatus();
         Proposal storage proposal = proposals[_proposalId];
-        uint256 eta = block.timestamp + executor.delay();
+        uint256 eta = block.timestamp + executor.DELAY();
         uint numTargets = proposal.targets.length;
         for (uint256 i = 0; i < numTargets; i++) {
             queueOrRevertInternal(

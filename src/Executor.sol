@@ -14,7 +14,7 @@ contract Executor is IExecutor {
     ////////// CONSTRUCTOR //////////
     /////////////////////////////////
 
-    constructor(address _governance) public {
+    constructor(address _governance) {
         if (_governance == address(0)) revert ZeroAddress();
         governance = _governance;
     }
@@ -23,7 +23,7 @@ contract Executor is IExecutor {
     /////////// MODIFIERS ///////////
     /////////////////////////////////
 
-        modifier onlyGovernance() {
+    modifier onlyGovernance() {
         if (msg.sender != governance) revert Unauthorized();
         _;
     }
