@@ -129,16 +129,16 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   modifier lockedWhileVotesCast() {
     uint[] memory activeProposals = governance.getActiveProposals();
     for (uint i = 0; i < activeProposals.length; i++) {
-      require(!governance.getReceipt(activeProposals[i], delegates(msg.sender)).hasVoted, "Staking: Cannot stake while votes are cast");
+      if (governance.getReceipt(activeProposals[i], delegates(msg.sender)).hasVoted) revert TokenLocked();
       (, address proposer,,) = governance.getProposalData(activeProposals[i]);
-      require(proposer != delegates(msg.sender), "Staking: Cannot stake while votes are cast");
+      if (proposer == delegates(msg.sender)) revert TokenLocked();
     }
     _;
   }
 
   /// @dev The executor sends transactions of successfully passed governance proposals
   modifier onlyExecutor() {
-    require(msg.sender == executor, "Staking: only executor");
+    if (msg.sender != executor) revert NotAuthorized();
     _;
   }
 
@@ -207,7 +207,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @notice Token URI to find metadata for each tokenId
   /// @dev The metadata will be a variation on the metadata of the underlying token
   function tokenURI(uint256 _tokenId) public view virtual override returns (string memory) {
-    require(ownerOf(_tokenId) != address(0), "Staking:tokenURI: URI query for nonexistent token");
+    if (ownerOf(_tokenId) == address(0)) revert NonExistentToken();
 
     string memory baseURI = _baseTokenURI;
     return bytes(baseURI).length > 0
@@ -238,10 +238,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @notice Delegate votes to another address and get your gas cost refunded
   /// @param _delegatee The address you wish to delegate to
   function delegateWithRefund(address _delegatee) public refundable {
-    require(
-      refund == RefundStatus.DelegatingRefund || refund == RefundStatus.StakingAndDelegatingRefund, 
-      "Staking: Delegating refunds are not enabled"
-    );
+    if (refund != RefundStatus.DelegatingRefund && refund != RefundStatus.StakingAndDelegatingRefund) revert NotRefundable();
     if (_delegatee == address(0)) _delegatee = msg.sender;
     return _delegate(msg.sender, _delegatee);
   }
@@ -252,7 +249,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   function _delegate(address _delegator, address _delegatee) internal lockedWhileVotesCast {
     address currentDelegate = delegates(_delegator);
     // If currentDelegate == _delegatee, then this function will not do anything
-    require(currentDelegate != _delegatee, "ERC721Checkpointable::_delegate: already delegated to this address");
+    if (currentDelegate == _delegatee) revert InvalidDelegation();
 
     // Set the _delegates mapping to the correct address, subbing in address(0) if they are delegating to themselves
     _delegates[_delegator] = _delegatee == _delegator ? address(0) : _delegatee;
@@ -260,7 +257,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
 
     // If the delegator has no votes, then this function will not do anything
     // This is explicitly blocked to ensure that users without votes cannot abuse the refund mechanism
-    require(amount > 0, "ERC721Checkpointable::_delegate: amount must be greater than 0");
+    if (amount <= 0) revert InvalidDelegation();
     
     // Move the votes from the currentDelegate to the new delegatee
     // Neither of these addresses can be address(0) because: 
@@ -313,7 +310,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _tokenIds An array of the id of the token you wish to stake
   /// @param _unlockTime The timestamp of the time your tokens will be unlocked
   function stakeWithRefund(uint[] calldata _tokenIds, uint _unlockTime) public refundable {
-    require(refund == RefundStatus.StakingRefund || refund == RefundStatus.StakingAndDelegatingRefund, "Staking: Staking refunds are not enabled");
+    if (refund != RefundStatus.StakingRefund && refund != RefundStatus.StakingAndDelegatingRefund) revert NotRefundable();
     _stake(_tokenIds, _unlockTime);
   }
 
@@ -321,12 +318,12 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _tokenIds An array of the id of the tokens being staked
   /// @param _unlockTime The timestamp of when the tokens will be unlocked
   function _stake(uint[] calldata _tokenIds, uint _unlockTime) internal {
-    require(!paused, "staking is paused");
-    require(_unlockTime == 0 || _unlockTime > block.timestamp, "must lock until future time (or set 0 for unlocked)");
+    if (paused) revert TokenLocked();
+    if (_unlockTime == 0 && _unlockTime < block.timestamp) revert InvalidParameter();
 
     uint numTokens = _tokenIds.length;
     // This is required to ensure the gas refunds are not abused
-    require(numTokens > 0, "stake at least one token");
+    if (numTokens <= 0) revert InvalidParameter();
     
     uint newVotingPower;
     for (uint i = 0; i < numTokens; i++) {
@@ -381,7 +378,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _to The address to send the underlying NFT to
   function _unstake(uint[] calldata _tokenIds, address _to) internal lockedWhileVotesCast {
     uint numTokens = _tokenIds.length;
-    require(numTokens > 0, "unstake at least one token");
+    if (numTokens <= 0) revert InvalidParameter();
     
     uint lostVotingPower;
     for (uint i = 0; i < numTokens; i++) {
@@ -408,8 +405,9 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _to The address to send the underlying NFT to
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
     address owner = ownerOf(_tokenId);
-    require(msg.sender == owner || isApprovedForAll[owner][msg.sender] || msg.sender == getApproved[_tokenId], "NOT_AUTHORIZED");
-    require(unlockTime[_tokenId] <= block.timestamp, "token is locked");
+    // NotAuthorized
+    if (msg.sender != owner && !isApprovedForAll[owner][msg.sender] && msg.sender != getApproved[_tokenId]) revert NotAuthorized();
+    if (unlockTime[_tokenId] > block.timestamp) revert TokenLocked();
 
     // Transfer the underlying asset to the address specified
     IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
@@ -442,7 +440,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     /// @return The voting power for the token
     /// @dev Voting power is calculated as 20 + staking bonus (0 to max staking bonus) + evil bonus (0 or 10)
     function getTokenVotingPower(uint _tokenId) public override view returns (uint) {
-      require(ownerOf(_tokenId) != address(0), "Staking:getTokenVotingPower: URI query for nonexistent token");
+      if ( ownerOf(_tokenId) == address(0)) revert NonExistentToken();
       // Only FrankenPunks are eligible for the evil bonus
       if (_tokenId < 10000) {
         return 20 + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);

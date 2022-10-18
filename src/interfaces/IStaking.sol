@@ -1,6 +1,12 @@
 pragma solidity ^0.8.13;
 
 interface IStaking {
+    // Errors
+    error NonExistentToken();
+    error InvalidDelegation();
+    error Paused();
+    error InvalidParameter();
+    error TokenLocked();
 
     struct CommunityPowerMultipliers {
         uint64 votes;

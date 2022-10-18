@@ -6,6 +6,14 @@ interface IExecutor {
     event ExecuteTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
     event QueueTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
     
+    error ZeroAddress();
+    error Unauthorized();
+    error DelayNotSatisfied();
+    error IdenticalTransactionAlreadyQueued();
+    error TransactionNotQueued();
+    error TimelockNotMet();
+    error StaleTransaction();
+    error TransactionReverted();
     
     // function GRACE_PERIOD() external view returns (uint256);
     // function MAXIMUM_DELAY() external view returns (uint256);

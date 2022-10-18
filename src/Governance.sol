@@ -112,12 +112,12 @@ contract Governance is IGovernance, Admin, Refund {
         uint256 _proposalThresholdBPS,
         uint256 _quorumVotesBPS
     ) public virtual {
-        require(!initialized, "FrankenDAOExecutor::initialize:already initialized");
-        require(_staking != address(0),"FrankenDAO::initialize: invalid staking address");
-        require(_votingPeriod >= MIN_VOTING_PERIOD && _votingPeriod <= MAX_VOTING_PERIOD, "FrankenDAO::initialize: invalid voting period");
-        require(_votingDelay >= MIN_VOTING_DELAY && _votingDelay <= MAX_VOTING_DELAY, "FrankenDAO::initialize: invalid voting delay");
-        require(_proposalThresholdBPS >= MIN_PROPOSAL_THRESHOLD_BPS && _proposalThresholdBPS <= MAX_PROPOSAL_THRESHOLD_BPS, "FrankenDAO::initialize: invalid proposal threshold" );
-        require(_quorumVotesBPS >= MIN_QUORUM_VOTES_BPS && _quorumVotesBPS <= MAX_QUORUM_VOTES_BPS, "FrankenDAO::initialize: invalid proposal threshold" );
+        if (initialized) revert AlreadyInitialized();
+        if(_staking == address(0)) revert ZeroAddress();
+        if (_votingPeriod < MIN_VOTING_PERIOD || _votingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds();
+        if (_votingDelay < MIN_VOTING_DELAY || _votingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
+        if (_proposalThresholdBPS < MIN_PROPOSAL_THRESHOLD_BPS || _proposalThresholdBPS > MAX_PROPOSAL_THRESHOLD_BPS) revert ParameterOutOfBounds();
+        if (_quorumVotesBPS < MIN_QUORUM_VOTES_BPS || _quorumVotesBPS > MAX_QUORUM_VOTES_BPS) revert ParameterOutOfBounds();
 
         executor = IExecutor(_executor);
         founders = _founders;
@@ -194,7 +194,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @return Proposal state
      */
     function state(uint256 _proposalId) public view returns (ProposalState) {
-        require(proposalCount >= _proposalId, "FrankenDAO::state: invalid proposal id");
+        if(_proposalId > proposalCount) revert InvalidId();
         Proposal storage proposal = proposals[_proposalId];
         if (proposal.vetoed) {
             return ProposalState.Vetoed;
@@ -269,11 +269,7 @@ contract Governance is IGovernance, Admin, Refund {
         bytes[] memory _calldatas,
         string memory _description
     ) public refundable returns (uint256) {
-        require(
-            refund == RefundStatus.ProposalRefund ||
-                refund == RefundStatus.VotingAndProposalRefund,
-            "FrankenDAO::proposeWithRefund: refunding gas is turned off"
-        );
+        if(refund != RefundStatus.ProposalRefund && refund != RefundStatus.VotingAndProposalRefund) revert NotRefundable();
         uint256 proposalId = _propose(
             _targets,
             _values,
@@ -295,26 +291,20 @@ contract Governance is IGovernance, Admin, Refund {
 
         temp.totalSupply = staking.getTotalVotingPower();
         temp.proposalThreshold = bps2Uint(proposalThresholdBPS, temp.totalSupply);
-        require(staking.getVotes(msg.sender) > temp.proposalThreshold,
-            "FrankenDAO::propose: proposer votes below proposal threshold"
-        );
+        if(staking.getVotes(msg.sender) < tmp.proposalThreshold) revert NotEligible();
 
-        require(_targets.length != 0, "FrankenDAO::propose: must provide actions");
-        require(_targets.length <= PROPOSAL_MAX_OPERATIONS, "FrankenDAO::propose: too many actions");
-        require(
-            _targets.length == _values.length &&
-            _targets.length == _signatures.length &&
-            _targets.length == _calldatas.length,
-            "FrankenDAO::propose: proposal function information arity mismatch"
-        );
+        if (_targets.length == 0) revert InvalidProposal();
+        if(_targets.length > PROPOSAL_MAX_OPERATIONS) revert InvalidProposal();
+        if(
+            _targets.length != _values.length ||
+            _targets.length != _signatures.length ||
+            _targets.length != _calldatas.length
+        ) revert InvalidProposal();
 
         temp.latestProposalId = latestProposalIds[msg.sender];
         if (temp.latestProposalId != 0) {
             ProposalState proposersLatestProposalState = state(temp.latestProposalId);
-            require(
-                proposersLatestProposalState != ProposalState.Active && proposersLatestProposalState != ProposalState.Pending,
-                "FrankenDAO::propose: one active / pending proposal per proposer"
-            );
+            if ( proposersLatestProposalState == ProposalState.Active || proposersLatestProposalState == ProposalState.Pending ) revert NotEligible();
         }
 
         temp.startBlock = block.number + votingDelay;
@@ -366,10 +356,7 @@ contract Governance is IGovernance, Admin, Refund {
     /// @param _proposalId Id of the proposal to verify
     function verifyProposal(uint _proposalId) external onlyVetoers {
         // Can't verify a proposal that's been vetoed, canceled,
-        require(
-            state(_proposalId) == ProposalState.Pending,
-            "FrankenDAOGovernance::verifyProposal: proposal must be pending to be verified"
-        );
+        if(state(_proposalId) != ProposalState.Pending) revert InvalidStatus();
 
         Proposal storage proposal = proposals[_proposalId];
 
@@ -390,10 +377,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _proposalId The id of the proposal to queue
      */
     function queue(uint256 _proposalId) external {
-        require(
-            state(_proposalId) == ProposalState.Succeeded,
-            "FrankenDAO::queue: proposal can only be queued if it is succeeded"
-        );
+        if(state(_proposalId) != ProposalState.Succeeded) revert InvalidStatus();
         Proposal storage proposal = proposals[_proposalId];
         uint256 eta = block.timestamp + executor.delay();
         uint numTargets = proposal.targets.length;
@@ -416,9 +400,7 @@ contract Governance is IGovernance, Admin, Refund {
         bytes memory _data,
         uint256 _eta
     ) internal {
-        require(!executor.queuedTransactions(keccak256(abi.encode(_target, _value, _signature, _data, _eta))),
-            "FrankenDAO::queueOrRevertInternal: identical proposal action already queued at eta"
-        );
+        if(executor.queuedTransactions(keccak256(abi.encode(_target, _value, _signature, _data, _eta)))) revert AlreadyQueued();
         executor.queueTransaction(_target, _value, _signature, _data, _eta);
     }
 
@@ -427,10 +409,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _proposalId The id of the proposal to execute
      */
     function execute(uint256 _proposalId) external {
-        require(
-            state(_proposalId) == ProposalState.Queued,
-            "FrankenDAO::execute: proposal can only be executed if it is queued"
-        );
+        if(state(_proposalId) != ProposalState.Queued) revert InvalidStatus();
         Proposal storage proposal = proposals[_proposalId];
 
         uint256 userSuccessfulProposalCount = ++userCommunityScoreData[proposal.proposer].proposalsPassed;
@@ -455,18 +434,14 @@ contract Governance is IGovernance, Admin, Refund {
      */
     function cancel(uint256 _proposalId) external {
         Proposal storage proposal = proposals[_proposalId];
-        require(
-            !proposal.executed && !proposal.canceled && !proposal.vetoed,
-            "FrankenDAO::cancel: cannot cancel executed, vetoed, or canceled proposal"
-        );
-
-        require(
-            msg.sender == proposal.proposer ||
-            staking.getVotes(proposal.proposer) < proposal.proposalThreshold ||
-            !proposal.verified && block.number > proposal.endBlock || 
-            state(_proposalId) == ProposalState.Expired,
-            "FrankenDAO::cancel: cancel requirements not met"
-        );
+        if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
+        if(
+            msg.sender != proposal.proposer &&
+            staking.getVotes(proposal.proposer) < proposal.proposalThreshold && 
+            !proposal.verified &&
+            block.number < proposal.endBlock &&
+            state(_proposalId) == ProposalState.Expired
+        ) revert NotEligible();
 
         _removeTransactionIfQueuedOrExpired(proposal);
 
@@ -481,10 +456,7 @@ contract Governance is IGovernance, Admin, Refund {
      */
     function veto(uint256 _proposalId) external onlyAdmins {
         Proposal storage proposal = proposals[_proposalId];
-        require(
-            !proposal.executed && !proposal.canceled && !proposal.vetoed,
-            "FrankenDAO::veto: cannot veto executed, vetoed, or canceled proposal"
-        );
+        if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
 
         _removeTransactionIfQueuedOrExpired(proposal);
 
@@ -541,11 +513,7 @@ contract Governance is IGovernance, Admin, Refund {
         external
         refundable
     {
-        require(
-            refund == RefundStatus.VotingRefund ||
-                refund == RefundStatus.VotingAndProposalRefund,
-            "FrankenDAO::castRefundableVote: refunding gas is turned off"
-        );
+        if (refund != RefundStatus.VotingRefund && refund != RefundStatus.VotingAndProposalRefund) revert NotRefundable();
         emit VoteCast(
             msg.sender,
             _proposalId,
@@ -566,12 +534,12 @@ contract Governance is IGovernance, Admin, Refund {
         totalCommunityScoreData.votes += 1;
         uint256 userVoteCount = ++userCommunityScoreData[_voter].votes;
 
-        require(state(_proposalId) == ProposalState.Active, "FrankenDAO::castVoteInternal: voting is closed");
-        require(_support <= 2, "FrankenDAO::castVoteInternal: invalid vote type");
+        if (state(_proposalId) != ProposalState.Active) revert InvalidStatus();
+        if (_support > 2) revert InvalidInput();
         
         Proposal storage proposal = proposals[_proposalId];
         Receipt storage receipt = proposal.receipts[_voter];
-        require(receipt.hasVoted == false, "FrankenDAO::castVoteInternal: voter already voted");
+        if (receipt.hasVoted) revert AlreadyVoted();
 
         uint votes = staking.getVotes(_voter);
 
@@ -611,7 +579,7 @@ contract Governance is IGovernance, Admin, Refund {
     }
     
     function updateTotalCommunityScoreData(uint64 _votes, uint64 _proposalsCreated, uint64 _proposalsPassed) external {
-        require(msg.sender == address(staking), "FrankenDAO::updateTotalCommunityScoreData: only staking");
+        if (msg.sender != address(staking)) revert NotAuthorized();
 
         totalCommunityScoreData.proposalsCreated = _proposalsCreated;
         totalCommunityScoreData.proposalsPassed = _proposalsPassed;
@@ -637,10 +605,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _newVotingDelay new voting delay, in blocks
      */
     function _setVotingDelay(uint256 _newVotingDelay) external onlyExecutor {
-        require(
-            _newVotingDelay >= MIN_VOTING_DELAY && _newVotingDelay <= MAX_VOTING_DELAY,
-            "FrankenDAO::_setVotingDelay: invalid voting delay"
-        );
+        if (_newVotingDelay < MIN_VOTING_DELAY || _newVotingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
         uint256 oldVotingDelay = votingDelay;
         votingDelay = _newVotingDelay;
 
@@ -652,10 +617,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _newVotingPeriod new voting period, in blocks
      */
     function _setVotingPeriod(uint256 _newVotingPeriod) external onlyExecutor {
-        require(
-            _newVotingPeriod >= MIN_VOTING_PERIOD && _newVotingPeriod <= MAX_VOTING_PERIOD,
-            "FrankenDAO::_setVotingPeriod: invalid voting period"
-        );
+        if (_newVotingPeriod < MIN_VOTING_PERIOD || _newVotingPeriod > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
         uint256 oldVotingPeriod = votingPeriod;
         votingPeriod = _newVotingPeriod;
 
@@ -668,11 +630,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _newProposalThresholdBPS new proposal threshold
      */
     function _setProposalThresholdBPS(uint256 _newProposalThresholdBPS) external onlyExecutorOrAdmins {
-        require(
-            _newProposalThresholdBPS >= MIN_PROPOSAL_THRESHOLD_BPS &&
-            _newProposalThresholdBPS <= MAX_PROPOSAL_THRESHOLD_BPS,
-            "FrankenDAO::_setProposalThreshold: invalid proposal threshold"
-        );
+        if (_newProposalThresholdBPS < MIN_PROPOSAL_THRESHOLD_BPS || _newProposalThresholdBPS > MAX_PROPOSAL_THRESHOLD_BPS) revert ParameterOutOfBounds();
         uint256 oldProposalThresholdBPS = proposalThresholdBPS;
         proposalThresholdBPS = _newProposalThresholdBPS;
 
@@ -685,11 +643,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _newQuorumVotesBPS new proposal threshold
      */
     function _setQuorumVotesBPS(uint256 _newQuorumVotesBPS) external onlyExecutorOrAdmins {
-        require(
-            _newQuorumVotesBPS >= MIN_QUORUM_VOTES_BPS &&
-            _newQuorumVotesBPS <= MAX_QUORUM_VOTES_BPS,
-            "FrankenDAO::_setProposalThreshold: invalid proposal threshold"
-        );
+        if (_newQuorumVotesBPS < MIN_QUORUM_VOTES_BPS || _newQuorumVotesBPS > MAX_QUORUM_VOTES_BPS) revert ParameterOutOfBounds();
         uint256 oldQuorumVotesBPS = quorumVotesBPS;
         quorumVotesBPS = _newQuorumVotesBPS;
 

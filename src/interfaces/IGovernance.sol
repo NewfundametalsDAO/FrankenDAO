@@ -3,6 +3,19 @@ pragma solidity ^0.8.13;
 interface IGovernance {
     event RefundSet(RefundStatus status);
 
+    // Errors
+    error ZeroAddress();
+    error AlreadyInitialized();
+    error ParameterOutOfBounds();
+    error InvalidId();
+    error InvalidProposal();
+    error InvalidStatus();
+    error InvalidInput();
+    error AlreadyQueued();
+    error AlreadyVoted();
+    error RequirementsNotMet();
+    error NotEligible();
+
     /// @notice An event emitted when a new proposal is created
     event ProposalCreated(
         uint256 id,
