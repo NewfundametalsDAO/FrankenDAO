@@ -4,11 +4,13 @@ import "forge-std/Test.sol";
 import "../../src/Staking.sol";
 import "../utils/mocks/Token.sol";
 
-contract LockedTest is Test {
-    Staking staking;
-    Token frankenpunk;
+import { TestBase } from "../TestBase.t.sol";
 
-    function setUp() public { }
+contract LockedTest is TestBase {
+
+    function testRevertIfUnstakeDuringVoting() public {
+
+    }
 
     // reverts if unstaking during a vote
     //function testRevertsIfUnstakingDuringVoting() public {

@@ -15,10 +15,10 @@ contract DeployScript is Script {
     Governance govImpl;
     Governance gov;
 
-    address FOUNDER_MULTISIG;
-    address COUNCIL_MULTISIG;
+    address FOUNDER_MULTISIG = address(2);
+    address COUNCIL_MULTISIG = address(3);
     address FRANKENPUNKS = 0x1FEC856e25F757FeD06eB90548B0224E91095738;
-    address FRANKENMONSTERS;
+    address FRANKENMONSTERS = address(1);
     bytes32 SALT = bytes32("salty");
 
     function run() public {
