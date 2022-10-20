@@ -53,7 +53,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
 
   /// @notice The staked time bonus for each staked token (tokenId => bonus votes)
   /// @dev This needs to be tracked because users will select how much time to lock for, so bonus is variable
-  mapping(uint => uint) stakedTimeBonus; 
+  mapping(uint => uint) public stakedTimeBonus; 
 
   /// @notice Addresses that each user delegates votes to
   /// @dev This should only be accessed via delegates() function, which overrides address(0) with self

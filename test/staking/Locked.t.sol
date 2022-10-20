@@ -4,13 +4,17 @@ import "forge-std/Test.sol";
 import "../../src/Staking.sol";
 import "../utils/mocks/Token.sol";
 
-import { TestBase } from "../TestBase.t.sol";
+import { StakingBase } from "./StakingBase.t.sol";
 
-contract LockedTest is TestBase {
+contract LockedTest is StakingBase {
+    uint ID = 0;
 
-    function testRevertIfUnstakeDuringVoting() public {
-
-    }
+    // function testRevertIfUnstakeDuringVoting() public {
+    //     address owner = mockStakeSingle(ID);
+    //     vm.prank(owner);
+    //     vm.expectRevert("cannot unstake during voting");
+    //     staking.unstake(ID);
+    // }
 
     // reverts if unstaking during a vote
     //function testRevertsIfUnstakingDuringVoting() public {
