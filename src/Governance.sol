@@ -27,16 +27,16 @@ contract Governance is IGovernance, Admin, Refund {
     uint256 public constant MAX_PROPOSAL_THRESHOLD_BPS = 1_000; // 1,000 basis points or 10%
 
     /// @notice The minimum setable voting period
-    uint256 public constant MIN_VOTING_PERIOD = 5_760; // About 24 hours
+    uint256 public constant MIN_VOTING_PERIOD = 1 days; 
 
     /// @notice The max setable voting period
-    uint256 public constant MAX_VOTING_PERIOD = 80_640; // About 2 weeks
+    uint256 public constant MAX_VOTING_PERIOD = 14 days;
 
     /// @notice The min setable voting delay
     uint256 public constant MIN_VOTING_DELAY = 1;
 
     /// @notice The max setable voting delay
-    uint256 public constant MAX_VOTING_DELAY = 40_320; // About 1 week
+    uint256 public constant MAX_VOTING_DELAY = 1 weeks;
 
     /// @notice The minimum setable quorum votes basis points
     uint256 public constant MIN_QUORUM_VOTES_BPS = 200; // 200 basis points or 2%
@@ -104,7 +104,7 @@ contract Governance is IGovernance, Admin, Refund {
      */
     function initialize(
         address _staking,
-        address payable _executor,
+        address _executor,
         address _founders,
         address _council,
         uint256 _votingPeriod,
@@ -113,7 +113,7 @@ contract Governance is IGovernance, Admin, Refund {
         uint256 _quorumVotesBPS
     ) public virtual {
         if (initialized) revert AlreadyInitialized();
-        if(_staking == address(0)) revert ZeroAddress();
+        if (_staking == address(0)) revert ZeroAddress();
         if (_votingPeriod < MIN_VOTING_PERIOD || _votingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds();
         if (_votingDelay < MIN_VOTING_DELAY || _votingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
         if (_proposalThresholdBPS < MIN_PROPOSAL_THRESHOLD_BPS || _proposalThresholdBPS > MAX_PROPOSAL_THRESHOLD_BPS) revert ParameterOutOfBounds();

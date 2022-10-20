@@ -234,7 +234,7 @@ interface IGovernance {
     // function hasRole(bytes32 role, address account) external view returns (bool);
     function initialize(
         address _staking,
-        address payable _executor,
+        address _executor,
         address _founders,
         address _council,
         uint256 _votingPeriod,
