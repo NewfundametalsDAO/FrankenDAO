@@ -6,7 +6,7 @@ interface IGovernance {
     // Errors
     error ZeroAddress();
     error AlreadyInitialized();
-    error ParameterOutOfBounds();
+    error ParameterOutOfBounds(string _parameter);
     error InvalidId();
     error InvalidProposal();
     error InvalidStatus();

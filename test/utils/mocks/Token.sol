@@ -8,9 +8,10 @@ contract Token is ERC721 {
 
   constructor (string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
 
-  function mint(address _to) external {
+  function mint(address _to) external returns (uint) {
     ++nextTokenId;
     _mint(_to, nextTokenId);
+    return nextTokenId;
   }
 
   function tokenURI(uint256 id) public view override returns (string memory) {
