@@ -13,6 +13,8 @@ import { IExecutor } from "src/interfaces/IExecutor.sol";
 import { IStaking } from "src/interfaces/IStaking.sol";
 import { IGovernance } from "src/interfaces/IGovernance.sol";
 
+import {ERC721} from "oz/token/ERC721/ERC721.sol";
+
 contract DeployScript is Script {
     IExecutor executor;
     IStaking staking;
@@ -21,8 +23,8 @@ contract DeployScript is Script {
 
     address FOUNDER_MULTISIG;
     address COUNCIL_MULTISIG;
-    address FRANKENPUNKS = 0x1FEC856e25F757FeD06eB90548B0224E91095738;
-    address FRANKENMONSTERS;
+    ERC721 FRANKENPUNKS = ERC721( 0x1FEC856e25F757FeD06eB90548B0224E91095738 );
+    ERC721 FRANKENMONSTERS;
     bytes32 SALT = bytes32("salty");
 
     function run() public {
@@ -39,7 +41,7 @@ contract DeployScript is Script {
     function _deployAllContracts() internal {
         bytes memory proxyCreationCode = abi.encodePacked(
             type(GovernanceProxy).creationCode,
-            abi.encode(FRANKENPUNKS, address(this), bytes(""))
+            abi.encode(address( FRANKENPUNKS ), address(this), bytes(""))
         );
 
         address expectedGovProxyAddr = address(uint160(uint256(keccak256(
@@ -51,8 +53,8 @@ contract DeployScript is Script {
 
         // create staking 
         staking = new Staking(
-            FRANKENPUNKS,
-            FRANKENMONSTERS,
+            address( FRANKENPUNKS ),
+            address( FRANKENMONSTERS ),
             expectedGovProxyAddr,
             address(executor),
             FOUNDER_MULTISIG,
@@ -69,7 +71,7 @@ contract DeployScript is Script {
         govImpl.initialize(address(staking), address(0), address(0), address(0), 1 days, 1 days, 500, 200);
 
         // create governance proxy and initialize
-        gov = IGovernance(address(new GovernanceProxy{salt:SALT}(FRANKENPUNKS, address(this), bytes(""))));
+        gov = IGovernance(address(new GovernanceProxy{salt:SALT}(address( FRANKENPUNKS ), address(this), bytes(""))));
 
         require(address(gov) == expectedGovProxyAddr, "governance proxy address mismatch");
 
