@@ -1,43 +1,90 @@
 pragma solidity ^0.8.13;
 
 import { StakingBase } from "./StakingBase.t.sol";
+import "forge-std/Test.sol";
 
 contract StakingParametersTest is StakingBase {
 
     // can update stake time
     function testBonus__UpdateStakeBonusTime() public {
         (uint maxStakeBonusTime, uint maxStakeBonusAmount) = staking.stakingSettings();
-        assert(maxStakeBonusTime == 4 weeks);
 
         vm.prank(address(executor));
-        staking.changeStakeTime(5 weeks);
+        staking.changeStakeTime(uint128(maxStakeBonusTime + 1 weeks));
 
         (uint newMaxStakeBonusTime, uint newMaxStakeBonusAmount) = staking.stakingSettings();
-        assert(newMaxStakeBonusTime == 5 weeks);
+        assert(newMaxStakeBonusTime == maxStakeBonusTime + 1 weeks);
     }
 
-    function testBonus__UpdateStakeBonusTime() public {
+    function testBonus__UpdateStakeBonusAmount() public {
+        (uint maxStakeBonusTime, uint maxStakeBonusAmount) = staking.stakingSettings();
+        
+        vm.prank(address(executor));
+        staking.changeStakeAmount(uint128(maxStakeBonusAmount + 1));
+
+        (uint newMaxStakeBonusTime, uint newMaxStakeBonusAmount) = staking.stakingSettings();
+        assert(newMaxStakeBonusAmount == maxStakeBonusAmount + 1);
+    }
+
+    function testBonus__RewardsDecreaseIfMaxStakedTimeIncreases() public {
         (uint maxStakeBonusTime, uint maxStakeBonusAmount) = staking.stakingSettings();
 
-        address owner1 = mockStakeSingle(0, block.timestamp + maxStakeBonusTime);
-        uint o1bonus = staking.stakedTimeBonus(owner1);
+        uint TOKEN_ID_1 = 0;
+        address owner1 = mockStakeSingle(TOKEN_ID_1, block.timestamp + maxStakeBonusTime);
+        uint o1bonus = staking.stakedTimeBonus(TOKEN_ID_1);
         assert(o1bonus == maxStakeBonusAmount);
-
+        
         vm.prank(address(executor));
-        staking.changeStakeTime(maxStakeBonusTime + 1 weeks);
+        staking.changeStakeTime(uint128(maxStakeBonusTime + 1 weeks));
 
-        address owner2 = mockStakeSingle(0, block.timestamp + maxStakeBonusTime);
-        uint o2bonus = staking.stakedTimeBonus(owner2);
+        uint TOKEN_ID_2 = 10;
+        address owner2 = mockStakeSingle(TOKEN_ID_2, block.timestamp + maxStakeBonusTime);
+        uint o2bonus = staking.stakedTimeBonus(TOKEN_ID_2);
 
         assert(o2bonus < o1bonus);
     }
 
-    // get voting power (should be 0)
-        // set stake bonus to 0
-        // stake
-        // get voting power (should be the same)
-        // set stake bonus to 2
-        // get voting power (should be x2)
+    function testBonus__RewardsIncreaseIfMaxStakedBonusIncreases() public {
+        (uint maxStakeBonusTime, uint maxStakeBonusAmount) = staking.stakingSettings();
+
+        uint TOKEN_ID_1 = 0;
+        address owner1 = mockStakeSingle(TOKEN_ID_1, block.timestamp + maxStakeBonusTime);
+        uint o1bonus = staking.stakedTimeBonus(TOKEN_ID_1);
+        assert(o1bonus == maxStakeBonusAmount);
+        
+        vm.prank(address(executor));
+        staking.changeStakeAmount(uint128(maxStakeBonusAmount + 1));
+
+        uint TOKEN_ID_2 = 10;
+        address owner2 = mockStakeSingle(TOKEN_ID_2, block.timestamp + maxStakeBonusTime);
+        uint o2bonus = staking.stakedTimeBonus(TOKEN_ID_2);
+
+        assert(o2bonus > o1bonus);
+    }
+
+    function testBonus__MaxStakedBonusIncreaseTranslatesToVotingPower() public {
+        (uint maxStakeBonusTime, uint maxStakeBonusAmount) = staking.stakingSettings();
+
+        uint TOKEN_ID_1 = 0;
+        address owner1 = mockStakeSingle(TOKEN_ID_1, block.timestamp + maxStakeBonusTime);
+        uint beforeVotes = staking.getVotes(owner1);
+
+        vm.prank(address(executor));
+        staking.changeStakeAmount(uint128(maxStakeBonusAmount + 1));
+
+        uint[] memory ids = new uint[](1);
+        ids[0] = TOKEN_ID_1;
+        vm.warp(block.timestamp + maxStakeBonusTime);
+        vm.prank(owner1);
+        staking.unstake(ids, owner1);
+
+        mockStakeSingle(TOKEN_ID_1, block.timestamp + maxStakeBonusTime);
+        uint afterVotes = staking.getVotes(owner1);
+
+        assert(afterVotes > beforeVotes);
+    }
+
+
 
     // updated stake time affects voting power
     //function testNewStakeBonusTimeChangesCommunityVotingPower() public {}
