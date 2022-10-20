@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import "solmate/tokens/ERC721.sol";
-import "oz/utils/Strings.sol";
-import "oz/utils/math/SafeCast.sol";
+import "solmate/utils/LibString.sol";
+import "./utils/SafeCast.sol";
 import "./utils/Refund.sol";
 import "./utils/Admin.sol";
 
@@ -17,7 +17,7 @@ import "./interfaces/IExecutor.sol";
 /// @notice Users stake FrankenPunks & FrankenMonsters and get ERC721s in return
 /// @notice These ERC721s are used for voting power for FrankenDAO governance
 contract Staking is IStaking, ERC721, Refund, Admin {
-  using Strings for uint256;
+  using LibString for uint256;
   using SafeCast for uint256;
 
   /// @notice The original ERC721 FrankenPunks contract
