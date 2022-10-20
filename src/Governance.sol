@@ -364,7 +364,7 @@ contract Governance is IGovernance, Admin, Refund {
         proposal.verified = true;
 
         // update community score data
-        uint256 userProposalCount = ++userCommunityScoreData[proposal.proposer].proposalsCreated;
+        ++userCommunityScoreData[proposal.proposer].proposalsCreated;
         // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
         totalCommunityScoreData.proposalsCreated += 1;
     }
@@ -412,7 +412,7 @@ contract Governance is IGovernance, Admin, Refund {
         if(state(_proposalId) != ProposalState.Queued) revert InvalidStatus();
         Proposal storage proposal = proposals[_proposalId];
 
-        uint256 userSuccessfulProposalCount = ++userCommunityScoreData[proposal.proposer].proposalsPassed;
+        ++userCommunityScoreData[proposal.proposer].proposalsPassed;
         // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
         totalCommunityScoreData.proposalsPassed += 1;
         
@@ -532,7 +532,7 @@ contract Governance is IGovernance, Admin, Refund {
     function castVoteInternal(address _voter, uint256 _proposalId, uint8 _support) internal returns (uint) {
         // we can do this with no check because if you can vote, it means you have votes so you haven't delegated
         totalCommunityScoreData.votes += 1;
-        uint256 userVoteCount = ++userCommunityScoreData[_voter].votes;
+        ++userCommunityScoreData[_voter].votes;
 
         if (state(_proposalId) != ProposalState.Active) revert InvalidStatus();
         if (_support > 2) revert InvalidInput();

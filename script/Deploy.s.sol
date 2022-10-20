@@ -2,22 +2,18 @@
  pragma solidity ^0.8.13;
 
 import { Script } from "forge-std/Script.sol";
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
 import { GovernanceProxy } from "src/proxy/GovernanceProxy.sol";
 import { Executor } from "src/Executor.sol";
 import { Staking } from "src/Staking.sol";
 import { Governance } from "src/Governance.sol";
 
-import { IExecutor } from "src/interfaces/IExecutor.sol";
-import { IStaking } from "src/interfaces/IStaking.sol";
-import { IGovernance } from "src/interfaces/IGovernance.sol";
-
 contract DeployScript is Script {
-    IExecutor executor;
-    IStaking staking;
-    IGovernance govImpl;
-    IGovernance gov;
+    Executor executor;
+    Staking staking;
+    Governance govImpl;
+    Governance gov;
 
     address FOUNDER_MULTISIG;
     address COUNCIL_MULTISIG;
@@ -69,11 +65,11 @@ contract DeployScript is Script {
         govImpl.initialize(address(staking), address(0), address(0), address(0), 1 days, 1 days, 500, 200);
 
         // create governance proxy and initialize
-        gov = IGovernance(address(new GovernanceProxy{salt:SALT}(FRANKENPUNKS, address(this), bytes(""))));
+        gov = Governance(address(new GovernanceProxy{salt:SALT}(FRANKENPUNKS, address(this), bytes(""))));
 
         require(address(gov) == expectedGovProxyAddr, "governance proxy address mismatch");
 
-        address(gov).call
+        (bool upgradeSuccess, bytes memory uR) = address(gov).call
             (abi.encodeWithSignature(
                 "upgradeToAndCall(address,bytes)",
                 address(govImpl),
@@ -90,17 +86,19 @@ contract DeployScript is Script {
                 )
             )
         );
+        require(upgradeSuccess, "proxy upgrade failed");
 
-        address(gov).call(
+        (bool changeAdminSuccess, bytes memory caR) = address(gov).call(
             abi.encodeWithSignature(
                 "changeAdmin(address)",
                 (address(executor))
             )
         );
+        require(changeAdminSuccess, "proxy admin change failed");
     }
 
     // Harness so we can use the same script for testing.
-    function deployAllContracts() public {
+    function deployAllContractsForTesting() public {
         return _deployAllContracts();
     }
 }

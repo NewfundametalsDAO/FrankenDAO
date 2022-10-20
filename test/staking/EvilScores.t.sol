@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-// import "forge-std/Test.sol";
-import "./TestBase.t.sol";
-import "../src/Staking.sol";
-import "oz/utils/Strings.sol";
+import { TestBase } from "../TestBase.t.sol";
+import { LibString } from "solmate/utils/LibString.sol";
 
-contract StakingTest is TestBase {
+contract EvilScoresTest is TestBase {
 
     // Test only exists for sample data, where all evens are evil. Redo with JSON call once we have final.
     function testEvilScores(uint tokenId) public {
@@ -15,17 +13,10 @@ contract StakingTest is TestBase {
             assert(staking.evilBonus(tokenId) == 0);
         } else {
             string memory json = vm.readFile("static/evilScores.json");
-            string memory tokenLookup = string(abi.encodePacked(".", Strings.toString(tokenId)));
+            string memory tokenLookup = string(abi.encodePacked(".", LibString.toString(tokenId)));
             uint correct = abi.decode(vm.parseJson(json, tokenLookup), (uint)) * 10;
             uint bonus = staking.evilBonus(tokenId);
             assert(bonus == correct);
         }        
     }
-
-    // function testGetEvilScores() public {
-    //     console.log(staking.evilBonus(2158));
-    // }
-
-    // make sure transferFrom blocks all token transfers (safe with both sigs)
-    // test evil bonus
 }

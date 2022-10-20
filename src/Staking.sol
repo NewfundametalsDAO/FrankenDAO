@@ -190,7 +190,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
 
   /// @notice Transferring of staked tokens is prohibited, so all transfers will revert
   /// @dev This will also block safeTransferFrom, because of solmate's implementation
-  function transferFrom(address _from, address _to, uint256 _id) public pure override {
+  function transferFrom(address, address, uint256) public pure override(ERC721, IStaking) {
     revert("staked tokens cannot be transferred");
   }
 
@@ -350,10 +350,10 @@ contract Staking is IStaking, ERC721, Refund, Admin {
 
     // Transfer the underlying token from the owner to this contract
     IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
-    collection.transferFrom(collection.ownerOf(_tokenId), address(this), _tokenId);
+    address owner = collection.ownerOf(_tokenId);
+    collection.transferFrom(owner, address(this), _tokenId);
 
     // Mint the staker a new ERC721 token representing their staked token
-    // This token goes to the address of the user staking, which may not be the underlying token owner
     _mint(msg.sender, _tokenId);
 
     // Return the voting power for this token based on staked time bonus and evil score
@@ -399,7 +399,6 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _to The address to send the underlying NFT to
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
     address owner = ownerOf(_tokenId);
-    // NotAuthorized
     if (msg.sender != owner && !isApprovedForAll[owner][msg.sender] && msg.sender != getApproved[_tokenId]) revert NotAuthorized();
     if (unlockTime[_tokenId] > block.timestamp) revert TokenLocked();
 
