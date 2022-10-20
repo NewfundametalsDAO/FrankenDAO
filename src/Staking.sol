@@ -357,12 +357,14 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     if (_unlockTime > 0) {
       unlockTime[_tokenId] = _unlockTime;
       uint fullStakedTimeBonus = (_unlockTime - block.timestamp) * stakingSettings.maxStakeBonusAmount / stakingSettings.maxStakeBonusTime;
+      // If they are staking a Frankenmonster (ID >= 10k), only give them half the bonus.
       stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : fullStakedTimeBonus / 2;
     }
 
     // Transfer the underlying token from the owner to this contract
     IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
     address owner = collection.ownerOf(_tokenId);
+    if (msg.sender != owner && !collection.isApprovedForAll(owner, msg.sender) && msg.sender != collection.getApproved(_tokenId)) revert NotAuthorized();
     collection.transferFrom(owner, address(this), _tokenId);
 
     // Mint the staker a new ERC721 token representing their staked token
@@ -383,7 +385,8 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _tokenIds An array of the ids of the tokens being unstaked
   /// @param _to The address to send the underlying NFT to
   function _unstake(uint[] calldata _tokenIds, address _to) internal lockedWhileVotesCast {
-    if (paused) revert TokenLocked();
+    // @todo commenting out the paused condition, confirm 
+    // if (paused) revert TokenLocked();
     uint numTokens = _tokenIds.length;
     if (numTokens == 0) revert InvalidParameter();
     
