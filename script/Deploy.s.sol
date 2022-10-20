@@ -19,8 +19,8 @@ contract DeployScript is Script {
 
     address FOUNDER_MULTISIG = address(2);
     address COUNCIL_MULTISIG = address(3);
-    ERC721 FRANKENPUNKS = ERC721( 0x1FEC856e25F757FeD06eB90548B0224E91095738 );
-    ERC721 FRANKENMONSTERS = address(1);
+    address FRANKENPUNKS = 0x1FEC856e25F757FeD06eB90548B0224E91095738;
+    address FRANKENMONSTERS = address(1);
     bytes32 SALT = bytes32("salty");
 
     function run() public {
@@ -37,7 +37,7 @@ contract DeployScript is Script {
     function _deployAllContracts() internal {
         bytes memory proxyCreationCode = abi.encodePacked(
             type(GovernanceProxy).creationCode,
-            abi.encode(address( FRANKENPUNKS ), address(this), bytes(""))
+            abi.encode(FRANKENPUNKS, address(this), bytes(""))
         );
 
         address expectedGovProxyAddr = address(uint160(uint256(keccak256(
@@ -49,8 +49,8 @@ contract DeployScript is Script {
 
         // create staking 
         staking = new Staking(
-            address( FRANKENPUNKS ),
-            address( FRANKENMONSTERS ),
+            FRANKENPUNKS,
+            FRANKENMONSTERS,
             expectedGovProxyAddr,
             address(executor),
             FOUNDER_MULTISIG,
@@ -67,7 +67,7 @@ contract DeployScript is Script {
         govImpl.initialize(address(staking), address(0), address(0), address(0), 1 days, 1 days, 500, 200);
 
         // create governance proxy and initialize
-        gov = Governance(address(new GovernanceProxy{salt:SALT}(address( FRANKENPUNKS ), address(this), bytes(""))));
+        gov = Governance(address(new GovernanceProxy{salt:SALT}(FRANKENPUNKS, address(this), bytes(""))));
 
         require(address(gov) == expectedGovProxyAddr, "governance proxy address mismatch");
 
