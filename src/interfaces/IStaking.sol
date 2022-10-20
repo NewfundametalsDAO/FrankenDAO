@@ -7,6 +7,7 @@ interface IStaking {
     error Paused();
     error InvalidParameter();
     error TokenLocked();
+    error ZeroAddress();
 
     struct CommunityPowerMultipliers {
         uint64 votes;

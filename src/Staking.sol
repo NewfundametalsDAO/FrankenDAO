@@ -164,6 +164,18 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     uint _proposalsMultiplier, 
     uint _executedMultiplier
   ) ERC721("Staked FrankenPunks", "sFP") {
+    if(_frankenpunks == address(0)) revert ZeroAddress();
+    if(_frankenmonsters == address(0)) revert ZeroAddress();
+    if(_governance == address(0)) revert ZeroAddress();
+    if(_executor == address(0)) revert ZeroAddress();
+    if(_founders == address(0)) revert ZeroAddress();
+    if(_council == address(0)) revert ZeroAddress();
+    if(_maxStakeBonusTime == 0) revert InvalidParameter();
+    if(_maxStakeBonusAmount == 0) revert InvalidParameter();
+    if(_votesMultiplier == 0) revert InvalidParameter();
+    if(_proposalsMultiplier == 0) revert InvalidParameter();
+    if(_executedMultiplier == 0) revert InvalidParameter();
+
     frankenpunks = IERC721(_frankenpunks);
     frankenmonsters = IERC721(_frankenmonsters);
     governance = IGovernance( _governance );
@@ -371,6 +383,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _tokenIds An array of the ids of the tokens being unstaked
   /// @param _to The address to send the underlying NFT to
   function _unstake(uint[] calldata _tokenIds, address _to) internal lockedWhileVotesCast {
+    if (paused) revert TokenLocked();
     uint numTokens = _tokenIds.length;
     if (numTokens == 0) revert InvalidParameter();
     
