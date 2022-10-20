@@ -84,7 +84,7 @@ contract DeployScript is Script {
     }
 
     // Harness so we can use the same script for testing.
-    function deployAllContracts() public {
+    function deployAllContracts() public returns (address, address, address, address){
         return _deployAllContracts();
     }
 }

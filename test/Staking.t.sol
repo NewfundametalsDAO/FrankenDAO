@@ -10,15 +10,17 @@ contract StakingTest is Test {
 
     function setUp() public {
         staking = new Staking(
-            address(0),
-            address(0),
-            address(0),
-            address(0),
-            0,
-            0,
-            0,
-            0,
-            0
+            address(0), //address _frankenpunks, 
+            address(0), //address _frankenmonsters,
+            address(0), //address _governance, 
+            address(0), //address _executor, 
+            address(0), //address _founders,
+            address(0), //address _council,
+            0, //uint _maxStakeBonusTime, 
+            0, //uint _maxStakeBonusAmount,
+            0, //uint _votesMultiplier, 
+            0, //uint _proposalsMultiplier, 
+            0 //uint _executedMultiplier
         );
     }
 

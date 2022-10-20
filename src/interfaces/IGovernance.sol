@@ -233,14 +233,14 @@ interface IGovernance {
     // function grantRole(bytes32 role, address account) external;
     // function hasRole(bytes32 role, address account) external view returns (bool);
     function initialize(
-        address payable executor_,
-        address staking_,
-        address founders_,
-        address council_,
-        uint256 votingPeriod_,
-        uint256 votingDelay_,
-        uint256 proposalThresholdBPS_,
-        uint256 quorumVotesBPS_
+        address _staking,
+        address payable _executor,
+        address _founders,
+        address _council,
+        uint256 _votingPeriod,
+        uint256 _votingDelay,
+        uint256 _proposalThresholdBPS,
+        uint256 _quorumVotesBPS
     ) external; 
     // function latestProposalIds(address) external view returns (uint256);
     // function name() external view returns (string memory);

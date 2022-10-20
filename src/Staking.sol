@@ -136,12 +136,6 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     _;
   }
 
-  /// @dev The executor sends transactions of successfully passed governance proposals
-  modifier onlyExecutor() {
-    if (msg.sender != executor) revert NotAuthorized();
-    _;
-  }
-
   /////////////////////////////////
   ////////// CONSTRUCTOR //////////
   /////////////////////////////////

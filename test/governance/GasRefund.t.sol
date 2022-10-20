@@ -1,3 +1,4 @@
+pragma solidity ^0.8.13;
 // reverts if insufficient balance: voting
 // reverts if insufficient balance: proposing
 // reverts if refunding is turned off: voting
