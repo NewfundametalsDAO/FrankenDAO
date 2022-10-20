@@ -68,7 +68,7 @@ interface IStaking {
     // function setDelegatingRefund(bool _refunding) external;
     // function setPause(bool _paused) external;
     // function setStakingRefund(bool _staking) external;
-    // function stake(uint256[] memory _tokenIds, uint256 _unlockTime) external;
+    function stake(uint256[] memory _tokenIds, uint256 _unlockTime) external;
     // function stakeWithRefund(uint256[] memory _tokenIds, uint256 _unlockTime) external;
     // function stakedTimeBonus(uint256) external view returns (uint256);
     // function stakingRefund() external view returns (bool);
@@ -81,7 +81,7 @@ interface IStaking {
     function getTotalVotingPower() external view returns (uint256);
     function getVotes(address account) external view returns (uint);
     function evilBonus(uint256 _tokenId) external view returns (uint256);
-    // function transferFrom(address from, address to, uint256 tokenId) external;
+    function transferFrom(address from, address to, uint256 tokenId) external;
     // function unlockTime(uint256) external view returns (uint256);
     // function unstake(uint256[] memory _tokenIds, address _to) external;
     // function unstakeWithRefund(uint256[] memory _tokenIds, address _to) external;
