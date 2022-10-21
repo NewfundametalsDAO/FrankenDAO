@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import { StakingBase } from "../staking/StakingBase.t.sol";
 import { IERC721 } from "../../src/interfaces/IERC721.sol";
+import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 
 contract GovernanceBase is StakingBase {
     address proposer;
@@ -21,9 +22,6 @@ contract GovernanceBase is StakingBase {
             tokenIds[i] = VOTER_TOKEN_IDS[i];
             voter = mockStakeSingle(tokenIds[i], block.timestamp + 4 weeks);
         }
-
-        console.log("initial proposer votes: ", staking.getVotes(proposer));
-        console.log("initial voter votes: ", staking.getVotes(voter));
     }
 
     function _generateFakeProposalData() public view returns (
@@ -39,7 +37,7 @@ contract GovernanceBase is StakingBase {
         values[0] = 0;
 
         string[] memory sigs = new string[](1);
-        sigs[0] = "_setVotingPeriod(uin256)";
+        sigs[0] = "_setVotingPeriod(uint256)";
         
         bytes[] memory calldatas = new bytes[](1);
         calldatas[0] = abi.encode(6 days);
@@ -55,5 +53,52 @@ contract GovernanceBase is StakingBase {
         uint eta
     ) internal pure returns (bytes32) {
         return keccak256(abi.encode(target, value, sig, data, eta));
+    }
+
+    function _checkState(uint proposalId, IGovernance.ProposalState targetState) internal returns (bool) {
+        IGovernance.ProposalState proposalState = gov.state(proposalId);
+        return proposalState == targetState;
+    }
+
+    function _createProposal() public returns (uint) {
+        (
+            address[] memory targets, 
+            uint[] memory values, 
+            string[] memory sigs, 
+            bytes[] memory calldatas
+        ) = _generateFakeProposalData();
+
+        vm.prank(proposer);
+        return gov.propose(targets, values, sigs, calldatas, "test");
+    }
+
+    function _createAndVerifyProposal() public returns (uint) {
+        uint proposalId = _createProposal();
+        vm.prank(COUNCIL_MULTISIG);
+        gov.verifyProposal(proposalId);
+        return proposalId;
+    }
+
+    function _createSuccessfulProposal() public returns (uint) {
+        uint proposalId = _createAndVerifyProposal();
+
+        // @todo switch this to warp when switching to times
+        vm.roll(block.number + gov.votingDelay());
+
+        _vote(proposalId, 1, true); // voter votes for proposal
+
+        // @todo switch this to warp when switching to times
+        vm.roll(block.number + gov.votingPeriod() + 1);
+
+        return proposalId;
+    }
+
+    function _vote(uint proposalId, uint8 voterVote, bool voterVotes) internal {
+        vm.prank(proposer);
+        gov.castVote(proposalId, 1);
+        if (voterVotes) {
+            vm.prank(voter);
+            gov.castVote(proposalId, voterVote);
+        }
     }
 }

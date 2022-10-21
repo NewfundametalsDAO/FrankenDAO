@@ -81,7 +81,7 @@ contract ProposalStateTests is GovernanceBase {
     }
 
     // Test that a proposal can be vetoed by the council multisig before becoming active.
-    function testGovPropose__CouncilCanVetoProposal() public {
+    function testGovState__CouncilCanVetoProposal() public {
         uint proposalId = _createProposal();
 
         vm.prank(COUNCIL_MULTISIG);
@@ -91,18 +91,19 @@ contract ProposalStateTests is GovernanceBase {
     }
 
     // Test that a proposal can be vetoed after being verified.
-    function testGovPropose__CouncilCanVetoVerifiedProposal() public {
+    function testGovState__CouncilCanVetoVerifiedProposal() public {
         uint proposalId = _createAndVerifyProposal();
 
         // @todo switch this to warp when switching to times
         vm.roll(block.number + gov.votingDelay());
 
+        vm.prank(COUNCIL_MULTISIG);
         gov.veto(proposalId);
         assert(_checkState(proposalId, IGovernance.ProposalState.Vetoed));
     }
 
     // Test that a proposal remains active until the end block, regardless of votes.
-    function testGovPropose__ProposalRemainsActiveUntilEndBlock() public {
+    function testGovState__ProposalRemainsActiveUntilEndBlock() public {
         uint proposalId = _createAndVerifyProposal();
 
         // @todo switch this to warp when switching to times
@@ -117,7 +118,7 @@ contract ProposalStateTests is GovernanceBase {
     }
 
     // Test that proposal passes if it has the majority of votes and hits quorum.
-    function testGovPropose__ProposalSucceedsIfGetsEnoughVotes() public {
+    function testGovState__ProposalSucceedsIfGetsEnoughVotes() public {
         uint proposalId = _createAndVerifyProposal();
 
         // @todo switch this to warp when switching to times
@@ -132,7 +133,7 @@ contract ProposalStateTests is GovernanceBase {
     }
 
     // Test that a proposal fails if the majority votes against it.
-    function testGovPropose__ProposalFailsIfMajorityVotesAgainst() public {
+    function testGovState__ProposalFailsIfMajorityVotesAgainst() public {
         uint proposalId = _createAndVerifyProposal();
 
         // @todo switch this to warp when switching to times
@@ -141,13 +142,13 @@ contract ProposalStateTests is GovernanceBase {
         _vote(proposalId, 0, true); // voter votes against proposal
 
         // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingPeriod() - 1);
+        vm.roll(block.number + gov.votingPeriod() + 1);
 
-        assert(_checkState(proposalId, IGovernance.ProposalState.Succeeded));
+        assert(_checkState(proposalId, IGovernance.ProposalState.Defeated));
     }
 
     // Test that a proposal fails if it doesn't hit quorum.
-    function testGovPropose__ProposalFailsIfDoesntReachQuorum() public {
+    function testGovState__ProposalFailsIfDoesntReachQuorum() public {
         uint proposalId = _createAndVerifyProposal();
 
         // @todo switch this to warp when switching to times
@@ -156,13 +157,13 @@ contract ProposalStateTests is GovernanceBase {
         _vote(proposalId, 1, false); // voter doesn't vote
 
         // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingPeriod() - 1);
+        vm.roll(block.number + gov.votingPeriod() + 1);
 
         assert(_checkState(proposalId, IGovernance.ProposalState.Defeated));
     }
 
     // Test that anyone can queue a proposal once it passes.
-    function testGovPropose__AnyoneCanQueueProposal() public {
+    function testGovState__AnyoneCanQueueProposal() public {
         uint proposalId = _createSuccessfulProposal();
 
         vm.prank(stranger);
@@ -183,7 +184,7 @@ contract ProposalStateTests is GovernanceBase {
     }
 
     // Test that nobody can queue a proposal before it completes.
-    function testGovPropose__NobodyCanQueueProposalBeforeItPasses() public {
+    function testGovState__NobodyCanQueueProposalBeforeItPasses() public {
         uint proposalId = _createAndVerifyProposal();
 
         // @todo switch this to warp when switching to times
@@ -197,7 +198,7 @@ contract ProposalStateTests is GovernanceBase {
     }
 
     // Test that a proposal can be vetoed after it has been queued.
-    function testGovPropose__ProposalCanBeUnqueuedByVeto() public {
+    function testGovState__ProposalCanBeUnqueuedByVeto() public {
         uint proposalId = _createSuccessfulProposal();
 
         vm.prank(stranger);
@@ -223,32 +224,20 @@ contract ProposalStateTests is GovernanceBase {
     }
 
     // Test that queued transaction can be executed by anyone after the delay.
-    // function testGovPropose__ExecutionSucceedsAndClearsQueue() public {
-    //     uint proposalId = _createSuccessfulProposal();
+    function testGovState__ExecutionSucceedsAndClearsQueue() public {
+        uint proposalId = _createSuccessfulProposal();
 
-    //     vm.prank(stranger);
-    //     gov.queue(proposalId);
+        vm.prank(stranger);
+        gov.queue(proposalId);
 
-    //     vm.warp(block.timestamp + executor.DELAY());
+        vm.warp(block.timestamp + executor.DELAY());
 
-    //     vm.prank(stranger);
-    //     assert(gov.votingPeriod() == 7 days);
-    //     gov.execute(proposalId);
-    //     assert(_checkState(proposalId, IGovernance.ProposalState.Executed));
-    //     assert(gov.votingPeriod() == 6 days);
+        vm.prank(stranger);
+        assert(gov.votingPeriod() == 7 days);
+        gov.execute(proposalId);
+        assert(_checkState(proposalId, IGovernance.ProposalState.Executed));
+        assert(gov.votingPeriod() == 6 days);
 
-    //     for (uint i = 0; i < targets.length; i++) {
-    //         bytes32 txHash = _getTxHash(targets[i], values[i], sigs[i], calldatas[i], block.timestamp + executor.DELAY());
-    //         assert(!executor.queuedTransactions(txHash));
-    //     }
-    // }
-
-    function _checkState(uint proposalId, IGovernance.ProposalState targetState) internal returns (bool) {
-        IGovernance.ProposalState proposalState = gov.state(proposalId);
-        return proposalState == targetState;
-    }
-
-    function _createProposal() public returns (uint) {
         (
             address[] memory targets, 
             uint[] memory values, 
@@ -256,37 +245,22 @@ contract ProposalStateTests is GovernanceBase {
             bytes[] memory calldatas
         ) = _generateFakeProposalData();
 
-        vm.prank(proposer);
-        return gov.propose(targets, values, sigs, calldatas, "test");
-    }
-
-    function _createAndVerifyProposal() public returns (uint) {
-        uint proposalId = _createProposal();
-        vm.prank(COUNCIL_MULTISIG);
-        gov.verifyProposal(proposalId);
-        return proposalId;
-    }
-
-    function _createSuccessfulProposal() public returns (uint) {
-        uint proposalId = _createAndVerifyProposal();
-
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
-
-        _vote(proposalId, 1, true); // voter votes for proposal
-
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingPeriod() + 1);
-
-        return proposalId;
-    }
-
-    function _vote(uint proposalId, uint8 voterVote, bool voterVotes) internal {
-        vm.prank(proposer);
-        gov.castVote(proposalId, 1);
-        if (voterVotes) {
-            vm.prank(voter);
-            gov.castVote(proposalId, voterVote);
+        for (uint i = 0; i < targets.length; i++) {
+            bytes32 txHash = _getTxHash(targets[i], values[i], sigs[i], calldatas[i], block.timestamp + executor.DELAY());
+            assert(!executor.queuedTransactions(txHash));
         }
     }
+
+    // Test that a proposal CANNOT be vetoed after being executed.
+    function testGovState__ProposalCannotBeVetoedAfterExecution() public {
+        uint proposalId = _createSuccessfulProposal();
+        gov.queue(proposalId);
+        vm.warp(block.timestamp + executor.DELAY());
+        gov.execute(proposalId);
+
+        vm.prank(COUNCIL_MULTISIG);
+        vm.expectRevert(InvalidStatus.selector);
+        gov.veto(proposalId);
+    }
+
 }

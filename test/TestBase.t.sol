@@ -28,7 +28,6 @@ contract TestBase is Test, DeployScript {
     function setUp() virtual public {
         vm.createSelectFork("https://mainnet.infura.io/v3/324422b5714843da8a919967a9c652ac");
         deployAllContractsForTesting();
-
     }
 
     function dealRefundBalance() internal {
