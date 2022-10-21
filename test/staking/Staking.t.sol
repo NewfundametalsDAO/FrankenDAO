@@ -2,6 +2,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../utils/BaseSetup.sol";
+import "./StakingBase.t.sol";
 
 error NonExistentToken();
 error InvalidDelegation();
@@ -10,161 +11,75 @@ error InvalidParameter();
 error TokenLocked();
 error ZeroAddress();
 
-contract StakingTest is Test, BaseSetup {
-    address staker;
+contract StakingTest is StakingBase {
 
-    uint256[] public ids;
+    function testStaking__UnlockTimeCantBeInThePast(uint _id) public {
+        vm.assume(_id <= 10_000);
+        address owner = frankenpunks.ownerOf(_id);
+        vm.startPrank(owner);
+        frankenpunks.approve(address(staking), _id);
 
-    function setUp() public {
-        staker = makeAddr("staker");
-
-        ids.push(frankenpunk.mint(staker));
-        ids.push(frankenpunk.mint(staker));
-
-        for (uint256 index = 0; index < ids.length; index++) {
-            vm.prank(staker);
-            frankenpunk.approve(address(staking), ids[index]);
-        }
-    }
-
-    function testThisWorks() public {
-        uint256 balance = frankenpunk.balanceOf(staker);
-        assertEq(balance, ids.length);
-    }
-
-    function stakeTokens(uint256 _unlockTime) internal {
-
-        staking.stake(ids, _unlockTime);
-    }
-
-    function unstakeTokens() internal {
-        staking.unstake(ids, staker);
-    }
-
-    function testUnlockTimeCantBeInThePast() public {
-        vm.warp(1 weeks);
-
-        vm.startPrank(staker);
-        vm.expectRevert(InvalidParameter.selector);
-        stakeTokens(block.timestamp - 1 days);
-    }
-
-    function testStakingNoTokensFails() public {
-        vm.warp(1 weeks);
-
-        ids.pop();
-        ids.pop();
-
-        vm.startPrank(staker);
+        uint[] memory ids = new uint[](1);
+        ids[0] = _id;
 
         vm.expectRevert(InvalidParameter.selector);
-        staking.stake(ids, block.timestamp + 30 days);
+        staking.stake(ids, block.timestamp - 1 days);
     }
 
-    // stake frankenpunk
-    function testStakingFrankenPunk() public {
-        vm.warp(1 weeks);
+    //// stake frankenpunk
+    function testStaking__CanStakeFrankenPunk(uint _id) public {
+        vm.assume(_id <= 10_000);
+        address owner = mockStakeSingle(_id);
 
-        vm.startPrank(staker);
-        stakeTokens(block.timestamp + 30 days);
-
-        // staker frankenpunk.balanceOf should equal 0
-        assert(frankenpunk.balanceOf(staker) == 0);
-        // staking frankenpunk.balanceOf should equal 1
-        assert(frankenpunk.balanceOf(address(staking)) == ids.length);
         // staking.ownerOf id 1 should be staker
-        assert(staking.ownerOf(ids[0]) == staker);
+        assert(staking.ownerOf(_id) == owner);
         // frankenpunk.ownerOf id 1 should be staking
-        assert(frankenpunk.ownerOf(ids[0]) == address(staking));
+        assert(frankenpunks.ownerOf(_id) == address(staking));
     }
 
-    // transfer reverts for staked FrankenPunks
-    function testStakedTokensAreNotTransferrable() public {
+    //// transfer reverts for staked FrankenPunks
+    function testStaking__TokensAreNotTransferrable(uint _id) public {
+        vm.assume(_id <= 10_000);
+        address owner = mockStakeSingle(_id);
         address other = makeAddr("other");
-        vm.warp(1 weeks);
 
-        vm.startPrank(staker);
-        stakeTokens(block.timestamp + 30 days);
+        vm.startPrank(owner);
 
         //expect revert
         vm.expectRevert("staked tokens cannot be transferred");
         //transfer staked token
-        staking.transferFrom(staker, other, ids[0]);
+        staking.transferFrom(owner, other, _id);
     }
 
-    // unstake frankenpunk
-    function testUnstakingFrankenPunk() public {
-        vm.warp(1 weeks);
+    //// unstake frankenpunk
+    function testStaking__UnstakingFrankenPunk(uint _id, uint _unlockTime) public {
+        vm.assume(_id <= 10_000);
+        vm.assume(_unlockTime < 1_825);
+        // get starting values:
+        address owner = frankenpunks.ownerOf(_id);
+        uint initialBalance = frankenpunks.balanceOf(owner);
 
-        vm.startPrank(staker);
-        stakeTokens(block.timestamp + 30 days);
+        // stake token:
+        mockStakeSingle(_id, block.timestamp + ( _unlockTime * 1 days ));
 
-        // @todo 31 days should work here but throws TokenLocked()
-        // (meaning the staking lock isn't up yet)
-        vm.warp(37 days);
+         //@todo 31 days should work here but throws TokenLocked()
+         //(meaning the staking lock isn't up yet)
+        vm.warp(1 + ( _unlockTime * 1 days ));
+        vm.startPrank(owner);
 
         //unstake on staking
-        unstakeTokens();
+        uint[] memory ids = new uint[](1);
+        ids[0] = _id;
 
-        // balance on frankenpunk should go back
-        assert(frankenpunk.balanceOf(staker) == ids.length);
+        staking.unstake(ids, owner);
+
+         //balance on frankenpunk should go back
+        assert(frankenpunks.balanceOf(owner) == initialBalance);
 
         //balance on staking should be zero;
-        assert(staking.balanceOf(staker) == 0);
+        assert(staking.balanceOf(owner) == 0);
 
-        // frankenpunk.ownerOf id 1 should be staker
-        assert(frankenpunk.ownerOf(ids[0]) == staker);
-    }
-
-    function pauseStaking() internal {
-        staking.setPause(true);
-    }
-
-    function unPauseStaking() internal {
-        staking.setPause(false);
-    }
-
-    function testPausingAndUnpausingStaking() public {
-        vm.startPrank(founders);
-        // pause staking
-        pauseStaking();
-
-        //check for staking paused variable on staking
-        assert(staking.paused());
-
-        //unpause staking;
-        unPauseStaking();
-        //for staking paused variable on staking;
-        assert(staking.paused() == false);
-    }
-
-    function testStakingRevertsWhenPaused() public {
-        //pause staking
-        vm.prank(founders);
-        pauseStaking();
-        vm.stopPrank();
-        //try to stake frankenpunk on staking
-
-        vm.startPrank(staker);
-        vm.expectRevert(TokenLocked.selector);
-        stakeTokens(block.timestamp + 30 days);
-    }
-
-    // revert unstaking if paused
-    function testUnstakingRevertsWhenPaused() public {
-        //try to stake frankenpunk on staking
-        vm.startPrank(staker);
-        stakeTokens(block.timestamp + 30 days);
-        vm.stopPrank();
-
-        //pause staking
-        vm.prank(founders);
-        pauseStaking();
-        vm.stopPrank();
-
-        //expert revert;
-        vm.expectRevert(TokenLocked.selector);
-        //try to unstake frankenpunk from staking;
-        unstakeTokens();
+         //frankenpunk.ownerOf id 1 should be staker
+        assert(frankenpunks.ownerOf(_id) == owner);
     }
 }

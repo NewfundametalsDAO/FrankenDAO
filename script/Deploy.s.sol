@@ -9,6 +9,8 @@ import { Executor } from "src/Executor.sol";
 import { Staking } from "src/Staking.sol";
 import { Governance } from "src/Governance.sol";
 
+import {ERC721} from "oz/token/ERC721/ERC721.sol";
+
 contract DeployScript is Script {
     Executor executor;
     Staking staking;

@@ -7,17 +7,18 @@ import "../utils/mocks/Token.sol";
 import { StakingBase } from "./StakingBase.t.sol";
 
 contract LockedTest is StakingBase {
-    uint ID = 0;
+    // @todo come back after implementing voting and proposing tests
 
-    // function testRevertIfUnstakeDuringVoting() public {
+    // @todo revert if unstaking after delegatee has voted
+    // function testPausing__RevertIfUnstakeDuringVoting() public {
     //     address owner = mockStakeSingle(ID);
     //     vm.prank(owner);
     //     vm.expectRevert("cannot unstake during voting");
     //     staking.unstake(ID);
-    // }
+     //}
 
-    // reverts if unstaking during a vote
-    //function testRevertsIfUnstakingDuringVoting() public {
+    // @todo reverts if unstaking during a vote
+    //function testPausing__RevertsIfUnstakingDuringVoting() public {
         // addr 1 stakes
         // addr 2 stakes
         // addr 2 delegates to addr 1
@@ -27,8 +28,8 @@ contract LockedTest is StakingBase {
         // expect revert
     // }
 
-    // reverts if delegating during a vote
-    // function testRevertsIfDelegatingDuringVoting() public {
+    // @tod reverts if delegating during a vote
+    // function testPausing__RevertsIfDelegatingDuringVoting() public {
         // addr 1 stakes
         // addr 2 stakes
         // addr 2 delegates to addr 1
