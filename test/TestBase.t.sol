@@ -13,7 +13,7 @@ contract TestBase is Test, DeployScript {
     error TokenLocked();
     error ZeroAddress();
     error AlreadyInitialized();
-    error ParameterOutOfBounds(string _parameter);
+    error ParameterOutOfBounds();
     error InvalidId();
     error InvalidProposal();
     error InvalidStatus();
@@ -22,6 +22,7 @@ contract TestBase is Test, DeployScript {
     error AlreadyVoted();
     error RequirementsNotMet();
     error NotEligible();
+    error Unauthorized();
     error NotRefundable();
     error InsufficientRefundBalance();
 
@@ -42,7 +43,7 @@ contract TestBase is Test, DeployScript {
         staking.setRefund(_status);
     }
 
-    function _generateAddress(string memory name) internal returns (address) {
+    function _generateAddress(string memory name) internal pure returns (address) {
         return address(uint160(uint(keccak256(abi.encodePacked(name)))));
     }
 }

@@ -37,7 +37,7 @@ contract GovernanceBase is StakingBase {
         values[0] = 0;
 
         string[] memory sigs = new string[](1);
-        sigs[0] = "_setVotingPeriod(uint256)";
+        sigs[0] = "setVotingPeriod(uint256)";
         
         bytes[] memory calldatas = new bytes[](1);
         calldatas[0] = abi.encode(6 days);
@@ -55,7 +55,7 @@ contract GovernanceBase is StakingBase {
         return keccak256(abi.encode(target, value, sig, data, eta));
     }
 
-    function _checkState(uint proposalId, IGovernance.ProposalState targetState) internal returns (bool) {
+    function _checkState(uint proposalId, IGovernance.ProposalState targetState) internal view returns (bool) {
         IGovernance.ProposalState proposalState = gov.state(proposalId);
         return proposalState == targetState;
     }

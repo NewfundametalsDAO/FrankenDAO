@@ -6,7 +6,7 @@ interface IGovernance {
     // Errors
     error ZeroAddress();
     error AlreadyInitialized();
-    error ParameterOutOfBounds(string _parameter);
+    error ParameterOutOfBounds();
     error InvalidId();
     error InvalidProposal();
     error InvalidStatus();
@@ -114,9 +114,9 @@ interface IGovernance {
     }
 
     struct CommunityScoreData {
+        uint64 votes;
         uint64 proposalsCreated;
         uint64 proposalsPassed;
-        uint64 votes;
     }
 
     struct Proposal {
@@ -201,9 +201,9 @@ interface IGovernance {
     // function _addVetoer(address newVetoer) external;
     // function _renouceVetoer() external;
     // function _setPendingAdmin(address newPendingAdmin) external;
-    // function _setProposalThresholdBPS(uint256 newProposalThresholdBPS) external;
-    // function _setQuorumVotesBPS(uint256 newQuorumVotesBPS) external;
-    // function _setVotingDelay(uint256 newVotingDelay) external;
+    // function setProposalThresholdBPS(uint256 newProposalThresholdBPS) external;
+    // function setQuorumVotesBPS(uint256 newQuorumVotesBPS) external;
+    // function setVotingDelay(uint256 newVotingDelay) external;
     // function setVotingPeriod(uint256 newVotingPeriod) external;
     // function admin() external view returns (address);
     // function cancel(uint256 proposalId) external;

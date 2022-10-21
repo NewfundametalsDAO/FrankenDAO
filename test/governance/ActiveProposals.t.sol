@@ -19,6 +19,34 @@ contract ActiveProposalTest is GovernanceBase {
         assert(found);
     }
 
+    // Test that we can add two proposals to Active Proposals.
+    function testGovActive__TwoProposalsAddedToActive() public {
+        uint proposalId1 = _createProposal();
+        
+        (
+            address[] memory targets, 
+            uint[] memory values, 
+            string[] memory sigs, 
+            bytes[] memory calldatas
+        ) = _generateFakeProposalData();
+        vm.prank(voter);
+        uint proposalId2 = gov.propose(targets, values, sigs, calldatas, "test");
+
+        uint[] memory activeProposals = gov.getActiveProposals();
+        bool found1;
+        bool found2;
+        for (uint i = 0; i < activeProposals.length; i++) {
+            if (activeProposals[i] == proposalId1) {
+                found1 = true;
+            }
+            if (activeProposals[i] == proposalId2) {
+                found2 = true;
+            }
+        }
+        assert(found1 && found2);
+        assert(activeProposals.length == 2);
+    }
+
     // Test that a proposal is removed from Active Proposals when it's canceled.
     function testGovActive__ProposalRemovedFromActiveWhenCanceled() public {
         uint proposalId = _createProposal();

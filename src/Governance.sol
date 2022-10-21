@@ -114,10 +114,10 @@ contract Governance is IGovernance, Admin, Refund {
     ) public virtual {
         if (initialized) revert AlreadyInitialized();
         if(_staking == address(0)) revert ZeroAddress();
-        if (_votingPeriod < MIN_VOTING_PERIOD || _votingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds("_votingPeriod");
-        if (_votingDelay < MIN_VOTING_DELAY || _votingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds("_votingDelay");
-        if (_proposalThresholdBPS < MIN_PROPOSAL_THRESHOLD_BPS || _proposalThresholdBPS > MAX_PROPOSAL_THRESHOLD_BPS) revert ParameterOutOfBounds("_proposalThresholdBPS");
-        if (_quorumVotesBPS < MIN_QUORUM_VOTES_BPS || _quorumVotesBPS > MAX_QUORUM_VOTES_BPS) revert ParameterOutOfBounds("_quorumVotesBPS");
+        if (_votingPeriod < MIN_VOTING_PERIOD || _votingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds();
+        if (_votingDelay < MIN_VOTING_DELAY || _votingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
+        if (_proposalThresholdBPS < MIN_PROPOSAL_THRESHOLD_BPS || _proposalThresholdBPS > MAX_PROPOSAL_THRESHOLD_BPS) revert ParameterOutOfBounds();
+        if (_quorumVotesBPS < MIN_QUORUM_VOTES_BPS || _quorumVotesBPS > MAX_QUORUM_VOTES_BPS) revert ParameterOutOfBounds();
 
         executor = IExecutor(_executor);
         founders = _founders;
@@ -366,7 +366,7 @@ contract Governance is IGovernance, Admin, Refund {
         // update community score data
         ++userCommunityScoreData[proposal.proposer].proposalsCreated;
         // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
-        totalCommunityScoreData.proposalsCreated += 1;
+        ++totalCommunityScoreData.proposalsCreated;
     }
 
     /////////////////
@@ -414,7 +414,7 @@ contract Governance is IGovernance, Admin, Refund {
 
         ++userCommunityScoreData[proposal.proposer].proposalsPassed;
         // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
-        totalCommunityScoreData.proposalsPassed += 1;
+        ++totalCommunityScoreData.proposalsPassed;
         
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
@@ -530,10 +530,6 @@ contract Governance is IGovernance, Admin, Refund {
      * @return The number of votes cast
      */
     function castVoteInternal(address _voter, uint256 _proposalId, uint8 _support) internal returns (uint) {
-        // we can do this with no check because if you can vote, it means you have votes so you haven't delegated
-        totalCommunityScoreData.votes += 1;
-        ++userCommunityScoreData[_voter].votes;
-
         if (state(_proposalId) != ProposalState.Active) revert InvalidStatus();
         if (_support > 2) revert InvalidInput();
         
@@ -555,6 +551,11 @@ contract Governance is IGovernance, Admin, Refund {
         receipt.support = _support;
         // Can't overflow because there will never be more than 2 ** 96 votes in the system.
         receipt.votes = uint96(votes);
+
+        // Do this after the vote so it doesn't impact voting power for this vote.
+        // We can do this with no check because if you can vote, it means you have votes so you haven't delegated.
+        ++totalCommunityScoreData.votes;
+        ++userCommunityScoreData[_voter].votes;
 
         return votes;
     }
@@ -604,8 +605,8 @@ contract Governance is IGovernance, Admin, Refund {
      * @notice Admin function for setting the voting delay
      * @param _newVotingDelay new voting delay, in blocks
      */
-    function _setVotingDelay(uint256 _newVotingDelay) external onlyExecutor {
-        if (_newVotingDelay < MIN_VOTING_DELAY || _newVotingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds("_newVotingDelay");
+    function setVotingDelay(uint256 _newVotingDelay) external onlyExecutor {
+        if (_newVotingDelay < MIN_VOTING_DELAY || _newVotingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
         uint256 oldVotingDelay = votingDelay;
         votingDelay = _newVotingDelay;
 
@@ -616,8 +617,8 @@ contract Governance is IGovernance, Admin, Refund {
      * @notice Admin function for setting the voting period
      * @param _newVotingPeriod new voting period, in blocks
      */
-    function _setVotingPeriod(uint256 _newVotingPeriod) external onlyExecutor {
-        if (_newVotingPeriod < MIN_VOTING_PERIOD || _newVotingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds("_newVotingPeriod");
+    function setVotingPeriod(uint256 _newVotingPeriod) external onlyExecutor {
+        if (_newVotingPeriod < MIN_VOTING_PERIOD || _newVotingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds();
         uint256 oldVotingPeriod = votingPeriod;
         votingPeriod = _newVotingPeriod;
 
@@ -629,8 +630,8 @@ contract Governance is IGovernance, Admin, Refund {
      * @dev _newProposalThresholdBPS must be greater than the hardcoded min
      * @param _newProposalThresholdBPS new proposal threshold
      */
-    function _setProposalThresholdBPS(uint256 _newProposalThresholdBPS) external onlyExecutorOrAdmins {
-        if (_newProposalThresholdBPS < MIN_PROPOSAL_THRESHOLD_BPS || _newProposalThresholdBPS > MAX_PROPOSAL_THRESHOLD_BPS) revert ParameterOutOfBounds("_newProposalThresholdBPS");
+    function setProposalThresholdBPS(uint256 _newProposalThresholdBPS) external onlyExecutorOrAdmins {
+        if (_newProposalThresholdBPS < MIN_PROPOSAL_THRESHOLD_BPS || _newProposalThresholdBPS > MAX_PROPOSAL_THRESHOLD_BPS) revert ParameterOutOfBounds();
         uint256 oldProposalThresholdBPS = proposalThresholdBPS;
         proposalThresholdBPS = _newProposalThresholdBPS;
 
@@ -642,8 +643,8 @@ contract Governance is IGovernance, Admin, Refund {
      * @dev _newQuorumVotesBPS must be greater than the hardcoded min
      * @param _newQuorumVotesBPS new proposal threshold
      */
-    function _setQuorumVotesBPS(uint256 _newQuorumVotesBPS) external onlyExecutorOrAdmins {
-        if (_newQuorumVotesBPS < MIN_QUORUM_VOTES_BPS || _newQuorumVotesBPS > MAX_QUORUM_VOTES_BPS) revert ParameterOutOfBounds("_newQuorumVotesBPS");
+    function setQuorumVotesBPS(uint256 _newQuorumVotesBPS) external onlyExecutorOrAdmins {
+        if (_newQuorumVotesBPS < MIN_QUORUM_VOTES_BPS || _newQuorumVotesBPS > MAX_QUORUM_VOTES_BPS) revert ParameterOutOfBounds();
         uint256 oldQuorumVotesBPS = quorumVotesBPS;
         quorumVotesBPS = _newQuorumVotesBPS;
 
