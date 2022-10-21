@@ -32,7 +32,7 @@ contract Cancel is GovernanceBase {
         gov.cancel(proposalId);
     }
 
-    // other can cancel if they fall below (@todo NOT POSSIBLE!)
+    // other can cancel if they fall below (@todo NOT POSSIBLE, so doesn't matter!)
     function testGovCancel__AnyoneCanCancelProposalIfProposerPowerFalls() public {
         (address[] memory targets, uint[] memory values, string[] memory sigs, bytes[] memory calldatas) = _generateFakeProposalData();
 
@@ -52,5 +52,5 @@ contract Cancel is GovernanceBase {
 
     // user can cancel after voting starts
 
-    // cancelling can happen after queued and it's not in executor
+    // cancelling can happen after queued and it's not in executor (and cancels exec as well)
 }

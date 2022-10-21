@@ -204,7 +204,7 @@ interface IGovernance {
     // function _setProposalThresholdBPS(uint256 newProposalThresholdBPS) external;
     // function _setQuorumVotesBPS(uint256 newQuorumVotesBPS) external;
     // function _setVotingDelay(uint256 newVotingDelay) external;
-    // function _setVotingPeriod(uint256 newVotingPeriod) external;
+    // function setVotingPeriod(uint256 newVotingPeriod) external;
     // function admin() external view returns (address);
     // function cancel(uint256 proposalId) external;
     // function castRefundableVote(uint256 proposalId_, uint8 support_) external;

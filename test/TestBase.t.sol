@@ -27,4 +27,8 @@ contract TestBase is Test, DeployScript {
         vm.createSelectFork("https://mainnet.infura.io/v3/324422b5714843da8a919967a9c652ac");
         deployAllContractsForTesting();
     }
+
+    function _generateAddress(string memory name) internal returns (address) {
+        return address(uint160(uint(keccak256(abi.encodePacked(name)))));
+    }
 }

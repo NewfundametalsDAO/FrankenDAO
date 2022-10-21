@@ -200,7 +200,7 @@ contract Governance is IGovernance, Admin, Refund {
             return ProposalState.Vetoed;
         } else if (proposal.canceled || (!proposal.verified && block.number > proposal.endBlock)) {
             return ProposalState.Canceled;
-        }  else if (block.number <= proposal.startBlock || !proposal.verified) {
+        }  else if (block.number < proposal.startBlock || !proposal.verified) {
             return ProposalState.Pending;
         } else if (block.number <= proposal.endBlock) {
             return ProposalState.Active;
@@ -617,7 +617,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _newVotingPeriod new voting period, in blocks
      */
     function _setVotingPeriod(uint256 _newVotingPeriod) external onlyExecutor {
-        if (_newVotingPeriod < MIN_VOTING_PERIOD || _newVotingPeriod > MAX_VOTING_DELAY) revert ParameterOutOfBounds("_newVotingPeriod");
+        if (_newVotingPeriod < MIN_VOTING_PERIOD || _newVotingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds("_newVotingPeriod");
         uint256 oldVotingPeriod = votingPeriod;
         votingPeriod = _newVotingPeriod;
 
