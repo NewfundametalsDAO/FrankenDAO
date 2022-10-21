@@ -32,7 +32,7 @@ contract PausedTest is StakingBase {
         vm.prank(delegator);
         staking.delegate(delegatee);
 
-        assert(staking.delegates(delegator) == delegatee);
+        assert(staking.getDelegate(delegator) == delegatee);
     }
 
     // @todo make sure this is the right test, asked in discord
