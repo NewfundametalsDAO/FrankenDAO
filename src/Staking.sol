@@ -129,9 +129,10 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   modifier lockedWhileVotesCast() {
     uint[] memory activeProposals = governance.getActiveProposals();
     for (uint i = 0; i < activeProposals.length; i++) {
-      if (governance.getReceipt(activeProposals[i], delegates(msg.sender)).hasVoted) revert TokenLocked();
+      if (governance.getReceipt(activeProposals[i],
+                                delegates(msg.sender)).hasVoted) revert TokenLocked("locked while votes cast");
       (, address proposer,,) = governance.getProposalData(activeProposals[i]);
-      if (proposer == delegates(msg.sender)) revert TokenLocked();
+      if (proposer == delegates(msg.sender)) revert TokenLocked("locked while votes cast");
     }
     _;
   }
@@ -324,7 +325,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _tokenIds An array of the id of the tokens being staked
   /// @param _unlockTime The timestamp of when the tokens will be unlocked
   function _stake(uint[] calldata _tokenIds, uint _unlockTime) internal {
-    if (paused) revert TokenLocked();
+    if (paused) revert TokenLocked("locked while staking paused");
     if (_unlockTime > 0 && _unlockTime < block.timestamp) revert InvalidParameter();
 
     uint numTokens = _tokenIds.length;
@@ -383,7 +384,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _tokenIds An array of the ids of the tokens being unstaked
   /// @param _to The address to send the underlying NFT to
   function _unstake(uint[] calldata _tokenIds, address _to) internal lockedWhileVotesCast {
-    if (paused) revert TokenLocked();
+    if (paused) revert TokenLocked("locked while staking paused");
     uint numTokens = _tokenIds.length;
     if (numTokens == 0) revert InvalidParameter();
     
@@ -413,7 +414,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
     address owner = ownerOf(_tokenId);
     if (msg.sender != owner && !isApprovedForAll[owner][msg.sender] && msg.sender != getApproved[_tokenId]) revert NotAuthorized();
-    if (unlockTime[_tokenId] > block.timestamp) revert TokenLocked();
+    if (unlockTime[_tokenId] < block.timestamp) revert TokenLocked("unlock time not passed");
 
     // Transfer the underlying asset to the address specified
     IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
