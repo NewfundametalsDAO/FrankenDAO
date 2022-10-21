@@ -524,8 +524,8 @@ contract Staking is IStaking, ERC721, Refund, Admin {
 
   /// @notice Turn on or off gas refunds for staking and delegating
   /// @param _refundStatus Are refunds on for staking, delegating, both, or neither?
-  function setRefund(RefundStatus _refundStatus) external onlyExecutor {
-    emit RefundSet(refund = _refundStatus);
+  function setRefund(uint _refundStatus) external onlyExecutor {
+    emit RefundSet(refund = RefundStatus( _refundStatus ));
   }
 
   /// @notice Pause or unpause staking
