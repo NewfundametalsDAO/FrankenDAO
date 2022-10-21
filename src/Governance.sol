@@ -33,7 +33,7 @@ contract Governance is IGovernance, Admin, Refund {
     uint256 public constant MAX_VOTING_PERIOD = 14 days;
 
     /// @notice The min setable voting delay
-    uint256 public constant MIN_VOTING_DELAY = 1;
+    uint256 public constant MIN_VOTING_DELAY = 1 hours;
 
     /// @notice The max setable voting delay
     uint256 public constant MAX_VOTING_DELAY = 1 weeks;
