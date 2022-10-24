@@ -6,23 +6,23 @@ import "../utils/mocks/Token.sol";
 import { StakingBase } from "./StakingBase.t.sol";
 
 contract PausedTest is StakingBase {
-    function testRevertsIfStakingPaused() public {
+    function testPausing__RevertsIfStakingPaused() public {
         vm.prank(address(FOUNDER_MULTISIG));
         staking.setPause(true);
 
         address owner = frankenpunks.ownerOf(0);
         vm.startPrank(owner);
         frankenpunks.approve(address(staking), 0);
-        
+
         uint[] memory ids = new uint[](1);
         ids[0] = 0;
         vm.expectRevert(TokenLocked.selector);
         staking.stake(ids, 0);
-        
+
         vm.stopPrank();
     }
 
-    function testCanStillDelegateWhilePaused() public {
+    function testPausing__CanStillDelegateWhilePaused() public {
         address delegator = mockStakeSingle(0);
         address delegatee = mockStakeSingle(10);
 
@@ -36,7 +36,7 @@ contract PausedTest is StakingBase {
     }
 
     // @todo make sure this is the right test, asked in discord
-    function testCanStillUnstakeWhilePaused() public {
+    function testPausing__CanStillUnstakeWhilePaused() public {
         address staker = mockStakeSingle(0);
 
         vm.prank(address(FOUNDER_MULTISIG));
