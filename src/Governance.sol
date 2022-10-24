@@ -509,7 +509,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _support The support value for the vote. 0=against, 1=for, 2=abstain
      * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
      */
-    function castRefundableVote(uint256 _proposalId, uint8 _support)
+    function castVoteWithRefund(uint256 _proposalId, uint8 _support)
         external
         refundable
     {

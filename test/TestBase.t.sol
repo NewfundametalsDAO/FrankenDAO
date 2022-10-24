@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 import { DeployScript } from "../script/Deploy.s.sol";
 import { Test } from "forge-std/Test.sol";
+import { IGovernance } from "../src/interfaces/IGovernance.sol";
+import { IStaking } from "../src/interfaces/IStaking.sol";
 
 contract TestBase is Test, DeployScript {
     // Errors
@@ -33,12 +35,15 @@ contract TestBase is Test, DeployScript {
 
     function dealRefundBalance() internal {
         vm.deal(address( staking ), 10 ether);
-        vm.deal(address( govImpl ), 10 ether);
+        vm.deal(address( gov ), 10 ether);
     }
 
-    function setRefundStatus(uint256 _status) internal {
-        require(_status <= 3);
+    function setGovernanceRefundStatus(IGovernance.RefundStatus _status) internal {
+        vm.prank(address(executor));
+        gov.setRefund(_status);
+    }
 
+    function setStakingRefundStatus(IStaking.RefundStatus _status) internal {
         vm.prank(address(executor));
         staking.setRefund(_status);
     }
