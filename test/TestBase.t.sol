@@ -42,8 +42,4 @@ contract TestBase is Test, DeployScript {
         vm.prank(address(executor));
         staking.setRefund(_status);
     }
-
-    function _generateAddress(string memory name) internal pure returns (address) {
-        return address(uint160(uint(keccak256(abi.encodePacked(name)))));
-    }
 }

@@ -10,7 +10,7 @@ contract GovernanceBase is StakingBase {
     uint[] VOTER_TOKEN_IDS = [0, 1, 2]; 
     address voter;
     uint PROPOSER_TOKEN_ID = 10;
-    address stranger = _generateAddress("stranger");
+    address stranger = makeAddr("stranger");
 
     function setUp() public override {
         super.setUp();
@@ -30,6 +30,15 @@ contract GovernanceBase is StakingBase {
         string[] memory,
         bytes[] memory
     ) {
+        return _generateCustomProposalData("setVotingPeriod(uint256)", abi.encode(6 days)); 
+    }
+
+    function _generateCustomProposalData(string memory _sig, bytes memory _data) public view returns (
+        address[] memory,
+        uint[] memory,
+        string[] memory,
+        bytes[] memory
+    ) {
         address[] memory targets = new address[](1);
         targets[0] = address(gov);
 
@@ -37,13 +46,13 @@ contract GovernanceBase is StakingBase {
         values[0] = 0;
 
         string[] memory sigs = new string[](1);
-        sigs[0] = "setVotingPeriod(uint256)";
+        sigs[0] = _sig;
         
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encode(6 days);
+        calldatas[0] = _data;
 
         return (targets, values, sigs, calldatas);
-    }
+    }    
 
     function _getTxHash(
         address target, 
@@ -82,13 +91,31 @@ contract GovernanceBase is StakingBase {
     function _createSuccessfulProposal() public returns (uint) {
         uint proposalId = _createAndVerifyProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
-
+        vm.warp(block.timestamp + gov.votingDelay());
         _vote(proposalId, 1, true); // voter votes for proposal
+        vm.warp(block.timestamp + gov.votingPeriod() + 1);
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingPeriod() + 1);
+        return proposalId;
+    }
+
+    function _passCustomProposal(string memory _sig, bytes memory _data) internal returns(uint) {
+        (
+            address[] memory targets, 
+            uint[] memory values, 
+            string[] memory sigs, 
+            bytes[] memory calldatas
+        ) = _generateCustomProposalData(_sig, _data);
+
+        vm.prank(proposer);
+        uint proposalId = gov.propose(targets, values, sigs, calldatas, "this is a test to upgrade governance");
+
+        vm.prank(COUNCIL_MULTISIG);
+        gov.verifyProposal(proposalId);
+
+        vm.warp(block.timestamp + gov.votingDelay());
+        vm.prank(voter);
+        gov.castVote(proposalId, 1);
+        vm.warp(block.timestamp + gov.votingPeriod() + 1);
 
         return proposalId;
     }

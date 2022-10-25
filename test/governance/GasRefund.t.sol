@@ -22,13 +22,11 @@ contract GasRefundTests is GovernanceBase {
         vm.prank(COUNCIL_MULTISIG);
         gov.verifyProposal(proposalId);
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         _vote(proposalId, 1, true); // voter votes for proposal
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingPeriod() + 1);
+        vm.warp(block.timestamp + gov.votingPeriod() + 1);
 
         gov.queue(proposalId);
 

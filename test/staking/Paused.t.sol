@@ -35,7 +35,6 @@ contract PausedTest is StakingBase {
         assert(staking.delegates(delegator) == delegatee);
     }
 
-    // @todo make sure this is the right test, asked in discord
     function testCanStillUnstakeWhilePaused() public {
         address staker = mockStakeSingle(0);
 
