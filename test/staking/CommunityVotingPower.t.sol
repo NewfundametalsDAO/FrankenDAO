@@ -46,9 +46,6 @@ contract CommunityVotingPower is StakingBase {
 
         assertEq(proposalsPassed, 50);
     }
-    // new votes multiplier changes individual community voting power
-    // new proposals multiplier changes individual community voting power
-    // new executed/passed proposals multiplier changes individual community voting power
 
     // ----
     // Individual Community Voting Power

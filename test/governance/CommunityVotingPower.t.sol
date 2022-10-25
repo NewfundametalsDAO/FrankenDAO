@@ -4,6 +4,82 @@ import "./GovernanceBase.t.sol";
 
 contract CommunityVotingPower is GovernanceBase {
     // ----
+    // Multipliers
+    // ----
+    // new votes multiplier changes individual community voting power
+    function testCommunityVP__NewVotesMultiplierChangesIndividualCommunityVP()
+        public
+    {
+        address user = mockStakeSingle(1000);
+        uint proposalId = _createAndVerifyProposal();
+
+        // @todo switch this to warp when switching to times
+        vm.roll(block.number + gov.votingDelay());
+
+        vm.prank(user);
+        gov.castVote(proposalId, 1);
+
+        uint initialCommunityVP = staking.getCommunityVotingPower(user);
+
+        vm.prank(address( executor ));
+        staking.setVotesMultiplier(200);
+
+        uint256 finalCommunityVP = staking.getCommunityVotingPower(user);
+
+        assertEq(finalCommunityVP, initialCommunityVP * 2);
+
+        vm.prank(address( executor ));
+        staking.setVotesMultiplier(100);
+
+        finalCommunityVP = staking.getCommunityVotingPower(user);
+        assertEq(finalCommunityVP, initialCommunityVP);
+    }
+    // new proposals multiplier changes individual community voting power
+    function testCommunityVP__NewProposalsMultiplierChangesIndividualCommunityVP()
+        public
+    {
+        uint proposalId = _createAndExecuteSuccessfulProposal();
+
+        uint initialCommunityVP = staking.getCommunityVotingPower(proposer);
+
+        vm.prank(address( executor ));
+        staking.setProposalsCreatedMultiplier(400);
+
+        uint256 finalCommunityVP = staking.getCommunityVotingPower(proposer);
+
+        assert(finalCommunityVP > initialCommunityVP);
+
+        vm.prank(address( executor ));
+        staking.setProposalsCreatedMultiplier(200);
+
+        finalCommunityVP = staking.getCommunityVotingPower(proposer);
+
+        assertEq(finalCommunityVP, initialCommunityVP);
+    }
+    // new executed/passed proposals multiplier changes individual community voting power
+    function testCommunityVP__NewExecutedProposalsMultiplierChangesIndividualCommunityVP()
+        public
+    {
+        uint proposalId = _createAndExecuteSuccessfulProposal();
+
+        uint initialCommunityVP = staking.getCommunityVotingPower(proposer);
+
+        vm.prank(address( executor ));
+        staking.setProposalsPassedMultiplier(400);
+
+        uint256 finalCommunityVP = staking.getCommunityVotingPower(proposer);
+
+        assert(finalCommunityVP > initialCommunityVP);
+
+        vm.prank(address( executor ));
+        staking.setProposalsPassedMultiplier(200);
+
+        finalCommunityVP = staking.getCommunityVotingPower(proposer);
+
+        assertEq(finalCommunityVP, initialCommunityVP);
+    }
+
+    // ----
     // Individual Community Voting Power
     // ----
     // proposing doesn't increase my community voting power if proposal doesn't get verified
@@ -141,15 +217,58 @@ contract CommunityVotingPower is GovernanceBase {
         assertEq(initialTotalVP, finalTotalVP);
     }
     // proposing increases total community voting power
-    //function testCommunityVP__ProposingIncreasesTotalVotingPower() public {
-        //uint initialTotalVP = staking.getTotalVotingPower();
+    function testCommunityVP__ProposingIncreasesTotalVotingPower() public {
+        uint initialTotalVP = staking.getTotalVotingPower();
 
-        //_createAndVerifyProposal();
+        _createAndVerifyProposal();
 
-        //uint finalTotalVP = staking.getTotalVotingPower();
+        uint finalTotalVP = staking.getTotalVotingPower();
 
-        //assertEq(finalTotalVP, initialTotalVP + 1);
-    //}
+        assert(finalTotalVP > initialTotalVP);
+    }
     // voting increases total community voting power
+    function testCommunityVP__VotingIncreasesTotalVotingPower() public {
+        uint initialTotalVP = staking.getTotalVotingPower();
+
+        uint proposalID = _createAndVerifyProposal();
+
+        // @todo switch this to warp when switching to times
+        vm.roll(block.number + gov.votingDelay());
+
+        vm.prank(voter);
+        gov.castVote(proposalID, 1);
+
+        uint finalTotalVP = staking.getTotalVotingPower();
+
+        assert(finalTotalVP > initialTotalVP);
+    }
     // proposal passing increases total community voting power
+    function testCommunityVP__ProposalPassingIncreasesTotalVotingPower()
+        public
+    {
+        uint initialTotalVP = staking.getTotalVotingPower();
+
+        uint proposalID = _createAndVerifyProposal();
+
+        // @todo switch this to warp when switching to times
+        vm.roll(block.number + gov.votingDelay());
+
+        vm.prank(voter);
+        gov.castVote(proposalID, 1);
+
+        // @todo switch this to warp when switching to times
+        vm.roll(block.number + gov.votingPeriod() + 1);
+
+        vm.prank(COUNCIL_MULTISIG);
+        gov.queue(proposalID);
+
+        vm.warp(block.timestamp + executor.DELAY());
+
+        vm.prank(COUNCIL_MULTISIG);
+        gov.execute(proposalID);
+
+        uint finalTotalVP = staking.getTotalVotingPower();
+
+        assert(finalTotalVP > initialTotalVP);
+    }
 }

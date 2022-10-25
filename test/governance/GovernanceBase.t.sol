@@ -93,6 +93,20 @@ contract GovernanceBase is StakingBase {
         return proposalId;
     }
 
+    function _createAndExecuteSuccessfulProposal() public returns (uint) {
+        uint proposalId = _createSuccessfulProposal();
+
+        vm.prank(COUNCIL_MULTISIG);
+        gov.queue(proposalId);
+
+        vm.warp(block.timestamp + executor.DELAY());
+
+        vm.prank(COUNCIL_MULTISIG);
+        gov.execute(proposalId);
+
+        return proposalId;
+    }
+
     function _vote(uint proposalId, uint8 voterVote, bool voterVotes) internal {
         vm.prank(proposer);
         gov.castVote(proposalId, 1);
