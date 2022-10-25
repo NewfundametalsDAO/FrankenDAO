@@ -35,12 +35,7 @@ contract PausedTest is StakingBase {
         assert(staking.getDelegate(delegator) == delegatee);
     }
 
-<<<<<<< HEAD
-    // @todo make sure this is the right test, asked in discord
     function testPausing__CanStillUnstakeWhilePaused() public {
-=======
-    function testCanStillUnstakeWhilePaused() public {
->>>>>>> ztests
         address staker = mockStakeSingle(0);
 
         vm.prank(address(FOUNDER_MULTISIG));
