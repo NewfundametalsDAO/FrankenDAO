@@ -198,11 +198,11 @@ contract Governance is IGovernance, Admin, Refund {
         Proposal storage proposal = proposals[_proposalId];
         if (proposal.vetoed) {
             return ProposalState.Vetoed;
-        } else if (proposal.canceled || (!proposal.verified && block.number > proposal.endBlock)) {
+        } else if (proposal.canceled || (!proposal.verified && block.timestamp > proposal.endTime)) {
             return ProposalState.Canceled;
-        }  else if (block.number < proposal.startBlock || !proposal.verified) {
+        }  else if (block.timestamp < proposal.startTime || !proposal.verified) {
             return ProposalState.Pending;
-        } else if (block.number <= proposal.endBlock) {
+        } else if (block.timestamp <= proposal.endTime) {
             return ProposalState.Active;
         } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < proposal.quorumVotes) {
             return ProposalState.Defeated;
@@ -307,8 +307,8 @@ contract Governance is IGovernance, Admin, Refund {
             if ( proposersLatestProposalState == ProposalState.Active || proposersLatestProposalState == ProposalState.Pending ) revert NotEligible();
         }
 
-        temp.startBlock = block.number + votingDelay;
-        temp.endBlock = temp.startBlock + votingPeriod;
+        temp.startTime = block.timestamp + votingDelay;
+        temp.endTime = temp.startTime + votingPeriod;
 
         Proposal storage newProposal = proposals[++proposalCount];
 
@@ -321,8 +321,8 @@ contract Governance is IGovernance, Admin, Refund {
         newProposal.values = _values;
         newProposal.signatures = _signatures;
         newProposal.calldatas = _calldatas;
-        newProposal.startBlock = temp.startBlock;
-        newProposal.endBlock = temp.endBlock;
+        newProposal.startTime = temp.startTime;
+        newProposal.endTime = temp.endTime;
         newProposal.forVotes = 0;
         newProposal.againstVotes = 0;
         newProposal.abstainVotes = 0;
@@ -342,8 +342,8 @@ contract Governance is IGovernance, Admin, Refund {
             _values,
             _signatures,
             _calldatas,
-            newProposal.startBlock,
-            newProposal.endBlock,
+            newProposal.startTime,
+            newProposal.endTime,
             newProposal.proposalThreshold,
             newProposal.quorumVotes,
             _description
@@ -435,11 +435,9 @@ contract Governance is IGovernance, Admin, Refund {
     function cancel(uint256 _proposalId) external {
         Proposal storage proposal = proposals[_proposalId];
         if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
-        // @todo i think this is right but double check in testing
         if (
             msg.sender != proposal.proposer &&
-            staking.getVotes(proposal.proposer) > proposal.proposalThreshold && 
-            (proposal.verified || block.number < proposal.endBlock) &&
+            (proposal.verified || block.timestamp < proposal.endTime) &&
             state(_proposalId) != ProposalState.Expired
         ) revert NotEligible();
 
@@ -649,5 +647,12 @@ contract Governance is IGovernance, Admin, Refund {
         quorumVotesBPS = _newQuorumVotesBPS;
 
         emit QuorumVotesBPSSet(oldQuorumVotesBPS, quorumVotesBPS);
+    }
+
+    /// @notice Executor only function to upgrade the Staking contract to a new address
+    /// @param _newStaking Address of the new Staking contract
+    /// @dev Since upgrades are only allowed by governance, this is only callable by Executor
+    function setStakingAddress(IStaking _newStaking) external onlyExecutor {
+        staking = _newStaking;
     }
 }

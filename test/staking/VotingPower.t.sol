@@ -1,58 +1,53 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "../../src/Staking.sol";
-import "../utils/mocks/Token.sol";
+import { StakingBase } from "./StakingBase.t.sol";
+import { IERC721 } from "../../src/interfaces/IERC721.sol";
 
-contract VotingPowerTest is Test {
-    Staking staking;
-    Token frankenpunk;
+contract VotingPowerTest is StakingBase {
+    uint FAKE_ID = 12;
 
-    function setUp() public { }
+    // Test that staking, delegating, and undelegating all adjust voting power.
+    function testStakingVP__UndelegatingUpdatesVotingPower() public {
+        address staker = frankenpunks.ownerOf(FAKE_ID);
+        assert(staking.getVotes(staker) == 0);        
 
-    // staking updates voting power
-    //function testStakingIncreasesIndividualVotingPower() public {
-        // get initial voting power (should be zero)
-        // stake
-        // calculate what increase should be
-        // get new VP
-        // assert VP == initial VP + calculated increase from staking
-    //}
+        address owner = mockStakeSingle(FAKE_ID);
+        assert(owner == staker);
 
-    // unstaking updates voting power
-    //function testUnstakingDecreasesIndividualVotingPower() public {
-        // stake
-        // get initial voting power
-        // calculate what VP decrease should be
-        // unstake
-        // get new VP
-        // assert VP == initial VP - calculated decrease from staking
-    //}
+        uint evilBonus = staking.evilBonus(FAKE_ID);
 
-    // delegating updates voting power
-    //function testDelegatingIncreasesVotingPower() public {
-        // addr 1 stake
-        // addr 2 stake
-        // get initial VP for addr 1
-        // get initial VP for addr 2
-        // addr 2 delegate to addr 1
-        // get new VP for addr 1
-        // assert new VP = inivial VP from addr 1 + initial VP from addr 2
-    //}
+        assert(staking.getVotes(staker) == 20 + evilBonus);
 
-    // undelegating updates voting power
-    //function testUndelegatingDecreasesVotingPower() public {
-        // addr 1 stake
-        // addr 2 stake
-        // get initial VP for addr 2
-        // addr 2 delegate to addr 1
-        // get initial VP for addr 1
-        // addr 2 undelegates from addr 1
-        // get new VP for addr 1
-        // assert new VP = initial VP from addr 1 - VP from addr 2
-    //}
+        vm.prank(staker);
+        staking.delegate(address(1));
 
-    // total voting power is combination of VP + CVP
+        assert(staking.getVotes(staker) == 0);
+
+        vm.prank(staker);
+        staking.delegate(address(0));
+
+        assert(staking.getVotes(staker) == 20 + evilBonus);
+    }
+
+    // Test that unstaking reduces voting power.
+    function testStakingVP__UnstakingReducesVotingPower() public {
+        address staker = frankenpunks.ownerOf(FAKE_ID);
+        assert(staking.getVotes(staker) == 0);        
+
+        address owner = mockStakeSingle(FAKE_ID);
+        assert(owner == staker);
+
+        uint evilBonus = staking.evilBonus(FAKE_ID);
+
+        assert(staking.getVotes(staker) == 20 + evilBonus);
+
+        mockUnstakeSingle(FAKE_ID);
+
+        assert(staking.getVotes(staker) == 0);
+    }
+
+    // @todo Test that delegating removes community voting power.
     //function testTotalVotingPower() public {
         // addr 1 stake
         // addr 1 creates proposal
