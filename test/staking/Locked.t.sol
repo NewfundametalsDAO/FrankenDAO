@@ -4,51 +4,63 @@ import "forge-std/Test.sol";
 import "../../src/Staking.sol";
 import "../utils/mocks/Token.sol";
 
-import {GovernanceBase} from "../governance/GovernanceBase.sol";
+import {GovernanceBase} from "../governance/GovernanceBase.t.sol";
 
-contract LockedTest is StakingBase {
+contract LockedTest is GovernanceBase {
+    uint[] ids = [1553, 8687];
+
+    function testLocking__RevertIfUnstakingAfterVoting() public {
+        address playerOne = mockStakeSingle(ids[0]);
+
+        uint proposalId = _createAndVerifyProposal();
+        // @todo switch this to warp when switching to times
+        vm.roll(block.number + gov.votingDelay());
+
+        vm.startPrank(playerOne);
+        gov.castVote(proposalId, 1);
+
+        uint[] memory playerOneIds = new uint[](1);
+        playerOneIds[0] = ids[0];
+
+        vm.expectRevert(TokenLocked.selector);
+        staking.unstake(playerOneIds, playerOne);
+    }
     // @todo come back after implementing voting and proposing tests
+    function testLocking__RevertIfUnstakingAfterDelegateHasVoted() public {
+        address playerOne = mockStakeSingle(ids[0]);
+        address playerTwo = mockStakeSingle(ids[1]);
 
-    // @todo revert if unstaking after delegatee has voted
-    // function testPausing__RevertIfUnstakeDuringVoting() public {
-    //     address owner = mockStakeSingle(ID);
-    //     vm.prank(owner);
-    //     vm.expectRevert("cannot unstake during voting");
-    //     staking.unstake(ID);
-     //}
+        vm.prank(playerTwo);
+        staking.delegate(playerOne);
 
-    // @todo reverts if unstaking during a vote
-    // //function testPausing__RevertsIfUnstakingDuringVoting() public {
-    //     // addr 1 stakes
-    //     address playerOne = mockStakeSingle(ids[0]);
-    //     // addr 2 stakes
-    //     address playerTwo = mockStakeSingle(ids[1]);
+        uint proposalId = _createAndVerifyProposal();
+        // @todo switch this to warp when switching to times
+        vm.roll(block.number + gov.votingDelay());
 
-    //     // addr 2 delegates to addr 1
-    //     vm.prank(playerOne);
-    //     frankenpunks.delegate(playerOne);
+        vm.prank(playerOne);
+        gov.castVote(proposalId, 1);
 
-    //     // create proposal
+        vm.startPrank(playerTwo);
+        uint[] memory playerTwoIds = new uint[](1);
+        playerTwoIds[0] = ids[1];
 
-    //     // addr 1 votes
-    //     vm.prank(playerOne);
-    //     govImpl.castVote(proposalId, 1);
+        vm.expectRevert(TokenLocked.selector);
+        staking.unstake(playerTwoIds, playerTwo);
+    }
 
-    //     // expect revert
-    //     vm.prank(playerTwo);
-    //     vm.expectRevert(TokenLocked.selector);
-    //     // addr 2 unstakes
-    //     frankenpunks.unstake(ids[1], playerTwo);
-    //  }
+    // revert if delegating after voting
+    function testLocking__RevertIfDelegatingAfterVoting() public {
+        address playerOne = mockStakeSingle(ids[0]);
+        address playerTwo = mockStakeSingle(ids[1]);
 
-    // @todo reverts if delegating during a vote
-    // function testPausing__RevertsIfDelegatingDuringVoting() public {
-        // addr 1 stakes
-        // addr 2 stakes
-        // addr 2 delegates to addr 1
-        // create proposal
-        // addr 1 votes
-        // addr 2 delegates back to themselves
-        // expect revert
-    // }
+        uint proposalId = _createAndVerifyProposal();
+        // @todo switch this to warp when switching to times
+        vm.roll(block.number + gov.votingDelay());
+
+        vm.startPrank(playerOne);
+        gov.castVote(proposalId, 1);
+
+        vm.expectRevert(TokenLocked.selector);
+        staking.delegate(playerTwo);
+    }
 }

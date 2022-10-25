@@ -6,7 +6,7 @@ interface IStaking {
     error InvalidDelegation();
     error Paused();
     error InvalidParameter();
-    error TokenLocked(string _message);
+    error TokenLocked();
     error ZeroAddress();
 
     struct CommunityPowerMultipliers {

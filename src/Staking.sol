@@ -130,9 +130,9 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     uint[] memory activeProposals = governance.getActiveProposals();
     for (uint i = 0; i < activeProposals.length; i++) {
       if (governance.getReceipt(activeProposals[i],
-                                getDelegate(msg.sender)).hasVoted) revert TokenLocked("locked while votes cast");
+                                getDelegate(msg.sender)).hasVoted) revert TokenLocked();
       (, address proposer,,) = governance.getProposalData(activeProposals[i]);
-      if (proposer == getDelegate(msg.sender)) revert TokenLocked("locked while votes cast");
+      if (proposer == getDelegate(msg.sender)) revert TokenLocked();
     }
     _;
   }
@@ -325,7 +325,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _tokenIds An array of the id of the tokens being staked
   /// @param _unlockTime The timestamp of when the tokens will be unlocked
   function _stake(uint[] calldata _tokenIds, uint _unlockTime) internal {
-    if (paused) revert TokenLocked("locked while staking paused");
+    if (paused) revert TokenLocked();
     if (_unlockTime > 0 && _unlockTime < block.timestamp) revert InvalidParameter();
 
     uint numTokens = _tokenIds.length;
@@ -417,7 +417,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
     address owner = ownerOf(_tokenId);
     if (msg.sender != owner && !isApprovedForAll[owner][msg.sender] && msg.sender != getApproved[_tokenId]) revert NotAuthorized();
-    if (unlockTime[_tokenId] < block.timestamp) revert TokenLocked("unlock time not passed");
+    if (unlockTime[_tokenId] < block.timestamp) revert TokenLocked();
 
     // Transfer the underlying asset to the address specified
     IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
