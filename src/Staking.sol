@@ -386,8 +386,6 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _tokenIds An array of the ids of the tokens being unstaked
   /// @param _to The address to send the underlying NFT to
   function _unstake(uint[] calldata _tokenIds, address _to) internal lockedWhileVotesCast {
-    // @todo commenting out the paused condition, confirm 
-    // if (paused) revert TokenLocked("locked while staking paused");
     uint numTokens = _tokenIds.length;
     if (numTokens == 0) revert InvalidParameter();
     
@@ -417,7 +415,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
     address owner = ownerOf(_tokenId);
     if (msg.sender != owner && !isApprovedForAll[owner][msg.sender] && msg.sender != getApproved[_tokenId]) revert NotAuthorized();
-    if (unlockTime[_tokenId] < block.timestamp) revert TokenLocked();
+    if (unlockTime[_tokenId] > block.timestamp) revert TokenLocked();
 
     // Transfer the underlying asset to the address specified
     IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
@@ -498,7 +496,6 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     /// @param _tokenId The id of the token to get the evil bonus for
     /// @return The evil bonus for the token
     /// @dev The evil bonus is 10 if the token is sufficiently evil, 0 otherwise
-    // @todo switch this back to internal after testing?
     function evilBonus(uint _tokenId) public view returns (uint) {
       if (_tokenId >= 10000) return 0; 
       return (EVIL_BITMAPS[_tokenId >> 8] >> (255 - (_tokenId & 255)) & 1) * 10;

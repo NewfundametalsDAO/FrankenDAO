@@ -26,8 +26,7 @@ contract ProposalStateTests is GovernanceBase {
         vm.prank(COUNCIL_MULTISIG);
         gov.verifyProposal(proposalId);
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         assert(_checkState(proposalId, IGovernance.ProposalState.Active));
     }
@@ -39,8 +38,7 @@ contract ProposalStateTests is GovernanceBase {
         vm.prank(FOUNDER_MULTISIG);
         gov.verifyProposal(proposalId);
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
         
         assert(_checkState(proposalId, IGovernance.ProposalState.Active));
     }
@@ -49,8 +47,7 @@ contract ProposalStateTests is GovernanceBase {
     function testGovState__ProposalCanBeVerifiedAfterStartBlock() public {
         uint proposalId = _createProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay() + 10);
+        vm.warp(block.timestamp + gov.votingDelay() + 10);
         
         vm.prank(COUNCIL_MULTISIG);
         gov.verifyProposal(proposalId);
@@ -62,8 +59,7 @@ contract ProposalStateTests is GovernanceBase {
     function testGovState__ProposalCancelledIfNoActionTakenUntilEndBlock() public {
         uint proposalId = _createProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay() + gov.votingPeriod() + 1);
+        vm.warp(block.timestamp + gov.votingDelay() + gov.votingPeriod() + 1);
 
         assert(_checkState(proposalId, IGovernance.ProposalState.Canceled));
     }
@@ -72,8 +68,7 @@ contract ProposalStateTests is GovernanceBase {
     function testGovState__ProposalCantBeVerifiedAfterEndBlock() public {
         uint proposalId = _createProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay() + gov.votingPeriod() + 1);
+        vm.warp(block.timestamp + gov.votingDelay() + gov.votingPeriod() + 1);
 
         vm.prank(COUNCIL_MULTISIG);
         vm.expectRevert(InvalidStatus.selector);
@@ -94,8 +89,7 @@ contract ProposalStateTests is GovernanceBase {
     function testGovState__CouncilCanVetoVerifiedProposal() public {
         uint proposalId = _createAndVerifyProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         vm.prank(COUNCIL_MULTISIG);
         gov.veto(proposalId);
@@ -106,13 +100,11 @@ contract ProposalStateTests is GovernanceBase {
     function testGovState__ProposalRemainsActiveUntilEndBlock() public {
         uint proposalId = _createAndVerifyProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         _vote(proposalId, 1, true);
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingPeriod() - 1);
+        vm.warp(block.timestamp + gov.votingPeriod() - 1);
 
         assert(_checkState(proposalId, IGovernance.ProposalState.Active));
     }
@@ -121,13 +113,11 @@ contract ProposalStateTests is GovernanceBase {
     function testGovState__ProposalSucceedsIfGetsEnoughVotes() public {
         uint proposalId = _createAndVerifyProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         _vote(proposalId, 1, true); // voter votes for proposal
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingPeriod() + 1);
+        vm.warp(block.timestamp + gov.votingPeriod() + 1);
 
         assert(_checkState(proposalId, IGovernance.ProposalState.Succeeded));
     }
@@ -136,13 +126,11 @@ contract ProposalStateTests is GovernanceBase {
     function testGovState__ProposalFailsIfMajorityVotesAgainst() public {
         uint proposalId = _createAndVerifyProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         _vote(proposalId, 0, true); // voter votes against proposal
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingPeriod() + 1);
+        vm.warp(block.timestamp + gov.votingPeriod() + 1);
 
         assert(_checkState(proposalId, IGovernance.ProposalState.Defeated));
     }
@@ -151,13 +139,11 @@ contract ProposalStateTests is GovernanceBase {
     function testGovState__ProposalFailsIfDoesntReachQuorum() public {
         uint proposalId = _createAndVerifyProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         _vote(proposalId, 1, false); // voter doesn't vote
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingPeriod() + 1);
+        vm.warp(block.timestamp + gov.votingPeriod() + 1);
 
         assert(_checkState(proposalId, IGovernance.ProposalState.Defeated));
     }
@@ -187,8 +173,7 @@ contract ProposalStateTests is GovernanceBase {
     function testGovState__NobodyCanQueueProposalBeforeItPasses() public {
         uint proposalId = _createAndVerifyProposal();
 
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         _vote(proposalId, 1, true); // voter votes for proposal
 

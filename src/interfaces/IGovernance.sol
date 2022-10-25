@@ -24,8 +24,8 @@ interface IGovernance {
         uint256[] values,
         string[] signatures,
         bytes[] calldatas,
-        uint256 startBlock,
-        uint256 endBlock,
+        uint256 startTime,
+        uint256 endTime,
         string description
     );
 
@@ -37,8 +37,8 @@ interface IGovernance {
         uint256[] values,
         string[] signatures,
         bytes[] calldatas,
-        uint256 startBlock,
-        uint256 endBlock,
+        uint256 startTime,
+        uint256 endTime,
         uint256 proposalThreshold,
         uint256 quorumVotes,
         string description
@@ -99,18 +99,18 @@ interface IGovernance {
     );
 
     enum RefundStatus {
-        NoRefunds,
+        VotingAndProposalRefund,
         VotingRefund,
         ProposalRefund,
-        VotingAndProposalRefund
+        NoRefunds
     }
 
     struct ProposalTemp {
         uint256 totalSupply;
         uint256 proposalThreshold;
         uint256 latestProposalId;
-        uint256 startBlock;
-        uint256 endBlock;
+        uint256 startTime;
+        uint256 endTime;
     }
 
     struct CommunityScoreData {
@@ -139,9 +139,9 @@ interface IGovernance {
         /// @notice The ordered list of calldata to be passed to each call
         bytes[] calldatas;
         /// @notice The block at which voting begins: holders must delegate their votes prior to this block
-        uint256 startBlock;
+        uint256 startTime;
         /// @notice The block at which voting ends: votes must be cast prior to this block
-        uint256 endBlock;
+        uint256 endTime;
         /// @notice Current number of votes in favor of this proposal
         uint256 forVotes;
         /// @notice Current number of votes in opposition to this proposal

@@ -21,10 +21,10 @@ interface IStaking {
     }
 
     enum RefundStatus { 
-        NoRefunds, 
+        StakingAndDelegatingRefund,
         StakingRefund, 
         DelegatingRefund, 
-        StakingAndDelegatingRefund 
+        NoRefunds
     }
 
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
