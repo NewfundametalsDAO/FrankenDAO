@@ -2,7 +2,6 @@ pragma solidity ^0.8.13;
 
 import "./StakingBase.t.sol";
 
-
 contract DelegatingTest is StakingBase {
     // delegate - get my address if I haven't delegated
     function testDelegating__DelegateToSelfByDefault(uint _id) public {

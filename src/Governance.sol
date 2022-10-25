@@ -415,7 +415,7 @@ contract Governance is IGovernance, Admin, Refund {
         ++userCommunityScoreData[proposal.proposer].proposalsPassed;
         // we can do this with no check because if you can propose, it means you have votes so you haven't delegated
         ++totalCommunityScoreData.proposalsPassed;
-        
+
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
             executor.executeTransaction(

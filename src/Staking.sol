@@ -522,6 +522,27 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     stakingSettings.maxStakeBonusAmount = _newMaxStakeBonusAmount;
   }
 
+  /// @notice Set the community power multiplier for votes
+  /// @param _votesmultiplier The multiplier applied to community voting power based on past votes
+  /// @dev This function can only be called by the executor based on a governance proposal
+  function setVotesMultiplier(uint64 _votesmultiplier) external onlyExecutor {
+    communityPowerMultipliers.votes = _votesmultiplier;
+  }
+
+  /// @notice Set the community power multiplier for proposals created
+  /// @param _proposalsCreatedMultiplier The multiplier applied to community voting power based on proposals created
+  /// @dev This function can only be called by the executor based on a governance proposal
+  function setProposalsCreatedMultiplier(uint64 _proposalsCreatedMultiplier) external onlyExecutor {
+    communityPowerMultipliers.proposalsCreated = _proposalsCreatedMultiplier;
+  }
+
+  /// @notice Set the community power multiplier for proposals passed
+  /// @param _proposalsPassedMultiplier The multiplier applied to community voting power based on proposals passed
+  /// @dev This function can only be called by the executor based on a governance proposal
+  function setProposalsPassedMultiplier(uint64 _proposalsPassedMultiplier) external onlyExecutor {
+    communityPowerMultipliers.proposalsPassed = _proposalsPassedMultiplier;
+  }
+
   /// @notice Turn on or off gas refunds for staking and delegating
   /// @param _refundStatus Are refunds on for staking, delegating, both, or neither?
   function setRefund(RefundStatus _refundStatus) external onlyExecutor {
