@@ -1,66 +1,154 @@
 pragma solidity ^0.8.13;
-import "forge-std/Test.sol";
-import "../../src/Staking.sol";
-import "../utils/mocks/Token.sol";
 
-contract GasRefundingTest is Test {
-    Staking staking;
-    Token frankenpunk;
+import { StakingBase } from "./StakingBase.t.sol";
+import {IStaking} from "../../src/interfaces/IStaking.sol";
 
-    function setUp() public {
-
-    }
+contract GasRefundingTest is StakingBase {
     // set refunding
-    // function testSettingRefund() public {
-        // assert refund = StakingAndDelegatingRefund
-        // set refund to DelegatingRefund
-        // assert eq DelegatingRefund
-        // set refund to StakingRefund
-        // assert eq StakingRefund
-    // }
+    function testRefunding__SettingRefund() public {
+        dealRefundBalance();
+        // Default status is 0 (NoRefund)
+        uint256 status = uint256(staking.refund());
+        assertEq(status, 0);
+
+        // 1 ( StakingRefund )
+        setStakingRefundStatus(IStaking.RefundStatus.StakingRefund);
+
+        status = uint256(staking.refund());
+        assertEq(status, 1);
+
+        // 2 ( DelegatingRefund )
+        setStakingRefundStatus(IStaking.RefundStatus.DelegatingRefund);
+        status = uint256(staking.refund());
+        assertEq(status, 2);
+
+        // 3 ( StakingAndDelegatingRefund )
+        setStakingRefundStatus(IStaking.RefundStatus.StakingAndDelegatingRefund);
+        status = uint256(staking.refund());
+        assertEq(status, 3);
+    }
+
     // gas refunded for staking
-    // function testRefundingForStaking() {
+    function testRefunding__RefundingForStaking() public {
+        dealRefundBalance();
+        setStakingRefundStatus(IStaking.RefundStatus.StakingRefund);
+
+        address owner = frankenpunks.ownerOf(369);
+        uint256 initialBalance = owner.balance;
         // get starting balance of addr 1
+        vm.startPrank(owner);
+        frankenpunks.approve(address(staking), 369);
+
         // stake tokens
-        // get new balance
-        // assert eq starting balance, new balance;
-    // }
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 369;
+        staking.stakeWithRefund(ids, block.timestamp + 30 days);
 
-    // gas refunded for unstaking
-    // function testRefundingForUnstaking() {
-        // stake token
-        // get starting balance of addr 1
-        // unstake token
+        vm.stopPrank();
         // get new balance
+        uint256 newBalance = owner.balance;
         // assert eq starting balance, new balance;
-    // }
+        assertEq(initialBalance, newBalance);
+    }
 
-    // gas refunded for delegating
-    // function testRefundingForDelegating() {
-        // get starting balance of addr 1
-        // delegate
-        // get new balance
-        // assert eq starting balance, new balance;
-    // }
+    function testRefunding__StakingRefundRevertsIfPaused() public {
+        dealRefundBalance();
 
-    // unset refunding
-    // delegating reverts if refunding is paused
-    // staking reverts if refunding is paused
-    // unstaking reverts if refunding is paused
-    // function testRefundableMethodsRevertIfRefundingIsPaused() {
-        // set refund to NoRefunds;
-        // expect revert: delegateWithRefund;
-        // expect revert: stakingWithRefund;
-        // expect revert: unstakingWithRefund;
-    // }
+        address owner = frankenpunks.ownerOf(369);
+
+        vm.startPrank(owner);
+        frankenpunks.approve(address(staking), 369);
+
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 369;
+
+        // reverts by default (NoRefund)
+        vm.expectRevert(NotRefundable.selector);
+        staking.stakeWithRefund(ids, block.timestamp + 30 days);
+        vm.stopPrank();
+
+        // 2 DelegatingRefund
+        setStakingRefundStatus(IStaking.RefundStatus.DelegatingRefund);
+
+        vm.startPrank(owner);
+
+        vm.expectRevert(NotRefundable.selector);
+        staking.stakeWithRefund(ids, block.timestamp + 30 days);
+
+        vm.stopPrank();
+    }
 
     // staking reverts if contract has insufficient balance
-    // delegating reverts if contract has insufficient balance
-    // unstaking reverts if contract has insufficient balance
-    // function testRefundableMethodsRevertIfInsufficientBalance() {
-        // set staking balance to zero
-        // expect revert: delegateWithRefund;
-        // expect revert: stakingWithRefund;
-        // expect revert: unstakingWithRefund;
-    // }
+    function testRefunding__StakingRefundRevertsIfInsufficientBalance() public {
+        address owner = frankenpunks.ownerOf(369);
+
+        vm.startPrank(owner);
+        frankenpunks.approve(address(staking), 369);
+
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 369;
+
+        vm.expectRevert(InsufficientRefundBalance.selector);
+        staking.stakeWithRefund(ids, block.timestamp + 30 days);
+
+        vm.stopPrank();
+    }
+
+    function testRefunding__RefundingForDelegating() public {
+        dealRefundBalance();
+        setStakingRefundStatus(IStaking.RefundStatus.DelegatingRefund);
+
+        address owner = mockStakeSingle(6251, block.timestamp + 30 days);
+        address delegate = frankenpunks.ownerOf(3689);
+
+        //get starting balance of addr 1
+        uint256 startingBalance = owner.balance;
+
+        //delegate
+        vm.prank(owner);
+        staking.delegateWithRefund(delegate);
+
+        //get new balance
+        uint256 endingBalance = owner.balance;
+
+        //assert eq starting balance, new balance;
+        assertEq(startingBalance, endingBalance);
+    }
+
+    // @todo delegating reverts if refunding is paused
+    function testRefunding__DelegatingRefundRevertsIfPaused() public {
+        dealRefundBalance();
+
+        address owner = mockStakeSingle(1553);
+        address delegate = mockStakeSingle(6251);
+
+        vm.startPrank(owner);
+
+        // reverts by default (NoRefund)
+        vm.expectRevert(NotRefundable.selector);
+        staking.delegateWithRefund(delegate);
+        vm.stopPrank();
+
+        //2 StakingRefund
+        setStakingRefundStatus(IStaking.RefundStatus.StakingRefund);
+
+        vm.startPrank(owner);
+
+        vm.expectRevert(NotRefundable.selector);
+        staking.delegateWithRefund(delegate);
+
+        vm.stopPrank();
+    }
+
+    // @todo test delegating fails if balance is insufficient
+    function testRefunding__DelegatingRefundRevertsIfInsufficientBalance()
+        public
+    {
+        address owner = mockStakeSingle(1553);
+        address delegate = mockStakeSingle(6251);
+
+        vm.startPrank(owner);
+        vm.expectRevert(InsufficientRefundBalance.selector);
+        staking.delegateWithRefund(delegate);
+    }
 }

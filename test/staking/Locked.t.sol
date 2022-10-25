@@ -6,35 +6,43 @@ import "../utils/mocks/Token.sol";
 
 import {GovernanceBase} from "../governance/GovernanceBase.sol";
 
-contract LockedTest is GovernanceBase {
-    uint[] ids = [6251, 4122];
+contract LockedTest is StakingBase {
+    // @todo come back after implementing voting and proposing tests
 
-    // reverts if unstaking during a vote
-    function testLocking__RevertsIfUnstakingDuringVoting() public {
-        // addr 1 stakes
-        address playerOne = mockStakeSingle(ids[0]);
-        // addr 2 stakes
-        address playerTwo = mockStakeSingle(ids[1]);
+    // @todo revert if unstaking after delegatee has voted
+    // function testPausing__RevertIfUnstakeDuringVoting() public {
+    //     address owner = mockStakeSingle(ID);
+    //     vm.prank(owner);
+    //     vm.expectRevert("cannot unstake during voting");
+    //     staking.unstake(ID);
+     //}
 
-        // addr 2 delegates to addr 1
-        vm.prank(playerOne);
-        frankenpunks.delegate(playerOne);
+    // @todo reverts if unstaking during a vote
+    // //function testPausing__RevertsIfUnstakingDuringVoting() public {
+    //     // addr 1 stakes
+    //     address playerOne = mockStakeSingle(ids[0]);
+    //     // addr 2 stakes
+    //     address playerTwo = mockStakeSingle(ids[1]);
 
-        // create proposal
+    //     // addr 2 delegates to addr 1
+    //     vm.prank(playerOne);
+    //     frankenpunks.delegate(playerOne);
 
-        // addr 1 votes
-        vm.prank(playerOne);
-        govImpl.castVote(proposalId, 1);
+    //     // create proposal
 
-        // expect revert
-        vm.prank(playerTwo);
-        vm.expectRevert(TokenLocked.selector);
-        // addr 2 unstakes
-        frankenpunks.unstake(ids[1], playerTwo);
-     }
+    //     // addr 1 votes
+    //     vm.prank(playerOne);
+    //     govImpl.castVote(proposalId, 1);
 
-    // reverts if delegating during a vote
-    // function testLocking__RevertsIfDelegatingDuringVoting() public {
+    //     // expect revert
+    //     vm.prank(playerTwo);
+    //     vm.expectRevert(TokenLocked.selector);
+    //     // addr 2 unstakes
+    //     frankenpunks.unstake(ids[1], playerTwo);
+    //  }
+
+    // @todo reverts if delegating during a vote
+    // function testPausing__RevertsIfDelegatingDuringVoting() public {
         // addr 1 stakes
         // addr 2 stakes
         // addr 2 delegates to addr 1

@@ -14,16 +14,17 @@ contract Refund {
     /// @notice Error thrown when refunding is turned off
     error NotRefundable();
 
+    /// @notice Error thrown when the contract balance is too low to refund gas
+    error InsufficientRefundBalance();
+
     /**
      * @notice Take the amount of gas supplied and send that to the sender from
      *         the contract's balance. Lifted straight from NounsDAO: https://github.com/nounsDAO/nouns-monorepo/blob/master/packages/nouns-contracts/contracts/governance/NounsDAOLogicV2.sol#L1033-L1046
      * @param _startGas Amount of gas to refund
      */
     function _refundGas(uint256 _startGas) internal {
-        require(
-            address(this).balance >= _startGas,
-            "Refund: not enough Eth to refund transaction"
-        );
+        if (address(this).balance < _startGas) revert InsufficientRefundBalance();
+
         unchecked {
             uint256 balance = address(this).balance;
             if (balance == 0) {
@@ -39,7 +40,10 @@ contract Refund {
 
     modifier refundable() {
         uint256 startGas = gasleft();
+        if (address(this).balance < startGas ) revert InsufficientRefundBalance();
+
         _;
+
         _refundGas(startGas);
     }
 

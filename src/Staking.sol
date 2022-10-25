@@ -56,7 +56,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   mapping(uint => uint) public stakedTimeBonus; 
 
   /// @notice Addresses that each user delegates votes to
-  /// @dev This should only be accessed via delegates() function, which overrides address(0) with self
+  /// @dev This should only be accessed via getDelegate() function, which overrides address(0) with self
   mapping(address => address) private _delegates;
 
   /// @notice The total voting power earned by each user's staked tokens
@@ -130,9 +130,9 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     uint[] memory activeProposals = governance.getActiveProposals();
     for (uint i = 0; i < activeProposals.length; i++) {
       if (governance.getReceipt(activeProposals[i],
-                                delegates(msg.sender)).hasVoted) revert TokenLocked("locked while votes cast");
+                                getDelegate(msg.sender)).hasVoted) revert TokenLocked("locked while votes cast");
       (, address proposer,,) = governance.getProposalData(activeProposals[i]);
-      if (proposer == delegates(msg.sender)) revert TokenLocked("locked while votes cast");
+      if (proposer == getDelegate(msg.sender)) revert TokenLocked("locked while votes cast");
     }
     _;
   }
@@ -230,7 +230,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _delegator The address to check 
   /// @return The address that the delegator has delegated to
   /// @dev If the delegator has not delegated, this function will return their own address
-  function delegates(address _delegator) public view returns (address) {
+  function getDelegate(address _delegator) public view returns (address) {
     address current = _delegates[_delegator];
     return current == address(0) ? _delegator : current;
   }
@@ -254,7 +254,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _delegator The address of the user who called the function and owns the votes being delegated
   /// @param _delegatee The address of the user who will receive the votes
   function _delegate(address _delegator, address _delegatee) internal lockedWhileVotesCast {
-    address currentDelegate = delegates(_delegator);
+    address currentDelegate = getDelegate(_delegator);
     // If currentDelegate == _delegatee, then this function will not do anything
     if (currentDelegate == _delegatee) revert InvalidDelegation();
 
@@ -268,7 +268,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     
     // Move the votes from the currentDelegate to the new delegatee
     // Neither of these addresses can be address(0) because: 
-    // - currentDelegate calls delegates(), which replaces address(0) with the delegator's address
+    // - currentDelegate calls getDelegate(), which replaces address(0) with the delegator's address
     // - delegatee is changed to msg.sender in the external functions if address(0) is passed
     tokenVotingPower[currentDelegate] -= amount;
     tokenVotingPower[_delegatee] += amount; 
@@ -338,7 +338,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     }
 
     votesFromOwnedTokens[msg.sender] += newVotingPower;
-    tokenVotingPower[delegates(msg.sender)] += newVotingPower;
+    tokenVotingPower[getDelegate(msg.sender)] += newVotingPower;
     totalTokenVotingPower += newVotingPower;
 
     // If the user had 0 tokens before and doesn't delegate, they just unlocked their community voting power
@@ -347,7 +347,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
       // Then, we send an update that says the user's delegation went from address(0) to their delegate
       // If their delegate is themselves, this will increase total community voting power accordingly
       // If their tokens are delegated, both conditions will be skipped and nothing will happen
-      _updateTotalCommunityVotingPower(msg.sender, address(0), delegates(msg.sender));
+      _updateTotalCommunityVotingPower(msg.sender, address(0), getDelegate(msg.sender));
     }
   }
 
@@ -399,7 +399,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     votesFromOwnedTokens[msg.sender] -= lostVotingPower;
     // Since the delegate currently has the voting power, it must be removed from their balance
     // If the user doesn't delegate, delegates(msg.sender) will return self
-    tokenVotingPower[delegates(msg.sender)] -= lostVotingPower;
+    tokenVotingPower[getDelegate(msg.sender)] -= lostVotingPower;
     totalTokenVotingPower -= lostVotingPower;
 
     // If the user's balance reaches 0, they will not longer have any community voting power
@@ -407,7 +407,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
       // We send an update that says their delegation went from their delegate to address(0)
       // If they previously delegated, they didn't have any community voting power, so nothing will happen
       // If they didn't delegate, this will decrease total community voting power accordingly
-      _updateTotalCommunityVotingPower(msg.sender, delegates(msg.sender), address(0));
+      _updateTotalCommunityVotingPower(msg.sender, getDelegate(msg.sender), address(0));
     }
   }
 
@@ -474,7 +474,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
         // If a user no longer has any staked tokens, they forfeit their community voting power 
         if (balanceOf(_voter) == 0) return 0;
         // If a user delegates their votes, they forfeit their community voting power
-        if (delegates(_voter) != _voter) return 0;
+        if (getDelegate(_voter) != _voter) return 0;
 
         (votes, proposalsCreated, proposalsPassed) = governance.userCommunityScoreData(_voter);
       }

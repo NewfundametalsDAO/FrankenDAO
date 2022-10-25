@@ -37,7 +37,6 @@ contract StakingBase is TestBase {
 
     function _mockStakeSingle(uint id, uint stakeTime) public returns (address) {
         address owner = frankenpunks.ownerOf(id);
-        emit log_address(owner);
         vm.startPrank(owner);
         frankenpunks.approve(address(staking), id);
 

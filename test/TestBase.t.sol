@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 import { DeployScript } from "../script/Deploy.s.sol";
 import { Test } from "forge-std/Test.sol";
+import { IGovernance } from "../src/interfaces/IGovernance.sol";
+import { IStaking } from "../src/interfaces/IStaking.sol";
 
 contract TestBase is Test, DeployScript {
     // Errors
@@ -13,7 +15,7 @@ contract TestBase is Test, DeployScript {
     error TokenLocked();
     error ZeroAddress();
     error AlreadyInitialized();
-    error ParameterOutOfBounds(string _parameter);
+    error ParameterOutOfBounds();
     error InvalidId();
     error InvalidProposal();
     error InvalidStatus();
@@ -22,9 +24,31 @@ contract TestBase is Test, DeployScript {
     error AlreadyVoted();
     error RequirementsNotMet();
     error NotEligible();
+    error Unauthorized();
+    error NotRefundable();
+    error InsufficientRefundBalance();
 
     function setUp() virtual public {
         vm.createSelectFork("https://mainnet.infura.io/v3/324422b5714843da8a919967a9c652ac");
         deployAllContractsForTesting();
+    }
+
+    function dealRefundBalance() internal {
+        vm.deal(address( staking ), 10 ether);
+        vm.deal(address( gov ), 10 ether);
+    }
+
+    function setGovernanceRefundStatus(IGovernance.RefundStatus _status) internal {
+        vm.prank(address(executor));
+        gov.setRefund(_status);
+    }
+
+    function setStakingRefundStatus(IStaking.RefundStatus _status) internal {
+        vm.prank(address(executor));
+        staking.setRefund(_status);
+    }
+
+    function _generateAddress(string memory name) internal pure returns (address) {
+        return address(uint160(uint(keccak256(abi.encodePacked(name)))));
     }
 }

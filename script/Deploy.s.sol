@@ -2,7 +2,7 @@
  pragma solidity ^0.8.13;
 
 import { Script } from "forge-std/Script.sol";
-import { Test } from "forge-std/Test.sol";
+import "forge-std/Test.sol";
 
 import { GovernanceProxy } from "src/proxy/GovernanceProxy.sol";
 import { Executor } from "src/Executor.sol";
@@ -28,10 +28,10 @@ contract DeployScript is Script {
         _deployAllContracts();
         vm.stopBroadcast();
 
-        // console.log("executor deployed to: ", address(executor));
-        // console.log("govImpl deployed to: ", address(govImpl));
-        // console.log("govProxy deployed to: ", address(gov));
-        // console.log("staking deployed to: ", address(staking));
+        console.log("executor deployed to: ", address(executor));
+        console.log("govImpl deployed to: ", address(govImpl));
+        console.log("govProxy deployed to: ", address(gov));
+        console.log("staking deployed to: ", address(staking));
     }
 
     function _deployAllContracts() internal {
@@ -84,7 +84,7 @@ contract DeployScript is Script {
                     7 days, // Voting Period
                     1 days, // Voting Delay
                     500, // Proposal BPS: 5%
-                    2000 // Quorum BPS: 20%
+                    2000 // Quorum BPS: 35%
                 )
             )
         );
