@@ -3,6 +3,11 @@ pragma solidity ^0.8.0;
 
 import "oz/proxy/ERC1967/ERC1967Proxy.sol";
 
+// This contract is similar to OZ's TransparentUpgradeableProxy, but it allows:
+// - Admin to access the fallback function (so that Executor can call implementation functions)
+// - ifAdmin modifier to onlyAdmin, reverting vs fallback if non admin calls a proxy function
+// - Non admin to access proxy view functions (admin() and implementation())
+
 contract GovernanceProxy is ERC1967Proxy {
     /**
      * @dev Initializes an upgradeable proxy managed by `_admin`, backed by the implementation at `_logic`, and
@@ -17,12 +22,9 @@ contract GovernanceProxy is ERC1967Proxy {
     /**
      * @dev Modifier used internally that will delegate the call to the implementation unless the sender is the admin.
      */
-    modifier ifAdmin() {
-        if (msg.sender == _getAdmin()) {
-            _;
-        } else {
-            _fallback();
-        }
+    modifier onlyAdmin() {
+        require(msg.sender == _getAdmin(), 'only admin');
+        _;
     }
 
     /**
@@ -58,7 +60,7 @@ contract GovernanceProxy is ERC1967Proxy {
      *
      * NOTE: Only the admin can call this function. See {ProxyAdmin-changeProxyAdmin}.
      */
-    function changeAdmin(address newAdmin) external virtual ifAdmin {
+    function changeAdmin(address newAdmin) external virtual onlyAdmin {
         _changeAdmin(newAdmin);
     }
 
@@ -67,7 +69,7 @@ contract GovernanceProxy is ERC1967Proxy {
      *
      * NOTE: Only the admin can call this function. See {ProxyAdmin-upgrade}.
      */
-    function upgradeTo(address newImplementation) external ifAdmin {
+    function upgradeTo(address newImplementation) external onlyAdmin {
         _upgradeToAndCall(newImplementation, bytes(""), false);
     }
 
@@ -78,7 +80,7 @@ contract GovernanceProxy is ERC1967Proxy {
      *
      * NOTE: Only the admin can call this function. See {ProxyAdmin-upgradeAndCall}.
      */
-    function upgradeToAndCall(address newImplementation, bytes calldata data) external payable ifAdmin {
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external payable onlyAdmin {
         _upgradeToAndCall(newImplementation, data, true);
     }
 
@@ -88,12 +90,4 @@ contract GovernanceProxy is ERC1967Proxy {
     function _admin() internal view virtual returns (address) {
         return _getAdmin();
     }
-
-    /**
-     * @dev Makes sure the admin cannot access the fallback function. See {Proxy-_beforeFallback}.
-     */
-    // function _beforeFallback() internal virtual override {
-        // require(msg.sender != _getAdmin(), "TransparentUpgradeableProxy: admin cannot fallback to proxy target");
-    //     super._beforeFallback();
-    // }
 }

@@ -72,10 +72,11 @@ contract Executor is IExecutor {
         bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
         if (!queuedTransactions[txHash]) revert TransactionNotQueued();
         if (_eta > block.timestamp) revert TimelockNotMet();
-        if (block.timestamp > _eta + GRACE_PERIOD) revert StaleTransaction(); // @todo this is actually useless because it's caught in governance
+        // We don't need to check if it's expired, because this will be caught by the Governance contract.
+        // (If we are past the grace period, proposal state will be Expired and execute() will revert.)
 
         queuedTransactions[txHash] = false;
-
+        
         bytes memory callData;
 
         if (bytes(_signature).length == 0) {
