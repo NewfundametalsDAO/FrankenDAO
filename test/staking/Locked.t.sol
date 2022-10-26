@@ -13,8 +13,7 @@ contract LockedTest is GovernanceBase {
         address playerOne = mockStakeSingle(ids[0]);
 
         uint proposalId = _createAndVerifyProposal();
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         vm.startPrank(playerOne);
         gov.castVote(proposalId, 1);
@@ -34,8 +33,7 @@ contract LockedTest is GovernanceBase {
         staking.delegate(playerOne);
 
         uint proposalId = _createAndVerifyProposal();
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         vm.prank(playerOne);
         gov.castVote(proposalId, 1);
@@ -54,8 +52,7 @@ contract LockedTest is GovernanceBase {
         address playerTwo = mockStakeSingle(ids[1]);
 
         uint proposalId = _createAndVerifyProposal();
-        // @todo switch this to warp when switching to times
-        vm.roll(block.number + gov.votingDelay());
+        vm.warp(block.timestamp + gov.votingDelay());
 
         vm.startPrank(playerOne);
         gov.castVote(proposalId, 1);

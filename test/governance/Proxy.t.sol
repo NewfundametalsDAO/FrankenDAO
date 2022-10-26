@@ -32,8 +32,4 @@ contract ProxyTests is GovernanceBase {
         GovernanceProxy proxy = GovernanceProxy(payable(address(gov)));
         assert(proxy.admin() == newAdmin);    
     }
-
-    
-
-
 }

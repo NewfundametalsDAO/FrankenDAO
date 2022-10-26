@@ -6,7 +6,7 @@ import { LibString } from "solmate/utils/LibString.sol";
 
 contract EvilScoresTest is TestBase {
 
-    // Test only exists for sample data, where all evens are evil. Redo with JSON call once we have final.
+    // Test that all evil scores pulled from on chain match with the local JSON file.
     function testEvilScores(uint tokenId) public {
         vm.assume(tokenId < 20000);
         if (tokenId > 9999) {

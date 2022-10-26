@@ -27,6 +27,12 @@ contract TestBase is Test, DeployScript {
     error Unauthorized();
     error NotRefundable();
     error InsufficientRefundBalance();
+    error DelayNotSatisfied();
+    error IdenticalTransactionAlreadyQueued();
+    error TransactionNotQueued();
+    error TimelockNotMet();
+    error StaleTransaction();
+    error TransactionReverted();
 
     function setUp() virtual public {
         vm.createSelectFork("https://mainnet.infura.io/v3/324422b5714843da8a919967a9c652ac");

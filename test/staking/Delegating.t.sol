@@ -70,5 +70,4 @@ contract DelegatingTest is StakingBase {
             delegate
         );
     }
-
 }

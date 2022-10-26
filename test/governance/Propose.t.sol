@@ -31,7 +31,7 @@ contract ProposeTest is GovernanceBase {
         uint proposalId2 = _createProposal();
     }
 
-    // ADD TESTS FOR MULTIPLE PROPOSALS, SAME BLOCK, SEP BLOCKS, ETC
+    // @todo ADD TESTS FOR MULTIPLE PROPOSALS, SAME BLOCK, SEP BLOCKS, ETC
 }
 
 

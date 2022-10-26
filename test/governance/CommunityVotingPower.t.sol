@@ -52,21 +52,24 @@ contract CommunityPowerTests is GovernanceBase {
         assert(staking.getCommunityVotingPower(proposer) == (votesMultiplier + proposalsCreatedMultiplier + proposalsPassedMultiplier) / 100);
     }
 
-    // @todo redo this with fuzzing
     // Test that updating community multiplers adjusts community voting power as expected.
-    // function testCommunityPower__UpdatingMultipliersAdjustsCommunityPower() public {
-    //     uint proposalId = _createSuccessfulProposal();
-    //     gov.queue(proposalId);
-    //     vm.warp(block.timestamp + executor.DELAY());
-    //     gov.execute(proposalId);
+    function testCommunityPower__UpdatingMultipliersAdjustsCommunityPower() public {
+        uint proposalId = _createSuccessfulProposal();
+        gov.queue(proposalId);
+        vm.warp(block.timestamp + executor.DELAY());
+        gov.execute(proposalId);
         
-    //     uint initialPower = (votesMultiplier + proposalsCreatedMultiplier + proposalsPassedMultiplier) / 100;
-    //     assert(staking.getCommunityVotingPower(voter) == initialPower);
+        uint initialPower = (votesMultiplier + proposalsCreatedMultiplier + proposalsPassedMultiplier) / 100;
+        assert(staking.getCommunityVotingPower(proposer) == initialPower);
 
-    //     // @todo add this when zakk merges the setting function
-    //     staking.setCommunityPowerMultipliers(200, 400, 400); // This is multiplying all multiplers by 2.
-    //     assert(staking.getCommunityVotingPower(voter) == initialPower * 2);
-    // }
+        vm.startPrank(address(executor));
+        staking.setVotesMultiplier(votesMultiplier * 2);
+        staking.setProposalsCreatedMultiplier(proposalsCreatedMultiplier * 2);
+        staking.setProposalsPassedMultiplier(proposalsPassedMultiplier * 2);
+        vm.stopPrank();
+
+        assert(staking.getCommunityVotingPower(proposer) == initialPower * 2);
+    }
 
     // Test that delegating sets community voting power to zero.
     function testCommunityPower__DelegatingAndUndelegatingChangeCommunityVotingPower() public {

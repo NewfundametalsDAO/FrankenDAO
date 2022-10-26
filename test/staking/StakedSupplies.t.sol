@@ -34,5 +34,5 @@ contract StakedSupplyTest is StakingBase {
     }
 
     // @todo Staking FrankenMonster increases staked supply
-    // @todo Unstaking FrankenPunk decreases staked supply
+    // @todo Unstaking FrankenMonster decreases staked supply
 }

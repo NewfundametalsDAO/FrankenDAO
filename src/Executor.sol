@@ -72,7 +72,7 @@ contract Executor is IExecutor {
         bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
         if (!queuedTransactions[txHash]) revert TransactionNotQueued();
         if (_eta > block.timestamp) revert TimelockNotMet();
-        if (block.timestamp > _eta + GRACE_PERIOD) revert StaleTransaction();
+        if (block.timestamp > _eta + GRACE_PERIOD) revert StaleTransaction(); // @todo this is actually useless because it's caught in governance
 
         queuedTransactions[txHash] = false;
 

@@ -4,13 +4,6 @@ import "forge-std/Test.sol";
 import "../utils/BaseSetup.sol";
 import "./StakingBase.t.sol";
 
-error NonExistentToken();
-error InvalidDelegation();
-error Paused();
-error InvalidParameter();
-error TokenLocked();
-error ZeroAddress();
-
 contract StakingTest is StakingBase {
 
     function testStaking__UnlockTimeCantBeInThePast(uint _id) public {
@@ -54,17 +47,16 @@ contract StakingTest is StakingBase {
     //// unstake frankenpunk
     function testStaking__UnstakingFrankenPunk(uint _id, uint _unlockTime) public {
         vm.assume(_id <= 10_000);
-        vm.assume(_unlockTime < 1_825);
+        vm.assume(_unlockTime > block.timestamp);
+        vm.assume(_unlockTime < type(uint128).max);
         // get starting values:
         address owner = frankenpunks.ownerOf(_id);
         uint initialBalance = frankenpunks.balanceOf(owner);
 
         // stake token:
-        mockStakeSingle(_id, block.timestamp + ( _unlockTime * 1 days ));
+        mockStakeSingle(_id, _unlockTime);
 
-         //@todo 31 days should work here but throws TokenLocked()
-         //(meaning the staking lock isn't up yet)
-        vm.warp(1 + ( _unlockTime * 1 days ));
+        vm.warp(_unlockTime + 1);
         vm.startPrank(owner);
 
         //unstake on staking
