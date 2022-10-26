@@ -12,7 +12,7 @@ contract GovernanceBase is StakingBase {
     uint PROPOSER_TOKEN_ID = 10;
     address stranger = makeAddr("stranger");
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
 
         proposer = mockStakeSingle(PROPOSER_TOKEN_ID, 0);

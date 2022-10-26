@@ -63,4 +63,49 @@ contract LockedTest is GovernanceBase {
         vm.expectRevert(TokenLocked.selector);
         staking.delegate(playerTwo);
     }
+
+    // Test that delegating after voting doesn't revert if proposal is canceled.
+    function testLocking__DelegatingAfterVotingDoesntRevertIfProposalCanceled() public {
+        uint proposalId = _createSuccessfulProposal();
+        
+        vm.startPrank(proposer);
+        vm.expectRevert(TokenLocked.selector);
+        staking.delegate(voter);
+
+        gov.cancel(proposalId);
+
+        staking.delegate(voter);
+        assert(staking.getDelegate(proposer) == voter);
+    }
+
+    // Test that delegating after voting doesn't revert if proposal is vetoed.
+    function testLocking__DelegatingAfterVotingDoesntRevertIfProposalVetoed() public {
+        uint proposalId = _createSuccessfulProposal();
+        
+        vm.prank(proposer);
+        vm.expectRevert(TokenLocked.selector);
+        staking.delegate(voter);
+
+        vm.prank(FOUNDER_MULTISIG);
+        gov.veto(proposalId);
+
+        vm.prank(proposer);
+        staking.delegate(voter);
+        assert(staking.getDelegate(proposer) == voter);
+    }
+
+    // Test that delegating after voting doesn't revert if proposal is queued.
+    function testLocking__DelegatingAfterVotingDoesntRevertIfProposalQueued() public {
+        uint proposalId = _createSuccessfulProposal();
+        
+        vm.startPrank(proposer);
+        vm.expectRevert(TokenLocked.selector);
+        staking.delegate(voter);
+
+        gov.queue(proposalId);
+
+        staking.delegate(voter);
+        assert(staking.getDelegate(proposer) == voter);
+    }
+
 }

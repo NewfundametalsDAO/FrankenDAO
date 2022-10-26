@@ -222,8 +222,8 @@ interface IGovernance {
     //         string[] memory signatures,
     //         bytes[] memory calldatas
     //     );
-    function userCommunityScoreData(address) external view returns (uint64 proposalsCreated, uint64 proposalsPassed, uint64 votes);
-    function totalCommunityScoreData() external view returns (uint64 proposalsCreated, uint64 proposalsPassed, uint64 votes);
+    function userCommunityScoreData(address) external view returns (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed);
+    function totalCommunityScoreData() external view returns (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed);
     function updateTotalCommunityScoreData(uint64 _votes, uint64 _proposalsCreated, uint64 _proposalsPassed) external;
     function getProposalData(uint256 id_) external view returns (uint256, address, uint256, uint256);
     // function getProposalStatus(uint256 id_) external view returns (bool, bool, bool);

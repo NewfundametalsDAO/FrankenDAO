@@ -84,4 +84,23 @@ contract ActiveProposalTest is GovernanceBase {
         uint[] memory newActiveProposals = gov.getActiveProposals();
         assert(newActiveProposals.length == 0);
     }
+
+    // Test that canceling a proposal after it's queued doesn't remove it from Active Proposals twice.
+    function testGovActive__ProposalCantBeDoubleRemovedFromActive() public {
+        uint proposalId = _createSuccessfulProposal();
+        uint dummyProposal = _createSuccessfulProposal();
+        uint[] memory activeProposals = gov.getActiveProposals();
+        assert(activeProposals.length == 2);
+
+        gov.queue(proposalId);
+
+        uint[] memory newActiveProposals = gov.getActiveProposals();
+        assert(newActiveProposals.length == 1);
+
+        vm.prank(proposer);
+        gov.cancel(proposalId);
+
+        uint[] memory finalActiveProposals = gov.getActiveProposals();
+        assert(finalActiveProposals.length == 1);
+    }
 }

@@ -441,7 +441,7 @@ contract Governance is IGovernance, Admin, Refund {
             state(_proposalId) != ProposalState.Expired
         ) revert NotEligible();
 
-        _removeTransactionIfQueuedOrExpired(proposal);
+        _removeTransactionWithQueuedOrExpiredCheck(proposal);
 
         proposal.canceled = true;        
 
@@ -456,14 +456,14 @@ contract Governance is IGovernance, Admin, Refund {
         Proposal storage proposal = proposals[_proposalId];
         if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
 
-        _removeTransactionIfQueuedOrExpired(proposal);
+        _removeTransactionWithQueuedOrExpiredCheck(proposal);
 
         proposal.vetoed = true;
 
         emit ProposalVetoed(_proposalId);
     }
 
-    function _removeTransactionIfQueuedOrExpired(Proposal storage _proposal) internal {
+    function _removeTransactionWithQueuedOrExpiredCheck(Proposal storage _proposal) internal {
         if (
             state(_proposal.id) == ProposalState.Queued || 
             state(_proposal.id) == ProposalState.Expired
