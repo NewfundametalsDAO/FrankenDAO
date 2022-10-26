@@ -74,6 +74,12 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @notice Base token URI for the ERC721s representing the staked position
   string public _baseTokenURI;
 
+  /// @notice The number of staked frankenpunks
+  uint128 public stakedFrankenPunks;
+
+  /// @notice The number of staked frankenmonsters
+  uint128 public stakedFrankenMonsters;
+
   /// @notice Bitmaps representing whether each FrankenPunk has a sufficient "evil score" for a bonus.
   /// @dev 40 words * 256 bits = 10,240 bits, which is sufficient to hold values for 10k FrankenPunks
   uint[40] EVIL_BITMAPS = [
@@ -363,7 +369,15 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     }
 
     // Transfer the underlying token from the owner to this contract
-    IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
+    IERC721 collection;
+    if (_tokenId < 10000) {
+      collection = frankenpunks;
+      ++stakedFrankenPunks;
+    } else {
+      collection = frankenmonsters;
+      ++stakedFrankenMonsters;
+    }
+
     address owner = collection.ownerOf(_tokenId);
     if (msg.sender != owner && !collection.isApprovedForAll(owner, msg.sender) && msg.sender != collection.getApproved(_tokenId)) revert NotAuthorized();
     collection.transferFrom(owner, address(this), _tokenId);
@@ -421,6 +435,12 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
     collection.transferFrom(address(this), _to, _tokenId);
     
+    if(_tokenId < 10000) {
+      --stakedFrankenPunks;
+    } else {
+      --stakedFrankenMonsters;
+    }
+
     // Voting power needs to be calculated before staked time bonus is zero'd out, as it uses this value
     uint lostVotingPower = getTokenVotingPower(_tokenId);
     _burn(_tokenId);
@@ -478,7 +498,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
       }
 
       CommunityPowerMultipliers memory cpMultipliers = communityPowerMultipliers;
-      
+
       return 
         (votes * cpMultipliers.votes / PERCENT) + 
         (proposalsCreated * cpMultipliers.proposalsCreated / PERCENT) + 
@@ -490,6 +510,10 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     /// @dev This is used to calculate the quorum and proposal thresholds
     function getTotalVotingPower() public view returns (uint) {
       return totalTokenVotingPower + getCommunityVotingPower(address(type(uint160).max));
+    }
+
+    function getStakedTokenSupplies() public view returns (uint128, uint128) {
+      return (stakedFrankenPunks, stakedFrankenMonsters);
     }
 
     /// @notice Get the evil bonus for a given token
@@ -517,6 +541,27 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @dev This function can only be called by the executor based on a governance proposal
   function changeStakeAmount(uint128 _newMaxStakeBonusAmount) external onlyExecutor {
     stakingSettings.maxStakeBonusAmount = _newMaxStakeBonusAmount;
+  }
+
+  /// @notice Set the community power multiplier for votes
+  /// @param _votesmultiplier The multiplier applied to community voting power based on past votes
+  /// @dev This function can only be called by the executor based on a governance proposal
+  function setVotesMultiplier(uint64 _votesmultiplier) external onlyExecutor {
+    communityPowerMultipliers.votes = _votesmultiplier;
+  }
+
+  /// @notice Set the community power multiplier for proposals created
+  /// @param _proposalsCreatedMultiplier The multiplier applied to community voting power based on proposals created
+  /// @dev This function can only be called by the executor based on a governance proposal
+  function setProposalsCreatedMultiplier(uint64 _proposalsCreatedMultiplier) external onlyExecutor {
+    communityPowerMultipliers.proposalsCreated = _proposalsCreatedMultiplier;
+  }
+
+  /// @notice Set the community power multiplier for proposals passed
+  /// @param _proposalsPassedMultiplier The multiplier applied to community voting power based on proposals passed
+  /// @dev This function can only be called by the executor based on a governance proposal
+  function setProposalsPassedMultiplier(uint64 _proposalsPassedMultiplier) external onlyExecutor {
+    communityPowerMultipliers.proposalsPassed = _proposalsPassedMultiplier;
   }
 
   /// @notice Turn on or off gas refunds for staking and delegating

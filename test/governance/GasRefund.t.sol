@@ -23,6 +23,7 @@ contract GasRefundTests is GovernanceBase {
 
         vm.prank(proposer);
         uint proposalId = gov.propose(targets, values, sigs, calldatas, "test");
+
         vm.prank(COUNCIL_MULTISIG);
         gov.verifyProposal(proposalId);
 
