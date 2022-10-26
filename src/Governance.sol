@@ -530,7 +530,7 @@ contract Governance is IGovernance, Admin, Refund {
     function castVoteInternal(address _voter, uint256 _proposalId, uint8 _support) internal returns (uint) {
         if (state(_proposalId) != ProposalState.Active) revert InvalidStatus();
         if (_support > 2) revert InvalidInput();
-        
+
         Proposal storage proposal = proposals[_proposalId];
         Receipt storage receipt = proposal.receipts[_voter];
         if (receipt.hasVoted) revert AlreadyVoted();

@@ -84,8 +84,6 @@ contract StakingParametersTest is StakingBase {
         assert(afterVotes > beforeVotes);
     }
 
-
-
     // updated stake time affects voting power
     //function testNewStakeBonusTimeChangesCommunityVotingPower() public {}
 

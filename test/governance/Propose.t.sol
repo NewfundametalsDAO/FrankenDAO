@@ -31,7 +31,14 @@ contract ProposeTest is GovernanceBase {
         uint proposalId2 = _createProposal();
     }
 
-    // @todo ADD TESTS FOR MULTIPLE PROPOSALS, SAME BLOCK, SEP BLOCKS, ETC
+    // Cant propose if already proposed
+    function testGovPropose__CannotCreateProposalIfAlreadyProposed() public {
+        uint proposalId = _createProposal();
+        vm.expectRevert(NotEligible.selector);
+        uint proposalId2 = _createProposal();
+    }
+
+    // ADD TESTS FOR MULTIPLE PROPOSALS, SAME BLOCK, SEP BLOCKS, ETC
 }
 
 
