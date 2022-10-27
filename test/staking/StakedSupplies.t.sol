@@ -18,14 +18,16 @@ contract StakedSupplyTest is StakingBase {
     // Unstaking FrankenPunk decreases staked supply
     function testStakedSupply__UnstakingFrankenPunkDecreasesStakedSupply()
     public {
-        mockStakeSingle(200);
+        uint _id = 200;
+        mockStakeSingle(_id, block.timestamp + 30 days);
 
         assertEq(
             staking.stakedFrankenPunks(),
             1
         );
 
-        mockUnstakeSingle(200);
+        vm.warp(block.timestamp + 31 days);
+        mockUnstakeSingle(_id);
 
         assertEq(
             staking.stakedFrankenPunks(),

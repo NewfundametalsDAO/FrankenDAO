@@ -5,10 +5,12 @@ import "../utils/BaseSetup.sol";
 import "./StakingBase.t.sol";
 
 contract StakingTest is StakingBase {
+    uint[] ids = [1553, 8687];
 
-    function testStaking__UnlockTimeCantBeInThePast(uint _id) public {
-        vm.assume(_id <= 10_000);
+    function testStaking__UnlockTimeCantBeInThePast() public {
+        uint _id = ids[0];
         address owner = frankenpunks.ownerOf(_id);
+
         vm.startPrank(owner);
         frankenpunks.approve(address(staking), _id);
 
@@ -20,8 +22,8 @@ contract StakingTest is StakingBase {
     }
 
     //// stake frankenpunk
-    function testStaking__CanStakeFrankenPunk(uint _id) public {
-        vm.assume(_id <= 10_000);
+    function testStaking__CanStakeFrankenPunk() public {
+        uint _id = ids[0];
         address owner = mockStakeSingle(_id);
 
         // staking.ownerOf id 1 should be staker
@@ -32,7 +34,7 @@ contract StakingTest is StakingBase {
 
     //// transfer reverts for staked FrankenPunks
     function testStaking__TokensAreNotTransferrable(uint _id) public {
-        vm.assume(_id <= 10_000);
+        vm.assume(_id < 10_000);
         address owner = mockStakeSingle(_id);
         address other = makeAddr("other");
 
@@ -45,18 +47,19 @@ contract StakingTest is StakingBase {
     }
 
     //// unstake frankenpunk
-    function testStaking__UnstakingFrankenPunk(uint _id, uint _unlockTime) public {
-        vm.assume(_id <= 10_000);
-        vm.assume(_unlockTime > block.timestamp);
-        vm.assume(_unlockTime < type(uint128).max);
+    function testStaking__UnstakingFrankenPunk() public {
+        uint _id = ids[0];
+        (uint128 maxStakeBonusTime, ) = staking.stakingSettings();
         // get starting values:
-        address owner = frankenpunks.ownerOf(_id);
+        address owner = frankenpunks.ownerOf(ids[0]);
         uint initialBalance = frankenpunks.balanceOf(owner);
 
         // stake token:
-        mockStakeSingle(_id, _unlockTime);
+        mockStakeSingle(_id, block.timestamp + 30 days);
 
-        vm.warp(_unlockTime + 1);
+         //@todo 31 days should work here but throws TokenLocked()
+         //(meaning the staking lock isn't up yet)
+        vm.warp(block.timestamp + 31 days);
         vm.startPrank(owner);
 
         //unstake on staking

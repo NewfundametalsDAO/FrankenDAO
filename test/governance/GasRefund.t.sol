@@ -19,7 +19,7 @@ contract GasRefundTests is GovernanceBase {
         ) = _generateFakeProposalData();
 
         sigs[0] = "setRefund(uint8)";
-        calldatas[0] = abi.encode(IGovernance.RefundStatus.VotingAndProposalRefund);
+        calldatas[0] = abi.encode(IGovernance.RefundStatus.NoRefunds);
 
         vm.prank(proposer);
         uint proposalId = gov.propose(targets, values, sigs, calldatas, "test");
@@ -38,12 +38,12 @@ contract GasRefundTests is GovernanceBase {
         vm.warp(block.timestamp + executor.DELAY());
 
         IGovernance.RefundStatus refund = gov.refund();
-        assert(refund == IGovernance.RefundStatus.NoRefunds);
+        assert(refund == IGovernance.RefundStatus.VotingAndProposalRefund);
 
         gov.execute(proposalId);
 
         IGovernance.RefundStatus newRefund = gov.refund();
-        assert(newRefund == IGovernance.RefundStatus.VotingAndProposalRefund);
+        assert(newRefund == IGovernance.RefundStatus.NoRefunds);
     }
 
     /**********************
@@ -51,10 +51,10 @@ contract GasRefundTests is GovernanceBase {
      **********************/
     // Changing refund RefundStatus
     function testGovGasRefund__ExecutorCanSetRefundStatus() public {
-        //NoRefunds (Default)
+        //VotingAndProposalRefund (defualt)
         assertEq(
             uint( gov.refund() ),
-            uint( IGovernance.RefundStatus.NoRefunds )
+            uint( IGovernance.RefundStatus.VotingAndProposalRefund)
         );
         //VotingRefund
         setGovernanceRefundStatus(IGovernance.RefundStatus.VotingRefund);
@@ -68,11 +68,11 @@ contract GasRefundTests is GovernanceBase {
             uint( gov.refund() ),
             uint( IGovernance.RefundStatus.ProposalRefund)
         );
-        //VotingAndProposalRefund
-        setGovernanceRefundStatus(IGovernance.RefundStatus.VotingAndProposalRefund);
+        //NoRefunds (Default)
+        setGovernanceRefundStatus(IGovernance.RefundStatus.NoRefunds);
         assertEq(
             uint( gov.refund() ),
-            uint( IGovernance.RefundStatus.VotingAndProposalRefund)
+            uint( IGovernance.RefundStatus.NoRefunds)
         );
     }
     // reverts if insufficient balance: proposing
@@ -99,7 +99,9 @@ contract GasRefundTests is GovernanceBase {
             bytes[] memory calldatas
         ) = _generateFakeProposalData();
 
-        vm.prank(proposer);
+        setGovernanceRefundStatus(IGovernance.RefundStatus.NoRefunds);
+
+        vm.startPrank(proposer);
         vm.expectRevert(NotRefundable.selector);
         gov.proposeWithRefund(targets, values, sigs, calldatas, "test");
     }
@@ -142,6 +144,8 @@ contract GasRefundTests is GovernanceBase {
         dealRefundBalance();
         uint proposalId = _createAndVerifyProposal();
 
+        setGovernanceRefundStatus(IGovernance.RefundStatus.NoRefunds);
+
         vm.prank(proposer);
         vm.expectRevert(NotRefundable.selector);
         gov.castVoteWithRefund(proposalId, 1);
@@ -150,9 +154,12 @@ contract GasRefundTests is GovernanceBase {
     // refunds gas for voting
     function testGovGasRefund__RefundsGasForVoting() public {
         dealRefundBalance();
-        setGovernanceRefundStatus(IGovernance.RefundStatus.VotingAndProposalRefund);
-        uint proposalId = _createAndVerifyProposal();
-        vm.roll(block.number + gov.votingDelay());
+        uint proposalId = _createProposal();
+
+        vm.prank(COUNCIL_MULTISIG);
+        gov.verifyProposal(proposalId);
+
+        vm.warp(block.timestamp + gov.votingDelay());
 
         uint startingBalance = voter.balance;
 

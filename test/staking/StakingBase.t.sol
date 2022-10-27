@@ -51,8 +51,10 @@ contract StakingBase is TestBase {
 
     function mockUnstakeSingle(uint id) public returns (address) {
         address owner = staking.ownerOf(id);
+
         uint[] memory ids = new uint[](1);
         ids[0] = id;
+
         vm.prank(owner);
         staking.unstake(ids, owner);
     }

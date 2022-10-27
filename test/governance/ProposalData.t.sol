@@ -61,7 +61,8 @@ contract ProposalDataTests is GovernanceBase {
     // Test that the proposal returns the correct vote information.
     function testGovData__ProposalReturnsCorrectVotes() public {
         uint proposalId = _createAndVerifyProposal();
-        vm.roll(block.number + gov.votingDelay());
+
+        vm.warp(block.timestamp + gov.votingDelay());
 
         _vote(proposalId, 2, true);
 
@@ -80,7 +81,8 @@ contract ProposalDataTests is GovernanceBase {
     function testGovData__ProposalReturnsCorrectReceipt(uint8 support, bool voted) public {
         vm.assume(support < 3);
         uint proposalId = _createAndVerifyProposal();
-        vm.roll(block.number + gov.votingDelay());
+
+        vm.warp(block.timestamp + gov.votingDelay() + 1);
 
         _vote(proposalId, support, voted);
 

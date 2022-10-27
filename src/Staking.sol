@@ -434,7 +434,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     // Transfer the underlying asset to the address specified
     IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
     collection.transferFrom(address(this), _to, _tokenId);
-    
+
     if(_tokenId < 10000) {
       --stakedFrankenPunks;
     } else {
@@ -447,7 +447,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
 
     delete unlockTime[_tokenId];
     delete stakedTimeBonus[_tokenId];
-    
+
     return lostVotingPower;
   }
 

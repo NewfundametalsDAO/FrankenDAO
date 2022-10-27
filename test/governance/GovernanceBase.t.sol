@@ -92,6 +92,7 @@ contract GovernanceBase is StakingBase {
         uint proposalId = _createAndVerifyProposal();
 
         vm.warp(block.timestamp + gov.votingDelay());
+
         _vote(proposalId, 1, true); // voter votes for proposal
         vm.warp(block.timestamp + gov.votingPeriod() + 1);
 

@@ -36,16 +36,21 @@ contract PausedTest is StakingBase {
     }
 
     function testPausing__CanStillUnstakeWhilePaused() public {
-        address staker = mockStakeSingle(0);
-
+        emit log_named_uint("timestamp", block.timestamp);
+        // 1. Stake tokens
+        address staker = mockStakeSingle(1559, block.timestamp + 30 days);
+        // 2. Pause Staking
         vm.prank(address(FOUNDER_MULTISIG));
         staking.setPause(true);
-
+        // 3. Warp forward to unstake time
+        vm.warp(block.timestamp + 31 days);
+        emit log_named_uint("timestamp", block.timestamp);
+        // 4. Unstake tokens
         uint[] memory ids = new uint[](1);
-        ids[0] = 0;
+        ids[0] = 1559;
         vm.prank(staker);
         staking.unstake(ids, staker);
-
+        // 5. Balance of staked tokens should be 0
         assert(staking.balanceOf(staker) == 0);
     }
 }

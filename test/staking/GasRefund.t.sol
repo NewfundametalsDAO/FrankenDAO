@@ -7,7 +7,7 @@ contract GasRefundingTest is StakingBase {
     // set refunding
     function testRefunding__SettingRefund() public {
         dealRefundBalance();
-        // Default status is 0 (NoRefund)
+        // Default status is 0 (StakingAndDelegatingRefund)
         uint256 status = uint256(staking.refund());
         assertEq(status, 0);
 
@@ -22,8 +22,8 @@ contract GasRefundingTest is StakingBase {
         status = uint256(staking.refund());
         assertEq(status, 2);
 
-        // 3 ( StakingAndDelegatingRefund )
-        setStakingRefundStatus(IStaking.RefundStatus.StakingAndDelegatingRefund);
+        // 3 ( NoRefund )
+        setStakingRefundStatus(IStaking.RefundStatus.NoRefunds);
         status = uint256(staking.refund());
         assertEq(status, 3);
     }
@@ -54,6 +54,9 @@ contract GasRefundingTest is StakingBase {
     function testRefunding__StakingRefundRevertsIfPaused() public {
         dealRefundBalance();
 
+        // 3 ( NoRefunds )
+        setStakingRefundStatus(IStaking.RefundStatus.NoRefunds);
+
         address owner = frankenpunks.ownerOf(369);
 
         vm.startPrank(owner);
@@ -62,7 +65,6 @@ contract GasRefundingTest is StakingBase {
         uint256[] memory ids = new uint256[](1);
         ids[0] = 369;
 
-        // reverts by default (NoRefund)
         vm.expectRevert(NotRefundable.selector);
         staking.stakeWithRefund(ids, block.timestamp + 30 days);
         vm.stopPrank();
@@ -122,9 +124,9 @@ contract GasRefundingTest is StakingBase {
         address owner = mockStakeSingle(1553);
         address delegate = mockStakeSingle(6251);
 
-        vm.startPrank(owner);
+        setStakingRefundStatus(IStaking.RefundStatus.NoRefunds);
 
-        // reverts by default (NoRefund)
+        vm.startPrank(owner);
         vm.expectRevert(NotRefundable.selector);
         staking.delegateWithRefund(delegate);
         vm.stopPrank();
