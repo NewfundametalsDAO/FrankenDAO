@@ -77,4 +77,25 @@ contract StakingTest is StakingBase {
          //frankenpunk.ownerOf id 1 should be staker
         assert(frankenpunks.ownerOf(_id) == owner);
     }
+
+    // Can unstake immediately if stake time is 0
+    function testStaking__UnstakingImmediately() public {
+        uint _id = ids[0];
+        address owner = frankenpunks.ownerOf(_id);
+
+        // stake token:
+        mockStakeSingle(_id);
+
+        vm.startPrank(owner);
+
+        //unstake on staking
+        uint[] memory ids = new uint[](1);
+        ids[0] = _id;
+
+        vm.roll(1);
+        staking.unstake(ids, owner);
+
+        //frankenpunk.ownerOf id should be staker
+        assert(frankenpunks.ownerOf(_id) == owner);
+    }
 }
