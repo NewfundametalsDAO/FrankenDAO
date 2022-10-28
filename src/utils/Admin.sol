@@ -4,7 +4,9 @@ pragma solidity ^0.8.13;
 import "../interfaces/IAdmin.sol";
 import "../interfaces/IExecutor.sol";
 
-contract Admin is IAdmin {
+/// @notice Custom access control manager for FrankenDAO
+/// @dev This functionality is inherited by Governance.sol and Staking.sol
+abstract contract Admin is IAdmin {
     /// @notice Founder multisig
     address public founders;
 
@@ -14,28 +16,42 @@ contract Admin is IAdmin {
     /// @notice Executor contract address for passed governance proposals
     IExecutor public executor;
 
-    /// @notice Pending administrator addresses for this contract
+    /// @notice Admin that only has the power to pause and unpause staking
+    /// @dev This will be a EOA used by the team for easy pausing and unpausing
+    /// @dev This address is changeable by governance if the community thinks the team is misusing this power
+    address public pauser;
+
+    /// @notice Pending founder addresses for this contract
+    /// @dev Only founders is two-step, because errors in transferring other admin addresses can be corrected by founders
     address public pendingFounders;
-    address public pendingCouncil;
 
     /// @notice Error thrown for an unauthorized transaction
     error NotAuthorized();
 
-  /////////////////////////////////
-  /////////// MODIFIERS ///////////
-  /////////////////////////////////
+    /////////////////////////////
+    ///////// MODIFIERS /////////
+    /////////////////////////////
 
-    /// @notice Modifier for function that can only be called by the Executor (Timelock) contract
+    /// @notice Modifier for functions that can only be called by the Executor contract
+    /// @dev This is for functions that only Governance is able to call
     modifier onlyExecutor() {
         if(msg.sender != address(executor)) revert Unauthorized();
         _;
     }
 
+    /// @notice Modifier for functions that can only be called by the Council or Founder multisigs
     modifier onlyAdmins() {
         if(msg.sender != founders && msg.sender != council) revert Unauthorized();
         _;
     }
 
+    /// @notice Modifier for functions that can only be called by the Pauser
+    modifier onlyPauser() {
+        if(msg.sender != pauser) revert Unauthorized();
+        _;
+    }
+
+    /// @notice Modifier for functions that can only be called by either multisig or the Executor contract
     modifier onlyExecutorOrAdmins() {
         if (
             msg.sender != address(executor) && 
@@ -45,85 +61,39 @@ contract Admin is IAdmin {
         _;
     }
 
-    /////////////////////////////////
-    //////// ADMIN TRANSFERS ////////
-    /////////////////////////////////
+    /////////////////////////////
+    ////// ADMIN TRANSFERS //////
+    /////////////////////////////
 
-    /**
-     * @notice Begins transfer of founder rights. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
-     * @dev Founders function to begin change of founder. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
-     * @param _newPendingFounders New pending founder.
-     */
-    function _setPendingFounders(address _newPendingFounders) external {
-        require(msg.sender == founders, "Admin: only founders can set pending founders");
-        // Save current value, if any, for inclusion in log
-        address oldPendingFounders = pendingFounders;
-
-        // Store pendingFounders with value _newPendingFounders
+    /// @notice Begins transfer of founder rights. The newPendingFounders must call `_acceptFounders` to finalize the transfer.
+    /// @param _newPendingFounders New pending founder.
+    /// @dev This doesn't use onlyAdmins because only Founders have the right to set new Founders.
+    function setPendingFounders(address _newPendingFounders) external {
+        if (msg.sender != founders) revert NotAuthorized();
+        emit NewPendingFounders(pendingFounders, _newPendingFounders);
         pendingFounders = _newPendingFounders;
-
-        // Emit NewPendingFounders(oldPendingFounders, newPendingFounders)
-        emit NewPendingFounders(oldPendingFounders, _newPendingFounders);
     }
 
-    /**
-     * @notice Accepts transfer of founder rights. msg.sender must be pendingFounders
-     * @dev Founders function for pending founder to accept role and update founder
-     */
-    function _acceptFounders() external {
-        // Check caller is pendingFounders and pendingFounders ≠ address(0)
-        require(msg.sender == pendingFounders, "FrankenDAO::_acceptFounders: pending founder only");
-
-        // Save current values for inclusion in log
-        address oldFounders = founders;
-        address oldPendingFounders = pendingFounders;
-
-        // Store founder with value pendingFounders
+    /// @notice Accepts transfer of founder rights. msg.sender must be pendingFounders
+    function acceptFounders() external {
+        if (msg.sender != pendingFounders) revert NotAuthorized();
+        emit NewFounders(founders, pendingFounders);
         founders = pendingFounders;
-
-        // Clear the pending value
         pendingFounders = address(0);
-
-        emit NewFounders(oldFounders, founders);
-        emit NewPendingFounders(oldPendingFounders, pendingFounders);
     }
 
-    /**
-     * @notice Begins transfer of council rights. The newPendingCouncil must call `_acceptCouncil` to finalize the transfer.
-     * @dev Council function to begin change of council. The newPendingCouncil must call `_acceptCouncil` to finalize the transfer.
-     * @param _newPendingCouncil New pending council.
-     */
-    function _setPendingCouncil(address _newPendingCouncil) external onlyAdmins {
-        // Save current value, if any, for inclusion in log
-        address oldPendingCouncil = pendingCouncil;
-
-        // Store pendingCouncil with value _newPendingCouncil
-        pendingCouncil = _newPendingCouncil;
-
-        // Emit NewPendingCouncil(oldPendingCouncil, newPendingCouncil)
-        emit NewPendingCouncil(oldPendingCouncil, _newPendingCouncil);
+    /// @notice Transfers council address to a new multisig
+    /// @param _newCouncil New address for council
+    /// @dev This uses onlyAdmin because either the Council or the Founders can set a new Council.
+    function setCouncil(address _newCouncil) external onlyAdmins {
+        emit NewCouncil(council, _newCouncil);
+        council = _newCouncil;
     }
 
-    /**
-     * @notice Accepts transfer of council rights. msg.sender must be pendingCouncil
-     * @dev Council function for pending council to accept role and update council
-     */
-    function _acceptCouncil() external {
-        // Check caller is pendingCouncil and pendingCouncil ≠ address(0)
-        require(msg.sender == pendingCouncil, "FrankenDAO::_acceptCouncil: pending council only");
-
-        // Save current values for inclusion in log
-        address oldCouncil = council;
-        address oldPendingCouncil = pendingCouncil;
-
-        // Store council with value pendingCouncil
-        council = pendingCouncil;
-
-        // Clear the pending value
-        pendingCouncil = address(0);
-
-        emit NewCouncil(oldCouncil, council);
-        emit NewPendingCouncil(oldPendingCouncil, pendingCouncil);
+    /// @notice Accepts transfer of council rights. msg.sender must be pendingCouncil
+    function setPauser(address _newPauser) external onlyExecutorOrAdmins {
+        emit NewPauser(pauser, _newPauser);
+        pauser = _newPauser;
     }
 }
 

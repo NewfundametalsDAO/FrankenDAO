@@ -8,6 +8,7 @@ interface IStaking {
     error InvalidParameter();
     error TokenLocked();
     error ZeroAddress();
+    error StakedTokensCannotBeTransferred();
 
     struct CommunityPowerMultipliers {
         uint64 votes;

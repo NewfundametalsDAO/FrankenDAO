@@ -1,30 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-contract Refund {
+/// @notice Provides a refundable modifier that can be used for inhering contracts to refund user gas cost
+/// @dev This functionality is inherited by Governance.sol (for proposing and voting) and Staking.sol (for staking and delegating)
+contract Refundable {
     /// @notice Emitted when a refund is issued
     event IssueRefund(address refunded, uint256 ammount, bool sent);
 
-    /// @notice The maximum priority fee used to cap gas refunds in `castRefundableVote`
+    /// @notice The maximum priority fee used to cap gas refunds
     uint256 public constant MAX_REFUND_PRIORITY_FEE = 2 gwei;
 
     /// @notice The vote refund gas overhead, including 7K for ETH transfer and 29K for general transaction overhead
     uint256 public constant REFUND_BASE_GAS = 36000;
 
-    /// @notice Error thrown when refunding is turned off
-    error NotRefundable();
-
     /// @notice Error thrown when the contract balance is too low to refund gas
     error InsufficientRefundBalance();
 
-    /**
-     * @notice Take the amount of gas supplied and send that to the sender from
-     *         the contract's balance. Lifted straight from NounsDAO: https://github.com/nounsDAO/nouns-monorepo/blob/master/packages/nouns-contracts/contracts/governance/NounsDAOLogicV2.sol#L1033-L1046
-     * @param _startGas Amount of gas to refund
-     */
+    /// @notice Take the amount spent on gas supplied and send that to msg.sender from the contract's balance
+    /// @param _startGas Amount of gas to refund
+    /// @dev Lifted straight from NounsDAO: https://github.com/nounsDAO/nouns-monorepo/blob/master/packages/nouns-contracts/contracts/governance/NounsDAOLogicV2.sol#L1033-L1046
     function _refundGas(uint256 _startGas) internal {
-        if (address(this).balance < _startGas) revert InsufficientRefundBalance();
-
         unchecked {
             uint256 balance = address(this).balance;
             if (balance == 0) {
@@ -33,18 +28,12 @@ contract Refund {
             uint256 gasPrice = min(tx.gasprice, block.basefee + MAX_REFUND_PRIORITY_FEE);
             uint256 gasUsed = _startGas - gasleft() + REFUND_BASE_GAS;
             uint256 refundAmount = min(gasPrice * gasUsed, balance);
+
+            // There shouldn't be any reentrancy risk, as this is always called last in all contracts.
+            // @todo do we want to cap how much gas this call can use to make sure they don't waste gas that way?
             (bool refundSent, ) = msg.sender.call{ value: refundAmount }('');
             emit IssueRefund(msg.sender, refundAmount, refundSent);
         }
-    }
-
-    modifier refundable() {
-        uint256 startGas = gasleft();
-        if (address(this).balance < startGas ) revert InsufficientRefundBalance();
-
-        _;
-
-        _refundGas(startGas);
     }
 
     function min(uint256 a, uint256 b) internal pure returns (uint256) {

@@ -1,14 +1,14 @@
 pragma solidity ^0.8.13;
 
 interface IAdmin {
-    /// @notice Emitted when pendingFounders or pendingCouncil is changed
+    /// @notice Emitted when pendingFounders is changed
     event NewPendingFounders(address oldPendingFounders, address newPendingFounders);
-    event NewPendingCouncil(address oldPendingCouncil, address newPendingCouncil);
 
     /// @notice Emitted when pendingFounders or pendingCouncil is accepted,
     ///         which means admin roles updated
     event NewFounders(address oldFounders, address newFounders);
     event NewCouncil(address oldCouncil, address newCouncil);
+    event NewPauser(address oldPauser, address newPauser);
 
     /// @notice Error emitted when an auth condition is not met
     error Unauthorized();

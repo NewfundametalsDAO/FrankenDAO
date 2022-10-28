@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "solmate/tokens/ERC721.sol";
 import "solmate/utils/LibString.sol";
 import "./utils/SafeCast.sol";
-import "./utils/Refund.sol";
+import "./utils/Refundable.sol";
 import "./utils/Admin.sol";
 
 import "./interfaces/IERC721.sol";
@@ -12,11 +12,11 @@ import "./interfaces/IStaking.sol";
 import "./interfaces/IGovernance.sol";
 import "./interfaces/IExecutor.sol";
 
-/// @title FrankenDAO Staking Contract
+/// @title FrankenDAO Staking
 /// @author Zach Obront & Zakk Fleischmann
 /// @notice Users stake FrankenPunks & FrankenMonsters and get ERC721s in return
 /// @notice These ERC721s are used for voting power for FrankenDAO governance
-contract Staking is IStaking, ERC721, Refund, Admin {
+contract Staking is IStaking, ERC721, Admin, Refundable {
   using LibString for uint256;
   using SafeCast for uint256;
 
@@ -42,18 +42,35 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @notice Constant to calculate voting power based on multipliers above
   uint constant PERCENT = 100;
 
-  /// @notice Status for which functions (staking, delegating, both, or neither) are refundable
-  RefundStatus public refund;
+  /// @notice Are refunds turned on for staking?
+  bool public stakingRefund;
+
+  /// @notice The last timestamp at which a user used their staking refund
+  mapping(address => uint256) public lastStakingRefund;
+
+  /// @notice Are refunds turned on for delegating?
+  bool public delegatingRefund;
+
+  /// @notice The last timestamp at which a user used their delegating refund
+  mapping(address => uint256) public lastDelegatingRefund;
 
   /// @notice Is staking currently paused or open?
   bool public paused;
+
+  /// @notice Base votes for holding a Frankenpunk token
+  uint public baseVotes;
+
+  /// @notice The time that the tokens were locked (tokenId => timestampe)
+  /// @dev This remains at 0 if tokens are staked without locking (ie unlockTime == 0), as there's no need to track it
+  mapping(uint256 => uint256) public lockedTime;
   
   /// @notice The allowed unlock time for each staked token (tokenId => timestamp)
+  /// @dev This remains at 0 if tokens are staked without locking
   mapping(uint => uint) public unlockTime;
 
-  /// @notice The staked time bonus for each staked token (tokenId => bonus votes)
-  /// @dev This needs to be tracked because users will select how much time to lock for, so bonus is variable
-  mapping(uint => uint) public stakedTimeBonus; 
+  /// @notice Multiplier for votes that Frankenmonsters earn, relative to Frankenpunks
+  /// @dev Expressed as a percentage (ie punk votes * monsterMultiplier / 100 = monster votes)
+  uint public monsterMultiplier;
 
   /// @notice Addresses that each user delegates votes to
   /// @dev This should only be accessed via getDelegate() function, which overrides address(0) with self
@@ -74,10 +91,10 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @notice Base token URI for the ERC721s representing the staked position
   string public _baseTokenURI;
 
-  /// @notice The number of staked frankenpunks
+  /// @notice The total supply of staked frankenpunks
   uint128 public stakedFrankenPunks;
 
-  /// @notice The number of staked frankenmonsters
+  /// @notice The total supply of staked frankenmonsters
   uint128 public stakedFrankenMonsters;
 
   /// @notice Bitmaps representing whether each FrankenPunk has a sufficient "evil score" for a bonus.
@@ -153,11 +170,13 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _executor The address of the DAO executor contract
   /// @param _founders The address of the founder multisig for restricted functions
   /// @param _council The address of the council multisig for restricted functions
+  /// @param _baseVotes The base number of votes a user receives for holding 1 token (no lock, no evil bonus)
   /// @param _maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
   /// @param _maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
   /// @param _votesMultiplier The multiplier for extra voting power earned per DAO vote cast
   /// @param _proposalsMultiplier The multiplier for extra voting power earned per proposal created
   /// @param _executedMultiplier The multiplier for extra voting power earned per proposal passed
+  /// @param _monsterMultiplier The multiplier for voting power earned per monster (relative to punk)
   constructor(
     address _frankenpunks, 
     address _frankenmonsters,
@@ -165,23 +184,26 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     address _executor, 
     address _founders,
     address _council,
+    uint _baseVotes,
     uint _maxStakeBonusTime, 
     uint _maxStakeBonusAmount,
     uint _votesMultiplier, 
     uint _proposalsMultiplier, 
-    uint _executedMultiplier
+    uint _executedMultiplier,
+    uint _monsterMultiplier
   ) ERC721("Staked FrankenPunks", "sFP") {
-    if(_frankenpunks == address(0)) revert ZeroAddress();
-    if(_frankenmonsters == address(0)) revert ZeroAddress();
-    if(_governance == address(0)) revert ZeroAddress();
-    if(_executor == address(0)) revert ZeroAddress();
-    if(_founders == address(0)) revert ZeroAddress();
-    if(_council == address(0)) revert ZeroAddress();
-    if(_maxStakeBonusTime == 0) revert InvalidParameter();
-    if(_maxStakeBonusAmount == 0) revert InvalidParameter();
-    if(_votesMultiplier == 0) revert InvalidParameter();
-    if(_proposalsMultiplier == 0) revert InvalidParameter();
-    if(_executedMultiplier == 0) revert InvalidParameter();
+    // @todo decide: should we get rid of all of this?
+    // if(_frankenpunks == address(0)) revert ZeroAddress();
+    // if(_frankenmonsters == address(0)) revert ZeroAddress();
+    // if(_governance == address(0)) revert ZeroAddress();
+    // if(_executor == address(0)) revert ZeroAddress();
+    // if(_founders == address(0)) revert ZeroAddress();
+    // if(_council == address(0)) revert ZeroAddress();
+    // if(_maxStakeBonusTime == 0) revert InvalidParameter();
+    // if(_maxStakeBonusAmount == 0) revert InvalidParameter();
+    // if(_votesMultiplier == 0) revert InvalidParameter();
+    // if(_proposalsMultiplier == 0) revert InvalidParameter();
+    // if(_executedMultiplier == 0) revert InvalidParameter();
 
     frankenpunks = IERC721(_frankenpunks);
     frankenmonsters = IERC721(_frankenmonsters);
@@ -190,6 +212,9 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     executor = IExecutor(_executor);
     founders = _founders;
     council = _council;
+
+    baseVotes = _baseVotes; // 20
+    monsterMultiplier = _monsterMultiplier; // 50
 
     stakingSettings = StakingSettings({
       maxStakeBonusTime: _maxStakeBonusTime.toUint128(), // 4 weeks
@@ -210,7 +235,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @notice Transferring of staked tokens is prohibited, so all transfers will revert
   /// @dev This will also block safeTransferFrom, because of solmate's implementation
   function transferFrom(address, address, uint256) public pure override(ERC721, IStaking) {
-    revert("staked tokens cannot be transferred");
+    revert StakedTokensCannotBeTransferred();
   }
 
   /////////////////////////////////
@@ -243,17 +268,19 @@ contract Staking is IStaking, ERC721, Refund, Admin {
 
   /// @notice Delegate votes to another address
   /// @param _delegatee The address you wish to delegate to
+  /// @dev Refunds gas if delegatingRefund is true and hasn't been used by this user in the past 24 hours
   function delegate(address _delegatee) public {
     if (_delegatee == address(0)) _delegatee = msg.sender;
-    return _delegate(msg.sender, _delegatee);
-  }
-
-  /// @notice Delegate votes to another address and get your gas cost refunded
-  /// @param _delegatee The address you wish to delegate to
-  function delegateWithRefund(address _delegatee) public refundable {
-    if (refund != RefundStatus.DelegatingRefund && refund != RefundStatus.StakingAndDelegatingRefund) revert NotRefundable();
-    if (_delegatee == address(0)) _delegatee = msg.sender;
-    return _delegate(msg.sender, _delegatee);
+    
+    // Refunds gas if delegatingRefund is true and hasn't been used by this user in the past 24 hours
+    if (delegatingRefund && lastDelegatingRefund[msg.sender] + 1 days <= block.timestamp) {
+      uint256 startGas = gasleft();
+      _delegate(msg.sender, _delegatee);
+      lastDelegatingRefund[msg.sender] = block.timestamp;
+      _refundGas(startGas);
+    } else {
+      _delegate(msg.sender, _delegatee);
+    }
   }
 
   /// @notice Delegates votes from the sender to the delegatee
@@ -279,31 +306,30 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     tokenVotingPower[currentDelegate] -= amount;
     tokenVotingPower[_delegatee] += amount; 
 
-    // If a user has delegated their votes, then they will have no community voting power
-    // This function updates the community voting power totals to ensure they reflect the current reality
-    _updateTotalCommunityVotingPower(_delegator, currentDelegate, _delegatee);
+    // If a user is delegating back to themselves, they regain their community voting power, so adjust totals up
+    if (_delegator == _delegatee) {
+      _updateTotalCommunityVotingPower(_delegator, true);
+
+    // If a user delegates away their votes, their forfeit their community voting power, so adjust totals down
+    } else if (currentDelegate == _delegator) {
+      _updateTotalCommunityVotingPower(_delegator, false);
+    }
 
     emit DelegateChanged(_delegator, currentDelegate, _delegatee);
   }
 
   /// @notice Updates the total community voting power totals
   /// @param _delegator The address of the user who called the function and owns the votes being delegated
-  /// @param _currentDelegate The address of the user who previously had the votes
-  /// @param _delegatee The address of the user who will now receive the votes
+  /// @param _increase Should we be increasing or decreasing the totals?
   /// @dev This function is called by _delegate, _stake, and _unstake
-  /// @dev Because _currentDelegate != _delegatee, we know that at most one of the situations will be true
-  function _updateTotalCommunityVotingPower(address _delegator, address _currentDelegate, address _delegatee) internal {
-    // If the _delegator current owns their own votes, then they are forfeiting their community voting power
-    if (_currentDelegate == _delegator) {
-      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.userCommunityScoreData(_delegator);
-      (uint64 totalVotes, uint64 totalProposalsCreated, uint64 totalProposalsPassed) = governance.totalCommunityScoreData();
-      governance.updateTotalCommunityScoreData(totalVotes - votes, totalProposalsCreated - proposalsCreated, totalProposalsPassed - proposalsPassed);
-    
-    // If the new delegator is the new delegatee, they are reclaiming their community voting power
-    } else if (_delegatee == _delegator) {
-      (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.userCommunityScoreData(_delegator);
-      (uint64 totalVotes, uint64 totalProposalsCreated, uint64 totalProposalsPassed) = governance.totalCommunityScoreData();
+  function _updateTotalCommunityVotingPower(address _delegator, bool _increase) internal {
+    (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed) = governance.userCommunityScoreData(_delegator);
+    (uint64 totalVotes, uint64 totalProposalsCreated, uint64 totalProposalsPassed) = governance.totalCommunityScoreData();
+
+    if (_increase) {
       governance.updateTotalCommunityScoreData(totalVotes + votes, totalProposalsCreated + proposalsCreated, totalProposalsPassed + proposalsPassed);
+    } else {
+      governance.updateTotalCommunityScoreData(totalVotes - votes, totalProposalsCreated - proposalsCreated, totalProposalsPassed - proposalsPassed);
     }
   }
 
@@ -316,15 +342,15 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   /// @param _unlockTime The timestamp of the time your tokens will be unlocked
   /// @dev unlockTime can be set to 0 to stake without locking (and earn no extra staked time bonus)
   function stake(uint[] calldata _tokenIds, uint _unlockTime) public {
-    _stake(_tokenIds, _unlockTime);
-  }
-
-  /// @notice Stake your tokens to get voting power and get your gas cost refunded
-  /// @param _tokenIds An array of the id of the token you wish to stake
-  /// @param _unlockTime The timestamp of the time your tokens will be unlocked
-  function stakeWithRefund(uint[] calldata _tokenIds, uint _unlockTime) public refundable {
-    if (refund != RefundStatus.StakingRefund && refund != RefundStatus.StakingAndDelegatingRefund) revert NotRefundable();
-    _stake(_tokenIds, _unlockTime);
+    // Refunds gas if stakingRefund is true and hasn't been used by this user in the past 24 hours
+    if (stakingRefund && lastStakingRefund[msg.sender] + 1 days <= block.timestamp) {
+      uint256 startGas = gasleft();
+      _stake(_tokenIds, _unlockTime);
+      lastStakingRefund[msg.sender] = block.timestamp;
+      _refundGas(startGas);
+    } else {
+      _stake(_tokenIds, _unlockTime);
+    }
   }
 
   /// @notice Internal function to stake tokens and get voting power
@@ -347,13 +373,16 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     tokenVotingPower[getDelegate(msg.sender)] += newVotingPower;
     totalTokenVotingPower += newVotingPower;
 
-    // If the user had 0 tokens before and doesn't delegate, they just unlocked their community voting power
-    // First, we check if they had 0 tokens before (if their new balance == tokens they just staked)
-    if (balanceOf(msg.sender) == numTokens) {
-      // Then, we send an update that says the user's delegation went from address(0) to their delegate
-      // If their delegate is themselves, this will increase total community voting power accordingly
-      // If their tokens are delegated, both conditions will be skipped and nothing will happen
-      _updateTotalCommunityVotingPower(msg.sender, address(0), getDelegate(msg.sender));
+    // If the user had no tokenVotingPower before and doesn't delegate, they just unlocked their community voting power
+    // If their tokenVotingPower == newVotingPower, that means (a) it was 0 before and (b) they don't delegate, or it'd be 0 now
+    if (tokenVotingPower[msg.sender] == newVotingPower) {
+      // The user's community voting power is reactivated, so we add it to the total community voting power
+      _updateTotalCommunityVotingPower(msg.sender, true);
+    
+    // If their delegate had no tokenVotingPower before, then they just unlocked their community voting power
+    } else if (tokenVotingPower[getDelegate(msg.sender)] == newVotingPower) {
+      // The delegate's community voting power is reactivated, so we add it to the total community voting power
+      _updateTotalCommunityVotingPower(getDelegate(msg.sender), true);
     }
   }
 
@@ -363,9 +392,7 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   function _stakeToken(uint _tokenId, uint _unlockTime) internal returns (uint) {
     if (_unlockTime > 0) {
       unlockTime[_tokenId] = _unlockTime;
-      uint fullStakedTimeBonus = (_unlockTime - block.timestamp) * stakingSettings.maxStakeBonusAmount / stakingSettings.maxStakeBonusTime;
-      // If they are staking a Frankenmonster (ID >= 10k), only give them half the bonus.
-      stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : fullStakedTimeBonus / 2;
+      lockedTime[_tokenId] = block.timestamp;
     }
 
     // Transfer the underlying token from the owner to this contract
@@ -414,12 +441,21 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     tokenVotingPower[getDelegate(msg.sender)] -= lostVotingPower;
     totalTokenVotingPower -= lostVotingPower;
 
-    // If the user's balance reaches 0, they will not longer have any community voting power
-    if (balanceOf(msg.sender) == 0) {
-      // We send an update that says their delegation went from their delegate to address(0)
-      // If they previously delegated, they didn't have any community voting power, so nothing will happen
-      // If they didn't delegate, this will decrease total community voting power accordingly
-      _updateTotalCommunityVotingPower(msg.sender, getDelegate(msg.sender), address(0));
+    // If this unstaking reduced the user or their delegate's tokenVotingPower to 0, then someone just lost their community voting power
+    // First, check if the user is their own delegate
+    if (msg.sender == getDelegate(msg.sender)) {
+      // Did their tokenVotingPower just become 0?
+      if (tokenVotingPower[msg.sender] == 0) {
+        // If so, reduce the total voting power to capture this decrease in the user's community voting power
+        _updateTotalCommunityVotingPower(msg.sender, false);
+      }
+    // If they aren't their own delegate...
+    } else {
+      // If their delegate's tokenVotingPower reaches 0, that means they were the final unstake and the delegate loses community voting power
+      if (tokenVotingPower[getDelegate(msg.sender)] == 0) {
+        // The delegate's community voting power is forfeited, so we adjust total community power balances down
+        _updateTotalCommunityVotingPower(getDelegate(msg.sender), false);
+      }
     }
   }
 
@@ -430,23 +466,26 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     address owner = ownerOf(_tokenId);
     if (msg.sender != owner && !isApprovedForAll[owner][msg.sender] && msg.sender != getApproved[_tokenId]) revert NotAuthorized();
     if (unlockTime[_tokenId] > block.timestamp) revert TokenLocked();
-
-    // Transfer the underlying asset to the address specified
-    IERC721 collection = _tokenId < 10000 ? frankenpunks : frankenmonsters;
-    collection.transferFrom(address(this), _to, _tokenId);
-
-    if(_tokenId < 10000) {
+    
+    // Transfer the underlying token from the owner to this contract
+    IERC721 collection;
+    if (_tokenId < 10000) {
+      collection = frankenpunks;
       --stakedFrankenPunks;
     } else {
+      collection = frankenmonsters;
       --stakedFrankenMonsters;
     }
+    collection.transferFrom(address(this), _to, _tokenId);
 
     // Voting power needs to be calculated before staked time bonus is zero'd out, as it uses this value
     uint lostVotingPower = getTokenVotingPower(_tokenId);
     _burn(_tokenId);
 
-    delete unlockTime[_tokenId];
-    delete stakedTimeBonus[_tokenId];
+    if (unlockTime[_tokenId] > 0) {
+      delete unlockTime[_tokenId];
+      delete lockedTime[_tokenId];
+    }
 
     return lostVotingPower;
   }
@@ -466,14 +505,18 @@ contract Staking is IStaking, ERC721, Refund, Admin {
     /// @notice Get the voting power for a specific token when staking or unstaking
     /// @param _tokenId The id of the token to get voting power for
     /// @return The voting power for the token
-    /// @dev Voting power is calculated as 20 + staking bonus (0 to max staking bonus) + evil bonus (0 or 10)
+    /// @dev Voting power is calculated as baseVotes + staking bonus (0 to max staking bonus) + evil bonus (0 or 10)
     function getTokenVotingPower(uint _tokenId) public override view returns (uint) {
-      if ( ownerOf(_tokenId) == address(0)) revert NonExistentToken();
-      // Only FrankenPunks are eligible for the evil bonus
+      if (ownerOf(_tokenId) == address(0)) revert NonExistentToken();
+
+      uint secondsStaked = (unlockTime[_tokenId] - lockedTime[_tokenId]);
+      uint fullStakingBonus = (secondsStaked * stakingSettings.maxStakeBonusAmount) / stakingSettings.maxStakeBonusTime;
+      
       if (_tokenId < 10000) {
-        return 20 + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
+        return baseVotes + fullStakingBonus + evilBonus(_tokenId);
       } else {
-        return 10 + stakedTimeBonus[_tokenId];
+        // FrankenMonsters are not eligible for the evil bonus
+        return (baseVotes + fullStakingBonus) / 2;
       }
     }
 
@@ -489,10 +532,8 @@ contract Staking is IStaking, ERC721, Refund, Admin {
       if (_voter == address(type(uint160).max)) {
         (votes, proposalsCreated, proposalsPassed) = governance.totalCommunityScoreData();
       } else {
-        // If a user no longer has any staked tokens, they forfeit their community voting power 
-        if (balanceOf(_voter) == 0) return 0;
-        // If a user delegates their votes, they forfeit their community voting power
-        if (getDelegate(_voter) != _voter) return 0;
+        // This is only the case if they are delegated or unstaked, both of which should zero out the result
+        if (tokenVotingPower[_voter] == 0) return 0;
 
         (votes, proposalsCreated, proposalsPassed) = governance.userCommunityScoreData(_voter);
       }
@@ -565,15 +606,17 @@ contract Staking is IStaking, ERC721, Refund, Admin {
   }
 
   /// @notice Turn on or off gas refunds for staking and delegating
-  /// @param _refundStatus Are refunds on for staking, delegating, both, or neither?
-  function setRefund(RefundStatus _refundStatus) external onlyExecutor {
-    emit RefundSet(refund = _refundStatus);
+  /// @param _stakingRefund Should refunds for staking be on (true) or off (false)?
+  /// @param _delegatingRefund Should refunds for delegating be on (true) or off (false)?
+  function setRefunds(bool _stakingRefund, bool _delegatingRefund) external onlyExecutor {
+    stakingRefund = _stakingRefund;
+    delegatingRefund = _delegatingRefund;
   }
 
   /// @notice Pause or unpause staking
   /// @param _paused Whether staking should be paused or not
   /// @dev This will be used to open and close staking windows to incentivize participation
-  function setPause(bool _paused) external onlyAdmins {
+  function setPause(bool _paused) external onlyPauser {
     emit StakingPause(paused = _paused);
   }
 

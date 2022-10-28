@@ -31,17 +31,16 @@ contract StakingParametersTest is StakingBase {
 
         uint TOKEN_ID_1 = 0;
         address owner1 = mockStakeSingle(TOKEN_ID_1, block.timestamp + maxStakeBonusTime);
-        uint o1bonus = staking.stakedTimeBonus(TOKEN_ID_1);
-        assert(o1bonus == maxStakeBonusAmount);
+        uint o1Power = staking.getTokenVotingPower(TOKEN_ID_1);
+        assert(o1Power == staking.baseVotes() + maxStakeBonusAmount + staking.evilBonus(TOKEN_ID_1));
         
         vm.prank(address(executor));
         staking.changeStakeTime(uint128(maxStakeBonusTime + 1 weeks));
 
         uint TOKEN_ID_2 = 10;
         address owner2 = mockStakeSingle(TOKEN_ID_2, block.timestamp + maxStakeBonusTime);
-        uint o2bonus = staking.stakedTimeBonus(TOKEN_ID_2);
-
-        assert(o2bonus < o1bonus);
+        uint o2Power = staking.getTokenVotingPower(TOKEN_ID_2);
+        assert(o2Power < o1Power);
     }
 
     function testBonus__RewardsIncreaseIfMaxStakedBonusIncreases() public {
@@ -49,17 +48,16 @@ contract StakingParametersTest is StakingBase {
 
         uint TOKEN_ID_1 = 0;
         address owner1 = mockStakeSingle(TOKEN_ID_1, block.timestamp + maxStakeBonusTime);
-        uint o1bonus = staking.stakedTimeBonus(TOKEN_ID_1);
-        assert(o1bonus == maxStakeBonusAmount);
+        uint o1Power = staking.getTokenVotingPower(TOKEN_ID_1);
+        assert(o1Power == staking.baseVotes() + maxStakeBonusAmount + staking.evilBonus(TOKEN_ID_1));
         
         vm.prank(address(executor));
         staking.changeStakeAmount(uint128(maxStakeBonusAmount + 1));
 
         uint TOKEN_ID_2 = 10;
         address owner2 = mockStakeSingle(TOKEN_ID_2, block.timestamp + maxStakeBonusTime);
-        uint o2bonus = staking.stakedTimeBonus(TOKEN_ID_2);
-
-        assert(o2bonus > o1bonus);
+        uint o2Power = staking.getTokenVotingPower(TOKEN_ID_1);
+        assert(o2Power > o1Power);
     }
 
     function testBonus__MaxStakedBonusIncreaseTranslatesToVotingPower() public {

@@ -127,7 +127,7 @@ contract CommunityPowerTests is GovernanceBase {
     }
 
     // Test that updating community multiplers adjusts community voting power as expected.
-    function testCommunityPower__UpdatingMultipliersAdjustsCommunityPower() public {
+    function testCommunityVP__UpdatingMultipliersAdjustsCommunityPower() public {
         uint proposalId = _createSuccessfulProposal();
         gov.queue(proposalId);
         vm.warp(block.timestamp + executor.DELAY());
@@ -205,6 +205,40 @@ contract CommunityPowerTests is GovernanceBase {
         proposerPower = staking.getCommunityVotingPower(proposer);
         assert(staking.getCommunityVotingPower(address(type(uint160).max)) == voterPower + proposerPower);
         vm.stopPrank();
+    }
+
+    // Test that total community power handles the situation where someone has no staked but does have delegated.
+    function testCommunityPower__TotalCommunityVotingPowerTracksUnstakedDelegationCorrectly() public {
+        vm.prank(voter);
+        staking.delegate(proposer);
+        mockUnstakeSingle(PROPOSER_TOKEN_ID);
+
+        uint proposalId = _createAndVerifyProposal();
+        vm.warp(block.timestamp + gov.votingDelay());
+        _vote(proposalId, 1, false);
+        vm.warp(block.timestamp + gov.votingPeriod() + 1);
+        gov.queue(proposalId);
+        vm.warp(block.timestamp + executor.DELAY());
+        gov.execute(proposalId);
+
+        uint voterPower = staking.getCommunityVotingPower(voter);
+        uint proposerPower = staking.getCommunityVotingPower(proposer);
+        assert(voterPower == 0);
+        assert(proposerPower == (votesMultiplier + proposalsCreatedMultiplier + proposalsPassedMultiplier) / 100);
+        assert(staking.getCommunityVotingPower(address(type(uint160).max)) == voterPower + proposerPower);
+
+        vm.warp(block.timestamp + 4 weeks);
+        uint[] memory tokenIds = new uint[](3);
+        for (uint i = 0; i < 3; i++) {
+            tokenIds[i] = VOTER_TOKEN_IDS[i];
+            mockUnstakeSingle(tokenIds[i]);
+        }
+
+        voterPower = staking.getCommunityVotingPower(voter);
+        proposerPower = staking.getCommunityVotingPower(proposer);
+        assert(voterPower == 0);
+        assert(proposerPower == 0);
+        assert(staking.getCommunityVotingPower(address(type(uint160).max)) == voterPower + proposerPower);
     }
 }
 

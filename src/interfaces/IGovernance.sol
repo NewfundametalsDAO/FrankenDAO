@@ -270,7 +270,7 @@ interface IGovernance {
     // function renounceRole(bytes32 role, address account) external;
     // function revokeRole(bytes32 role, address account) external;
     // function setProposalRefund(bool _proposing) external;
-    function setRefund(RefundStatus _refund) external;
+    function setRefunds(bool, bool) external;
     // function setVotingRefund(bool _voting) external;
     // function staking() external view returns (address);
     // function state(uint256 proposalId) external view returns (uint8);

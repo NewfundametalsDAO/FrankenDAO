@@ -5,9 +5,9 @@ import "./interfaces/IGovernance.sol";
 import "./interfaces/IExecutor.sol";
 import "./interfaces/IStaking.sol";
 import "./utils/Admin.sol";
-import "./utils/Refund.sol";
+import "./utils/Refundable.sol";
 
-contract Governance is IGovernance, Admin, Refund {
+contract Governance is IGovernance, Admin, Refundable {
     bool public initialized;
 
     /// @notice The name of this contract
@@ -62,8 +62,6 @@ contract Governance is IGovernance, Admin, Refund {
 
     /// @notice The basis point number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed. *DIFFERS from GovernerBravo
     uint256 public quorumVotesBPS;
-
-    RefundStatus public refund;
 
     /// @notice Whether or not gas is refunded for casting votes.
     bool public votingRefund;
@@ -257,26 +255,16 @@ contract Governance is IGovernance, Admin, Refund {
         bytes[] memory _calldatas,
         string memory _description
     ) public returns (uint256) {
-        uint256 proposalId = _propose(_targets, _values, _signatures,
-                                      _calldatas, _description);
-        return proposalId;
-    }
+        uint proposalId;
 
-    function proposeWithRefund(
-        address[] memory _targets,
-        uint256[] memory _values,
-        string[] memory _signatures,
-        bytes[] memory _calldatas,
-        string memory _description
-    ) public refundable returns (uint256) {
-        if(refund != RefundStatus.ProposalRefund && refund != RefundStatus.VotingAndProposalRefund) revert NotRefundable();
-        uint256 proposalId = _propose(
-            _targets,
-            _values,
-            _signatures,
-            _calldatas,
-            _description
-        );
+        // Refunds gas if proposalRefund is true
+        if (proposalRefund) {
+            uint256 startGas = gasleft();
+            proposalId = _propose(_targets, _values, _signatures, _calldatas, _description);
+            _refundGas(startGas);
+        } else {
+            proposalId = _propose(_targets, _values, _signatures, _calldatas, _description);
+        }
         return proposalId;
     }
 
@@ -491,33 +479,18 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _support The support value for the vote. 0=against, 1=for, 2=abstain
      */
     function castVote(uint256 _proposalId, uint8 _support) external {
-        emit VoteCast( 
-            msg.sender, _proposalId, _support, castVoteInternal(msg.sender,
-                                                                _proposalId, _support) 
-        );
-    }
+        uint votes;
 
-    /**
-     * @notice Cast a vote for a proposal, asking the DAO to refund gas costs.
-     * Users with > 0 votes receive refunds. Refunds are partial when using a gas priority fee higher than the DAO's cap.
-     * Refunds are partial when the DAO's balance is insufficient.
-     * No refund is sent when the DAO's balance is empty. No refund is sent to users with no votes.
-     * Voting takes place regardless of refund success.
-     * @param _proposalId The id of the proposal to vote on
-     * @param _support The support value for the vote. 0=against, 1=for, 2=abstain
-     * @dev Reentrancy is defended against in `castVoteInternal` at the `receipt.hasVoted == false` require statement.
-     */
-    function castVoteWithRefund(uint256 _proposalId, uint8 _support)
-        external
-        refundable
-    {
-        if (refund != RefundStatus.VotingRefund && refund != RefundStatus.VotingAndProposalRefund) revert NotRefundable();
-        emit VoteCast(
-            msg.sender,
-            _proposalId,
-            _support,
-            castVoteInternal(msg.sender, _proposalId, _support)
-        );
+        // Refunds gas if proposalRefund is true
+        if (votingRefund) {
+            uint256 startGas = gasleft();
+            votes = _castVote(msg.sender, _proposalId, _support);
+            emit VoteCast( msg.sender, _proposalId, _support, votes);
+            _refundGas(startGas);
+        } else {
+            votes = _castVote(msg.sender, _proposalId, _support);
+            emit VoteCast( msg.sender, _proposalId, _support, votes);
+        }
     }
 
     /**
@@ -527,7 +500,7 @@ contract Governance is IGovernance, Admin, Refund {
      * @param _support The support value for the vote. 0=against, 1=for, 2=abstain
      * @return The number of votes cast
      */
-    function castVoteInternal(address _voter, uint256 _proposalId, uint8 _support) internal returns (uint) {
+    function _castVote(address _voter, uint256 _proposalId, uint8 _support) internal returns (uint) {
         if (state(_proposalId) != ProposalState.Active) revert InvalidStatus();
         if (_support > 2) revert InvalidInput();
 
@@ -590,13 +563,13 @@ contract Governance is IGovernance, Admin, Refund {
     ///////////////
     //// Admin ////
     ///////////////
-    /**
-     * @notice Admin function for setting turning gas refunds
-     * on voting on and official
-     * @param _refundStatus RefundStatus value
-     */
-    function setRefund(RefundStatus _refundStatus) external onlyExecutor {
-        emit RefundSet(refund = _refundStatus);
+
+    /// @notice Turn on or off gas refunds for proposing and voting
+    /// @param _votingRefund Should refunds for voting be on (true) or off (false)?
+    /// @param _proposalRefund Should refunds for proposing be on (true) or off (false)?
+    function setRefunds(bool _votingRefund, bool _proposalRefund) external onlyExecutor {
+        votingRefund = _votingRefund;
+        proposalRefund = _proposalRefund;
     }
 
     /**

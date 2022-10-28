@@ -9,8 +9,6 @@ import { Executor } from "src/Executor.sol";
 import { Staking } from "src/Staking.sol";
 import { Governance } from "src/Governance.sol";
 
-import {ERC721} from "oz/token/ERC721/ERC721.sol";
-
 contract DeployScript is Script {
     Executor executor;
     Staking staking;
@@ -55,11 +53,13 @@ contract DeployScript is Script {
             address(executor),
             FOUNDER_MULTISIG,
             COUNCIL_MULTISIG,
+            20, // baseVotes
             4 weeks, // maxStakeBonusTime
             20, // maxStakeBonusAmount
             100, // votesMultiplier
             200, // proposalsCreatedMultiplier
-            200 // proposalsPassedMultiplier
+            200, // proposalsPassedMultiplier,
+            50 // monsterMultiplier
         );
 
         // create governance and initialize impl to avoid hacks

@@ -44,13 +44,13 @@ contract TestBase is Test, DeployScript {
         vm.deal(address( gov ), 10 ether);
     }
 
-    function setGovernanceRefundStatus(IGovernance.RefundStatus _status) internal {
-        vm.prank(address(executor));
-        gov.setRefund(_status);
-    }
+    // function setGovernanceRefundStatus(IGovernance.RefundStatus _status) internal {
+    //     vm.prank(address(executor));
+    //     gov.setRefund(_status);
+    // }
 
-    function setStakingRefundStatus(IStaking.RefundStatus _status) internal {
-        vm.prank(address(executor));
-        staking.setRefund(_status);
-    }
+    // function setStakingRefundStatus(IStaking.RefundStatus _status) internal {
+    //     vm.prank(address(executor));
+    //     staking.setRefund(_status);
+    // }
 }

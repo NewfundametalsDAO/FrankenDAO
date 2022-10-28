@@ -1,93 +1,76 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "oz/proxy/ERC1967/ERC1967Proxy.sol";
+import "@openzeppelin/proxy/ERC1967/ERC1967Proxy.sol";
 
-// This contract is similar to OZ's TransparentUpgradeableProxy, but it allows:
-// - Admin to access the fallback function (so that Executor can call implementation functions)
-// - ifAdmin modifier to onlyAdmin, reverting vs fallback if non admin calls a proxy function
-// - Non admin to access proxy view functions (admin() and implementation())
-
+/// @title FrankenDAO Governance Proxy
+/// @author Zach Obront & Zakk Fleischmann
+/** @dev This contract is similar to OZ's TransparentUpgradeableProxy, but it:
+- allows Admin to access the fallback function (so that Executor can call implementation functions)
+- changes ifAdmin modifier to onlyAdmin, reverting vs fallback if non admin calls a proxy function
+- gives non admin ability to access proxy view functions: admin() and implementation() */
 contract GovernanceProxy is ERC1967Proxy {
-    /**
-     * @dev Initializes an upgradeable proxy managed by `_admin`, backed by the implementation at `_logic`, and
-     * optionally initialized with `_data` as explained in {ERC1967Proxy-constructor}.
-     */
-    constructor ( 
-        address _logic, address admin_, bytes memory _data 
-    ) payable ERC1967Proxy(_logic, _data) {
+
+    /////////////////////////////
+    //////// CONSTRUCTOR ////////
+    /////////////////////////////
+
+    /// @notice Initializes an upgradeable proxy
+    /// @param _logic Implementation contract the proxy will fall back to
+    /// @param admin_ Address that has access to write functions on the proxy contract
+    /// @param _data Calldata that will be used to initialize the contract
+    constructor (address _logic, address admin_, bytes memory _data) payable ERC1967Proxy(_logic, _data) {
         _changeAdmin(admin_);
     }
 
-    /**
-     * @dev Modifier used internally that will delegate the call to the implementation unless the sender is the admin.
-     */
+    /////////////////////////////
+    ///////// MODIFIERS /////////
+    /////////////////////////////
+
+    /// @notice Modifier used to protect admin functions on this proxy contract
     modifier onlyAdmin() {
         require(msg.sender == _getAdmin(), 'only admin');
         _;
     }
+    
+    /////////////////////////////
+    /////// VIEW FUNCTIONS //////
+    /////////////////////////////
 
-    /**
-     * @dev Returns the current admin.
-     *
-     * NOTE: Only the admin can call this function. See {ProxyAdmin-getProxyAdmin}.
-     *
-     * TIP: To get this value clients can read directly from the storage slot shown below (specified by EIP1967) using the
-     * https://eth.wiki/json-rpc/API#eth_getstorageat[`eth_getStorageAt`] RPC call.
-     * `0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103`
-     */
+    /// @notice Returns the current admin.
+    /** @dev TIP: To get this value clients can read directly from the storage slot shown below (specified by EIP1967) using the
+    eth_getStorageAt RPC call: `0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103` */
     function admin() external view returns (address admin_) {
         admin_ = _getAdmin();
     }
 
-    /**
-     * @dev Returns the current implementation.
-     *
-     * NOTE: Only the admin can call this function. See {ProxyAdmin-getProxyImplementation}.
-     *
-     * TIP: To get this value clients can read directly from the storage slot shown below (specified by EIP1967) using the
-     * https://eth.wiki/json-rpc/API#eth_getstorageat[`eth_getStorageAt`] RPC call.
-     * `0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc`
-     */
+    /// @notice Returns the current implementation.
+    /** @dev TIP: To get this value clients can read directly from the storage slot shown below (specified by EIP1967) using the
+    eth_getStorageAt RPC call: `0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc` */
     function implementation() external view returns (address implementation_) {
         implementation_ = _implementation();
     }
 
-    /**
-     * @dev Changes the admin of the proxy.
-     *
-     * Emits an {AdminChanged} event.
-     *
-     * NOTE: Only the admin can call this function. See {ProxyAdmin-changeProxyAdmin}.
-     */
+    /////////////////////////////
+    ////// ADMIN FUNCTIONS //////
+    /////////////////////////////
+
+    /// @notice Changes the admin of the proxy.
+    /// @param newAdmin Address of the new admin
     function changeAdmin(address newAdmin) external virtual onlyAdmin {
         _changeAdmin(newAdmin);
     }
 
-    /**
-     * @dev Upgrade the implementation of the proxy.
-     *
-     * NOTE: Only the admin can call this function. See {ProxyAdmin-upgrade}.
-     */
+    /// @notice Upgrades the implementation of the proxy.
+    /// @param newImplementation Address of the new implementation
     function upgradeTo(address newImplementation) external onlyAdmin {
         _upgradeToAndCall(newImplementation, bytes(""), false);
     }
 
-    /**
-     * @dev Upgrade the implementation of the proxy, and then call a function from the new implementation as specified
-     * by `data`, which should be an encoded function call. This is useful to initialize new storage variables in the
-     * proxied contract.
-     *
-     * NOTE: Only the admin can call this function. See {ProxyAdmin-upgradeAndCall}.
-     */
+    /// @notice Upgrades the implementation of the proxy and calls the new implementation with the provided data.
+    /// @param newImplementation Address of the new implementation
+    /// @param data Data to send as msg.data in the low level call. This should be encoded calldata for a function call to the new implementation.
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable onlyAdmin {
         _upgradeToAndCall(newImplementation, data, true);
-    }
-
-    /**
-     * @dev Returns the current admin.
-     */
-    function _admin() internal view virtual returns (address) {
-        return _getAdmin();
     }
 }
