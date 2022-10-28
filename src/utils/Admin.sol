@@ -45,9 +45,9 @@ abstract contract Admin is IAdmin {
         _;
     }
 
-    /// @notice Modifier for functions that can only be called by the Pauser
-    modifier onlyPauser() {
-        if(msg.sender != pauser) revert Unauthorized();
+    /// @notice Modifier for functions that can only be called by the Pauser or either multisig
+    modifier onlyPauserOrAdmins() {
+        if(msg.sender != founders && msg.sender != council && msg.sender != pauser) revert Unauthorized();
         _;
     }
 

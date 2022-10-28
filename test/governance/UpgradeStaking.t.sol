@@ -14,7 +14,8 @@ contract UpgradeStakingTests is GovernanceBase {
             address(executor),
             FOUNDER_MULTISIG,
             COUNCIL_MULTISIG,
-            20, 4 weeks, 20, 100, 200, 200, 50
+            4 weeks, 20, 100, 200, 200, 
+            50
         ));
 
         uint proposalId = _passCustomProposal("setStakingAddress(address)", abi.encode(fakeStaking));

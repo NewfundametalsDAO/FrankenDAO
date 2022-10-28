@@ -60,9 +60,9 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice Base votes for holding a Frankenpunk token
   uint public baseVotes;
 
-  /// @notice The time that the tokens were locked (tokenId => timestampe)
-  /// @dev This remains at 0 if tokens are staked without locking (ie unlockTime == 0), as there's no need to track it
-  mapping(uint256 => uint256) public lockedTime;
+  /// @notice The staked time bonus for each staked token (tokenId => bonus votes)
+  /// @dev This needs to be tracked because users will select how much time to lock for, so bonus is variable
+  mapping(uint => uint) stakedTimeBonus; 
   
   /// @notice The allowed unlock time for each staked token (tokenId => timestamp)
   /// @dev This remains at 0 if tokens are staked without locking
@@ -170,7 +170,6 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @param _executor The address of the DAO executor contract
   /// @param _founders The address of the founder multisig for restricted functions
   /// @param _council The address of the council multisig for restricted functions
-  /// @param _baseVotes The base number of votes a user receives for holding 1 token (no lock, no evil bonus)
   /// @param _maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
   /// @param _maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
   /// @param _votesMultiplier The multiplier for extra voting power earned per DAO vote cast
@@ -184,7 +183,6 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     address _executor, 
     address _founders,
     address _council,
-    uint _baseVotes,
     uint _maxStakeBonusTime, 
     uint _maxStakeBonusAmount,
     uint _votesMultiplier, 
@@ -192,18 +190,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     uint _executedMultiplier,
     uint _monsterMultiplier
   ) ERC721("Staked FrankenPunks", "sFP") {
-    // @todo decide: should we get rid of all of this?
-    // if(_frankenpunks == address(0)) revert ZeroAddress();
-    // if(_frankenmonsters == address(0)) revert ZeroAddress();
-    // if(_governance == address(0)) revert ZeroAddress();
-    // if(_executor == address(0)) revert ZeroAddress();
-    // if(_founders == address(0)) revert ZeroAddress();
-    // if(_council == address(0)) revert ZeroAddress();
-    // if(_maxStakeBonusTime == 0) revert InvalidParameter();
-    // if(_maxStakeBonusAmount == 0) revert InvalidParameter();
-    // if(_votesMultiplier == 0) revert InvalidParameter();
-    // if(_proposalsMultiplier == 0) revert InvalidParameter();
-    // if(_executedMultiplier == 0) revert InvalidParameter();
+    if(_maxStakeBonusTime == 0) revert InvalidParameter();
 
     frankenpunks = IERC721(_frankenpunks);
     frankenmonsters = IERC721(_frankenmonsters);
@@ -213,8 +200,8 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     founders = _founders;
     council = _council;
 
-    baseVotes = _baseVotes; // 20
     monsterMultiplier = _monsterMultiplier; // 50
+    baseVotes = 20;
 
     stakingSettings = StakingSettings({
       maxStakeBonusTime: _maxStakeBonusTime.toUint128(), // 4 weeks
@@ -392,17 +379,18 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   function _stakeToken(uint _tokenId, uint _unlockTime) internal returns (uint) {
     if (_unlockTime > 0) {
       unlockTime[_tokenId] = _unlockTime;
-      lockedTime[_tokenId] = block.timestamp;
+      uint fullStakedTimeBonus = ((_unlockTime - block.timestamp) * stakingSettings.maxStakeBonusAmount) / stakingSettings.maxStakeBonusTime;
+      stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : fullStakedTimeBonus / 2;
     }
 
     // Transfer the underlying token from the owner to this contract
     IERC721 collection;
     if (_tokenId < 10000) {
       collection = frankenpunks;
-      ++stakedFrankenPunks;
+      stakedFrankenPunks++;
     } else {
       collection = frankenmonsters;
-      ++stakedFrankenMonsters;
+      stakedFrankenMonsters++;
     }
 
     address owner = collection.ownerOf(_tokenId);
@@ -484,7 +472,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
 
     if (unlockTime[_tokenId] > 0) {
       delete unlockTime[_tokenId];
-      delete lockedTime[_tokenId];
+      delete stakedTimeBonus[_tokenId];
     }
 
     return lostVotingPower;
@@ -509,15 +497,11 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     function getTokenVotingPower(uint _tokenId) public override view returns (uint) {
       if (ownerOf(_tokenId) == address(0)) revert NonExistentToken();
 
-      uint secondsStaked = (unlockTime[_tokenId] - lockedTime[_tokenId]);
-      uint fullStakingBonus = (secondsStaked * stakingSettings.maxStakeBonusAmount) / stakingSettings.maxStakeBonusTime;
+      // If tokenId < 10000, it's a FrankenPunk, so 100/100 = a multiplier of 1
+      uint multiplier = _tokenId < 10_000 ? 100 : monsterMultiplier;
       
-      if (_tokenId < 10000) {
-        return baseVotes + fullStakingBonus + evilBonus(_tokenId);
-      } else {
-        // FrankenMonsters are not eligible for the evil bonus
-        return (baseVotes + fullStakingBonus) / 2;
-      }
+      // evilBonus will return 0 for all FrankenMonsters, as they are not eligible for the evil bonus
+      return ((baseVotes * multiplier) / PERCENT) + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
     }
 
     /// @notice Get the community voting power for a given user
@@ -574,6 +558,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @param _newMaxStakeBonusTime The new max staking time
   /// @dev This function can only be called by the executor based on a governance proposal
   function changeStakeTime(uint128 _newMaxStakeBonusTime) external onlyExecutor {
+    if (_newMaxStakeBonusTime == 0) revert InvalidParameter();
     stakingSettings.maxStakeBonusTime = _newMaxStakeBonusTime;
   }
 
@@ -604,6 +589,21 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   function setProposalsPassedMultiplier(uint64 _proposalsPassedMultiplier) external onlyExecutor {
     communityPowerMultipliers.proposalsPassed = _proposalsPassedMultiplier;
   }
+  
+  /// @notice Set the base votes for 1 staked token
+  /// @param _baseVotes The number of base votes every staked token will earn (before locking, bonuses, etc)
+  /// @dev This function can only be called by the executor based on a governance proposal
+  function setBaseVotes(uint _baseVotes) external onlyExecutor {
+    baseVotes = _baseVotes;
+  }
+
+  /// @notice Set the FrankenMonster multiplier
+  /// @param _monsterMultiplier The new multiplier for voting power for a FrankenMonster vs a FrankenPunk
+  /// @dev This value is a percent, so will be divided by 100 when calculating voting power
+  /// @dev This function can only be called by the executor based on a governance proposal
+  function setMonsterMultiplier(uint _monsterMultiplier) external onlyExecutor {
+    monsterMultiplier = _monsterMultiplier;
+  }
 
   /// @notice Turn on or off gas refunds for staking and delegating
   /// @param _stakingRefund Should refunds for staking be on (true) or off (false)?
@@ -616,7 +616,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice Pause or unpause staking
   /// @param _paused Whether staking should be paused or not
   /// @dev This will be used to open and close staking windows to incentivize participation
-  function setPause(bool _paused) external onlyPauser {
+  function setPause(bool _paused) external onlyPauserOrAdmins {
     emit StakingPause(paused = _paused);
   }
 

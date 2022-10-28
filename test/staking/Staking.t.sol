@@ -41,7 +41,7 @@ contract StakingTest is StakingBase {
         vm.startPrank(owner);
 
         //expect revert
-        vm.expectRevert("staked tokens cannot be transferred");
+        vm.expectRevert(StakedTokensCannotBeTransferred.selector);
         //transfer staked token
         staking.transferFrom(owner, other, _id);
     }

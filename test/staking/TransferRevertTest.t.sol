@@ -9,21 +9,21 @@ contract TransferRevertTest is StakingBase {
     function testTransferFromReverts() public {       
         address owner = mockStakeSingle(ID);
         vm.prank(owner);
-        vm.expectRevert("staked tokens cannot be transferred");
+        vm.expectRevert(StakedTokensCannotBeTransferred.selector);
         staking.transferFrom(owner, address(1), ID);
     }
 
     function testSafeTransferFromReverts() public {
         address owner = mockStakeSingle(ID);
         vm.prank(owner);
-        vm.expectRevert("staked tokens cannot be transferred");
+        vm.expectRevert(StakedTokensCannotBeTransferred.selector);
         staking.safeTransferFrom(owner, address(1), ID);
     }
 
     function testSafeTransferFromWithBytesReverts() public {
         address owner = mockStakeSingle(ID);
         vm.prank(owner);
-        vm.expectRevert("staked tokens cannot be transferred");
+        vm.expectRevert(StakedTokensCannotBeTransferred.selector);
         staking.safeTransferFrom(owner, address(1), ID, bytes(""));
     }
 }

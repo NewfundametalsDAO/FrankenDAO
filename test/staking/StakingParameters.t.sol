@@ -52,11 +52,11 @@ contract StakingParametersTest is StakingBase {
         assert(o1Power == staking.baseVotes() + maxStakeBonusAmount + staking.evilBonus(TOKEN_ID_1));
         
         vm.prank(address(executor));
-        staking.changeStakeAmount(uint128(maxStakeBonusAmount + 1));
+        staking.changeStakeAmount(uint128(maxStakeBonusAmount + 10));
 
         uint TOKEN_ID_2 = 10;
         address owner2 = mockStakeSingle(TOKEN_ID_2, block.timestamp + maxStakeBonusTime);
-        uint o2Power = staking.getTokenVotingPower(TOKEN_ID_1);
+        uint o2Power = staking.getTokenVotingPower(TOKEN_ID_2);
         assert(o2Power > o1Power);
     }
 

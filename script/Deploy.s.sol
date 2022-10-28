@@ -53,7 +53,6 @@ contract DeployScript is Script {
             address(executor),
             FOUNDER_MULTISIG,
             COUNCIL_MULTISIG,
-            20, // baseVotes
             4 weeks, // maxStakeBonusTime
             20, // maxStakeBonusAmount
             100, // votesMultiplier
