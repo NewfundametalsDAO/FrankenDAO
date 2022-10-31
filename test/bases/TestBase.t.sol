@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { DeployScript } from "../script/Deploy.s.sol";
 import { Test } from "forge-std/Test.sol";
-import { IGovernance } from "../src/interfaces/IGovernance.sol";
-import { IStaking } from "../src/interfaces/IStaking.sol";
+
+import { DeployScript } from "../../script/Deploy.s.sol";
+
+import { IGovernance } from "../../src/interfaces/IGovernance.sol";
+import { IStaking } from "../../src/interfaces/IStaking.sol";
 
 contract TestBase is Test, DeployScript {
     // Errors
@@ -13,7 +15,6 @@ contract TestBase is Test, DeployScript {
     error Paused();
     error InvalidParameter();
     error TokenLocked();
-    error ZeroAddress();
     error AlreadyInitialized();
     error ParameterOutOfBounds();
     error InvalidId();

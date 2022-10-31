@@ -8,10 +8,8 @@ import "./utils/Admin.sol";
 import "./utils/Refundable.sol";
 
 contract Governance is IGovernance, Admin, Refundable {
-    bool public initialized;
-
     /// @notice The name of this contract
-    string public constant name = "Franken DAO";
+    string public constant name = "FrankenDAO";
 
     /// @notice The address of staked the Franken tokens
     IStaking public staking;
@@ -20,28 +18,36 @@ contract Governance is IGovernance, Admin, Refundable {
     //// Voting Constants ////
     //////////////////////////
 
-    /// @notice The minimum setable proposal threshold
-    uint256 public constant MIN_PROPOSAL_THRESHOLD_BPS = 1; // 1 basis point or 0.01%
-
-    /// @notice The maximum setable proposal threshold
-    uint256 public constant MAX_PROPOSAL_THRESHOLD_BPS = 1_000; // 1,000 basis points or 10%
-
-    /// @notice The minimum setable voting period
-    uint256 public constant MIN_VOTING_PERIOD = 1 days; 
-
-    /// @notice The max setable voting period
-    uint256 public constant MAX_VOTING_PERIOD = 14 days;
-
-    /// @notice The min setable voting delay
+    /// @notice The min setable voting delay 
+    /// @dev votingDelay is the time between a proposal being created and voting opening
     uint256 public constant MIN_VOTING_DELAY = 1 hours;
 
     /// @notice The max setable voting delay
+    /// @dev votingDelay is the time between a proposal being created and voting opening
     uint256 public constant MAX_VOTING_DELAY = 1 weeks;
 
+    /// @notice The minimum setable voting period 
+    /// @dev votingPeriod is the time that voting is open for
+    uint256 public constant MIN_VOTING_PERIOD = 1 days; 
+
+    /// @notice The max setable voting period 
+    /// @dev votingPeriod is the time that voting is open for
+    uint256 public constant MAX_VOTING_PERIOD = 14 days;
+
+    /// @notice The minimum setable proposal threshold
+    /// @dev proposalThreshold is the minimum percentage of votes that a user must have to create a proposal
+    uint256 public constant MIN_PROPOSAL_THRESHOLD_BPS = 1; // 1 basis point or 0.01%
+
+    /// @notice The maximum setable proposal threshold
+    /// @dev proposalThreshold is the minimum percentage of votes that a user must have to create a proposal
+    uint256 public constant MAX_PROPOSAL_THRESHOLD_BPS = 1_000; // 1,000 basis points or 10%
+
     /// @notice The minimum setable quorum votes basis points
+    /// @dev quorumVotesBPS is the minimum percentage of votes that must be cast on a proposal for it to succeed
     uint256 public constant MIN_QUORUM_VOTES_BPS = 200; // 200 basis points or 2%
 
     /// @notice The maximum setable quorum votes basis points
+    /// @dev quorumVotesBPS is the minimum percentage of votes that must be cast on a proposal for it to succeed
     uint256 public constant MAX_QUORUM_VOTES_BPS = 2_000; // 2,000 basis points or 20%
 
     /// @notice The maximum number of actions that can be included in a proposal
@@ -79,6 +85,8 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @notice The official record of all proposals ever proposed
     mapping(uint256 => Proposal) public proposals;
 
+    /// @notice Propsals that are currently verified, but have not been canceled, vetoed, or queued
+    // @todo fill in when clear: The admins will cancel defeated proposals on a regular basis to clear them out and keep gas costs low
     uint256[] public activeProposals;
 
     /// @notice The latest proposal for each proposer
@@ -109,30 +117,25 @@ contract Governance is IGovernance, Admin, Refundable {
         uint256 _votingDelay,
         uint256 _proposalThresholdBPS,
         uint256 _quorumVotesBPS
-    ) public virtual {
-        if (initialized) revert AlreadyInitialized();
-        if(_staking == address(0)) revert ZeroAddress();
-        if (_votingPeriod < MIN_VOTING_PERIOD || _votingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds();
+    ) public {
+        // Check whether this contract has already been initialized.
+        if (address(executor) != address(0)) revert AlreadyInitialized();
+        if (address(_executor) == address(0)) revert ZeroAddress();
+
         if (_votingDelay < MIN_VOTING_DELAY || _votingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
+        if (_votingPeriod < MIN_VOTING_PERIOD || _votingPeriod > MAX_VOTING_PERIOD) revert ParameterOutOfBounds();
         if (_proposalThresholdBPS < MIN_PROPOSAL_THRESHOLD_BPS || _proposalThresholdBPS > MAX_PROPOSAL_THRESHOLD_BPS) revert ParameterOutOfBounds();
         if (_quorumVotesBPS < MIN_QUORUM_VOTES_BPS || _quorumVotesBPS > MAX_QUORUM_VOTES_BPS) revert ParameterOutOfBounds();
 
         executor = IExecutor(_executor);
         founders = _founders;
         council = _council;
-
         staking = IStaking(_staking);
-        votingPeriod = _votingPeriod;
-        votingDelay = _votingDelay;
-        proposalThresholdBPS = _proposalThresholdBPS;
-        quorumVotesBPS = _quorumVotesBPS;
 
-        initialized = true;
-
-        emit VotingPeriodSet(votingPeriod, _votingPeriod);
-        emit VotingDelaySet(votingDelay, _votingDelay);
-        emit ProposalThresholdBPSSet( proposalThresholdBPS, _proposalThresholdBPS );
-        emit QuorumVotesBPSSet(quorumVotesBPS, _quorumVotesBPS);
+        emit VotingDelaySet(0, votingDelay = _votingDelay);
+        emit VotingPeriodSet(0, votingPeriod = _votingPeriod);
+        emit ProposalThresholdBPSSet(0, proposalThresholdBPS = _proposalThresholdBPS);
+        emit QuorumVotesBPSSet(0, quorumVotesBPS = _quorumVotesBPS);
     }
 
     ///////////////
@@ -231,10 +234,6 @@ contract Governance is IGovernance, Admin, Refundable {
         return bps2Uint(quorumVotesBPS, staking.getTotalVotingPower());
     }
 
-    function bps2Uint(uint256 _bps, uint256 _number) internal pure returns (uint256) {
-        return (_number * _bps) / 10000;
-    }
-
     ///////////////////
     //// Proposals ////
     ///////////////////
@@ -279,11 +278,11 @@ contract Governance is IGovernance, Admin, Refundable {
 
         temp.totalSupply = staking.getTotalVotingPower();
         temp.proposalThreshold = bps2Uint(proposalThresholdBPS, temp.totalSupply);
-        if(staking.getVotes(msg.sender) < temp.proposalThreshold) revert NotEligible();
 
+        if (staking.getVotes(msg.sender) < temp.proposalThreshold) revert NotEligible();
         if (_targets.length == 0) revert InvalidProposal();
-        if(_targets.length > PROPOSAL_MAX_OPERATIONS) revert InvalidProposal();
-        if(
+        if (_targets.length > PROPOSAL_MAX_OPERATIONS) revert InvalidProposal();
+        if (
             _targets.length != _values.length ||
             _targets.length != _signatures.length ||
             _targets.length != _calldatas.length
@@ -292,11 +291,11 @@ contract Governance is IGovernance, Admin, Refundable {
         temp.latestProposalId = latestProposalIds[msg.sender];
         if (temp.latestProposalId != 0) {
             ProposalState proposersLatestProposalState = state(temp.latestProposalId);
-            if ( proposersLatestProposalState == ProposalState.Active || proposersLatestProposalState == ProposalState.Pending ) revert NotEligible();
+            if (
+                proposersLatestProposalState == ProposalState.Active || 
+                proposersLatestProposalState == ProposalState.Pending
+            ) revert NotEligible();
         }
-
-        temp.startTime = block.timestamp + votingDelay;
-        temp.endTime = temp.startTime + votingPeriod;
 
         Proposal storage newProposal = proposals[++proposalCount];
 
@@ -309,8 +308,8 @@ contract Governance is IGovernance, Admin, Refundable {
         newProposal.values = _values;
         newProposal.signatures = _signatures;
         newProposal.calldatas = _calldatas;
-        newProposal.startTime = temp.startTime;
-        newProposal.endTime = temp.endTime;
+        newProposal.startTime = block.timestamp + votingDelay;
+        newProposal.endTime = block.timestamp + votingDelay + votingPeriod;
         newProposal.forVotes = 0;
         newProposal.againstVotes = 0;
         newProposal.abstainVotes = 0;
@@ -323,7 +322,7 @@ contract Governance is IGovernance, Admin, Refundable {
         activeProposals.push(newProposal.id);
 
         /// @notice Updated event with `proposalThreshold` and `quorumVotes`
-        emit ProposalCreatedWithRequirements(
+        emit ProposalCreated(
             newProposal.id,
             msg.sender,
             _targets,
@@ -343,12 +342,10 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @notice Function for verifying a proposal
     /// @param _proposalId Id of the proposal to verify
     function verifyProposal(uint _proposalId) external onlyAdmins {
-        // Can't verify a proposal that's been vetoed, canceled,
-        if(state(_proposalId) != ProposalState.Pending) revert InvalidStatus();
+        // Can only verify proposals that are currently in the Pending state
+        if (state(_proposalId) != ProposalState.Pending) revert InvalidStatus();
 
         Proposal storage proposal = proposals[_proposalId];
-
-        // verify proposal
         proposal.verified = true;
 
         // update community score data
@@ -367,29 +364,18 @@ contract Governance is IGovernance, Admin, Refundable {
     function queue(uint256 _proposalId) external {
         if(state(_proposalId) != ProposalState.Succeeded) revert InvalidStatus();
         Proposal storage proposal = proposals[_proposalId];
+
         uint256 eta = block.timestamp + executor.DELAY();
-        uint numTargets = proposal.targets.length;
-        for (uint256 i = 0; i < numTargets; i++) {
-            queueOrRevertInternal(
-                proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta
-            );
-        }
         proposal.eta = eta;
 
+        uint numTargets = proposal.targets.length;
+        for (uint256 i = 0; i < numTargets; i++) {
+            executor.queueTransaction(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
+        }
+        
         _removeFromActiveProposals(_proposalId);
 
         emit ProposalQueued(_proposalId, eta);
-    }
-
-    function queueOrRevertInternal(
-        address _target,
-        uint256 _value,
-        string memory _signature,
-        bytes memory _data,
-        uint256 _eta
-    ) internal {
-        if(executor.queuedTransactions(keccak256(abi.encode(_target, _value, _signature, _data, _eta)))) revert AlreadyQueued();
-        executor.queueTransaction(_target, _value, _signature, _data, _eta);
     }
 
     /**
@@ -397,7 +383,7 @@ contract Governance is IGovernance, Admin, Refundable {
      * @param _proposalId The id of the proposal to execute
      */
     function execute(uint256 _proposalId) external {
-        if(state(_proposalId) != ProposalState.Queued) revert InvalidStatus();
+        if (state(_proposalId) != ProposalState.Queued) revert InvalidStatus();
         Proposal storage proposal = proposals[_proposalId];
 
         ++userCommunityScoreData[proposal.proposer].proposalsPassed;
@@ -505,6 +491,7 @@ contract Governance is IGovernance, Admin, Refundable {
         if (_support > 2) revert InvalidInput();
 
         Proposal storage proposal = proposals[_proposalId];
+        
         Receipt storage receipt = proposal.receipts[_voter];
         if (receipt.hasVoted) revert AlreadyVoted();
 
@@ -535,6 +522,11 @@ contract Governance is IGovernance, Admin, Refundable {
     /////////////////
     //// Helpers ////
     /////////////////
+    
+    function bps2Uint(uint256 _bps, uint256 _number) internal pure returns (uint256) {
+        return (_number * _bps) / 10000;
+    }
+
     function _removeFromActiveProposals(uint256 _id) private {
         uint256 index;
         uint[] memory actives = activeProposals;
@@ -622,7 +614,7 @@ contract Governance is IGovernance, Admin, Refundable {
         emit QuorumVotesBPSSet(oldQuorumVotesBPS, quorumVotesBPS);
     }
 
-    /// @notice Executor only function to upgrade the Staking contract to a new address
+    /// @notice Upgrade the Staking contract to a new address
     /// @param _newStaking Address of the new Staking contract
     /// @dev Since upgrades are only allowed by governance, this is only callable by Executor
     function setStakingAddress(IStaking _newStaking) external onlyExecutor {

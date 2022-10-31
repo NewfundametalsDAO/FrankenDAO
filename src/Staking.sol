@@ -88,7 +88,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice The total token voting power of the system
   uint totalTokenVotingPower;
 
-  /// @notice Base token URI for the ERC721s representing the staked position
+  /// @notice Base token UR for the ERC721s representing the staked position
   string public _baseTokenURI;
 
   /// @notice The total supply of staked frankenpunks
@@ -146,14 +146,13 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /////////// MODIFIERS ///////////
   /////////////////////////////////
 
-  /// @dev To avoid needing to checkpoint voting power, tokens are locked while users have active votes cast
+  /// @dev To avoid needing to checkpoint voting power, tokens are locked while users have active votes cast or proposals open
   /// @dev If a user creates a proposal or casts a vote, this modifier prevents them from unstaking or delegating
   /// @dev Once the proposal is completed, it is removed from getActiveProposals and their tokens are unlocked
   modifier lockedWhileVotesCast() {
     uint[] memory activeProposals = governance.getActiveProposals();
     for (uint i = 0; i < activeProposals.length; i++) {
-      if (governance.getReceipt(activeProposals[i],
-                                getDelegate(msg.sender)).hasVoted) revert TokenLocked();
+      if (governance.getReceipt(activeProposals[i], getDelegate(msg.sender)).hasVoted) revert TokenLocked();
       (, address proposer,,) = governance.getProposalData(activeProposals[i]);
       if (proposer == getDelegate(msg.sender)) revert TokenLocked();
     }
@@ -297,7 +296,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     if (_delegator == _delegatee) {
       _updateTotalCommunityVotingPower(_delegator, true);
 
-    // If a user delegates away their votes, their forfeit their community voting power, so adjust totals down
+    // If a user delegates away their votes, they forfeit their community voting power, so adjust totals down
     } else if (currentDelegate == _delegator) {
       _updateTotalCommunityVotingPower(_delegator, false);
     }

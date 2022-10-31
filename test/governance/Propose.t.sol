@@ -1,6 +1,6 @@
 pragma solidity ^0.8.13;
 
-import { GovernanceBase } from "./GovernanceBase.t.sol";
+import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 
 contract ProposeTest is GovernanceBase {

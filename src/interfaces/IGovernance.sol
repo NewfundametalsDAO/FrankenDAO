@@ -26,19 +26,6 @@ interface IGovernance {
         bytes[] calldatas,
         uint256 startTime,
         uint256 endTime,
-        string description
-    );
-
-    /// @notice An event emitted when a new proposal is created, which includes additional information
-    event ProposalCreatedWithRequirements(
-        uint256 id,
-        address proposer,
-        address[] targets,
-        uint256[] values,
-        string[] signatures,
-        bytes[] calldatas,
-        uint256 startTime,
-        uint256 endTime,
         uint256 proposalThreshold,
         uint256 quorumVotes,
         string description

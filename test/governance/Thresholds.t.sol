@@ -1,6 +1,6 @@
 pragma solidity ^0.8.13;
 
-import { GovernanceBase } from "./GovernanceBase.t.sol";
+import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 
 contract ProposalThresholdTests is GovernanceBase {
     // Test that the founder multisig can change the proposal threshold.

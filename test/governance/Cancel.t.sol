@@ -1,7 +1,7 @@
 pragma solidity ^0.8.13;
 
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
-import { GovernanceBase } from "../governance/GovernanceBase.t.sol";
+import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 
 contract Cancel is GovernanceBase {
     // Test that a user can cancel their own proposal right away.

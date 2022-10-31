@@ -1,7 +1,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import { StakingBase } from "../staking/StakingBase.t.sol";
+import { StakingBase } from "./StakingBase.t.sol";
 import { IERC721 } from "../../src/interfaces/IERC721.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 

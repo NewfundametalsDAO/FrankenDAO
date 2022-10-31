@@ -1,7 +1,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import { GovernanceBase } from "./GovernanceBase.t.sol";
+import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { Staking } from "../../src/Staking.sol";
 
 contract UpgradeStakingTests is GovernanceBase {

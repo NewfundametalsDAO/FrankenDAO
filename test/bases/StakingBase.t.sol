@@ -1,6 +1,6 @@
 pragma solidity ^0.8.13;
 
-import { TestBase } from "../TestBase.t.sol";
+import { TestBase } from "./TestBase.t.sol";
 import { IERC721 } from "../../src/interfaces/IERC721.sol";
 
 contract StakingBase is TestBase {

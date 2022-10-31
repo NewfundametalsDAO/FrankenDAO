@@ -82,6 +82,17 @@ abstract contract Admin is IAdmin {
         pendingFounders = address(0);
     }
 
+    /// @notice Revokes permissions for the founder multisig
+    /// @dev Only the founders can call this, as nobody else should be able to revoke this permission
+    /// @dev Used for eventual decentralization, as otherwise founders cannot be set to address(0) because of two-step
+    /// @dev This also ensures that pendingFounders is set to address(0), to ensure they can't re-accept it later
+    function revokeFounders() external {
+        if (msg.sender != founders) revert NotAuthorized();
+        emit NewFounders(founders, address(0));
+        founders = address(0);
+        pendingFounders = address(0);
+    }
+
     /// @notice Transfers council address to a new multisig
     /// @param _newCouncil New address for council
     /// @dev This uses onlyAdmin because either the Council or the Founders can set a new Council.
@@ -91,6 +102,7 @@ abstract contract Admin is IAdmin {
     }
 
     /// @notice Accepts transfer of council rights. msg.sender must be pendingCouncil
+    /// @param _newPauser New address for pauser
     function setPauser(address _newPauser) external onlyExecutorOrAdmins {
         emit NewPauser(pauser, _newPauser);
         pauser = _newPauser;

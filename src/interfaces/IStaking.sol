@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 interface IStaking {
@@ -7,7 +8,6 @@ interface IStaking {
     error Paused();
     error InvalidParameter();
     error TokenLocked();
-    error ZeroAddress();
     error StakedTokensCannotBeTransferred();
 
     struct CommunityPowerMultipliers {

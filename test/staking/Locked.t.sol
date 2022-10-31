@@ -2,7 +2,6 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../../src/Staking.sol";
-import "../utils/mocks/Token.sol";
 
 import {GovernanceBase} from "../governance/GovernanceBase.t.sol";
 

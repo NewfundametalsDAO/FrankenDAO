@@ -61,9 +61,9 @@ contract DeployScript is Script {
             50 // monsterMultiplier
         );
 
-        // create governance and initialize impl to avoid hacks
+        // create governance 
+        // @todo no need to initialize because it's fine if someone else initializes?
         govImpl = new Governance();
-        govImpl.initialize(address(staking), address(0), address(0), address(0), 1 days, 1 days, 500, 200);
 
         // create governance proxy and initialize
         gov = Governance(address(new GovernanceProxy{salt:SALT}(FRANKENPUNKS, address(this), bytes(""))));

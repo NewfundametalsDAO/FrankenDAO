@@ -15,7 +15,6 @@ contract Executor is IExecutor {
     /////////////////////////////////
 
     constructor(address _governance) {
-        if (_governance == address(0)) revert ZeroAddress();
         governance = _governance;
     }
 
@@ -38,15 +37,14 @@ contract Executor is IExecutor {
         string memory _signature,
         bytes memory _data,
         uint256 _eta
-    ) public onlyGovernance returns (bytes32) {
+    ) public onlyGovernance returns (bytes32 txHash) {
         if (block.timestamp + DELAY > _eta) revert DelayNotSatisfied();
 
-        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
-        if(queuedTransactions[txHash]) revert IdenticalTransactionAlreadyQueued();
+        txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
+        if (queuedTransactions[txHash]) revert IdenticalTransactionAlreadyQueued();
         queuedTransactions[txHash] = true;
 
         emit QueueTransaction(txHash, _target, _value, _signature, _data, _eta);
-        return txHash;
     }
 
     function cancelTransaction(
@@ -57,6 +55,7 @@ contract Executor is IExecutor {
         uint256 eta
     ) public onlyGovernance {
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        if (!queuedTransactions[txHash]) revert TransactionNotQueued();
         queuedTransactions[txHash] = false;
 
         emit CancelTransaction(txHash, target, value, signature, data, eta);
@@ -70,27 +69,23 @@ contract Executor is IExecutor {
         uint256 _eta
     ) public onlyGovernance returns (bytes memory) {
         bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
-        if (!queuedTransactions[txHash]) revert TransactionNotQueued();
-        if (_eta > block.timestamp) revert TimelockNotMet();
+        
         // We don't need to check if it's expired, because this will be caught by the Governance contract.
         // (If we are past the grace period, proposal state will be Expired and execute() will revert.)
-
+        if (!queuedTransactions[txHash]) revert TransactionNotQueued();
+        if (_eta > block.timestamp) revert TimelockNotMet();
+        
         queuedTransactions[txHash] = false;
         
-        bytes memory callData;
-
-        if (bytes(_signature).length == 0) {
-            callData = _data;
-        } else {
-            callData = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
+        if (bytes(_signature).length > 0) {
+            _data = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
         }
 
         // solium-disable-next-line security/no-call-value
-        (bool success, bytes memory returnData) = _target.call{ value: _value }(callData);
+        (bool success, bytes memory returnData) = _target.call{ value: _value }(_data);
         if (!success) revert TransactionReverted();
 
         emit ExecuteTransaction(txHash, _target, _value, _signature, _data, _eta);
-
         return returnData;
     }
 

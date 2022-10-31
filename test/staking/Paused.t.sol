@@ -1,8 +1,6 @@
 pragma solidity ^0.8.13;
 
 import "../../src/Staking.sol";
-import "../utils/mocks/Token.sol";
-
 import { StakingBase } from "./StakingBase.t.sol";
 
 contract PausedTest is StakingBase {
