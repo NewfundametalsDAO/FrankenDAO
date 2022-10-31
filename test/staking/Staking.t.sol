@@ -57,8 +57,6 @@ contract StakingTest is StakingBase {
         // stake token:
         mockStakeSingle(_id, block.timestamp + 30 days);
 
-         //@todo 31 days should work here but throws TokenLocked()
-         //(meaning the staking lock isn't up yet)
         vm.warp(block.timestamp + 31 days);
         vm.startPrank(owner);
 

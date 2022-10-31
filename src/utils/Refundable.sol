@@ -30,7 +30,6 @@ contract Refundable {
             uint256 refundAmount = min(gasPrice * gasUsed, balance);
 
             // There shouldn't be any reentrancy risk, as this is always called last in all contracts.
-            // @todo do we want to cap how much gas this call can use to make sure they don't waste gas that way?
             (bool refundSent, ) = msg.sender.call{ value: refundAmount }('');
             emit IssueRefund(msg.sender, refundAmount, refundSent);
         }
