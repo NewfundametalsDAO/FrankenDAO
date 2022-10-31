@@ -1,10 +1,10 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
-import { StakingBase } from "./StakingBase.t.sol";
+import { StakingBase } from "../bases/StakingBase.t.sol";
 import { IERC721 } from "../../src/interfaces/IERC721.sol";
 
-contract VotingPowerTest is StakingBase {
+contract VotingPowerTests is StakingBase {
     uint256 FAKE_ID = 12;
 
     // Test that staking, delegating, and undelegating all adjust voting power.

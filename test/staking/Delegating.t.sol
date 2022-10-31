@@ -1,8 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./StakingBase.t.sol";
+import { StakingBase } from "../bases/StakingBase.t.sol";
 
-contract DelegatingTest is StakingBase {
+contract DelegatingTests is StakingBase {
     uint[] ids = [1553, 8687];
     // delegate - get my address if I haven't delegated
     function testDelegating__DelegateToSelfByDefault() public {

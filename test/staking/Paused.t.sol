@@ -1,9 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "../../src/Staking.sol";
-import { StakingBase } from "./StakingBase.t.sol";
+import { StakingBase } from "../bases/StakingBase.t.sol";
 
-contract PausedTest is StakingBase {
+contract PausedTests is StakingBase {
     function testPausing__RevertsIfStakingPaused() public {
         vm.prank(address(FOUNDER_MULTISIG));
         staking.setPause(true);

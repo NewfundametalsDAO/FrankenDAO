@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
-import "../utils/BaseSetup.sol";
-import "./StakingBase.t.sol";
+import { StakingBase } from "../bases/StakingBase.t.sol";
 
-contract StakingTest is StakingBase {
+contract StakingTests is StakingBase {
     uint[] ids = [1553, 8687];
 
     function testStaking__UnlockTimeCantBeInThePast() public {

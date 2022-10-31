@@ -1,11 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
-import "../../src/Staking.sol";
+import {GovernanceBase} from "../bases/GovernanceBase.t.sol";
 
-import {GovernanceBase} from "../governance/GovernanceBase.t.sol";
-
-contract LockedTest is GovernanceBase {
+contract LockedTests is GovernanceBase {
     uint[] ids = [1553, 8687];
 
     function testLocking__RevertIfUnstakingAfterVoting() public {
@@ -23,7 +21,7 @@ contract LockedTest is GovernanceBase {
         vm.expectRevert(TokenLocked.selector);
         staking.unstake(playerOneIds, playerOne);
     }
-    // @todo come back after implementing voting and proposing tests
+
     function testLocking__RevertIfUnstakingAfterDelegateHasVoted() public {
         address playerOne = mockStakeSingle(ids[0]);
         address playerTwo = mockStakeSingle(ids[1]);

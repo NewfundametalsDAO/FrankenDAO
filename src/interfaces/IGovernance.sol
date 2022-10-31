@@ -10,6 +10,7 @@ interface IGovernance {
     error InvalidId();
     error InvalidProposal();
     error InvalidStatus();
+    error NotInActiveProposals();
     error InvalidInput();
     error AlreadyQueued();
     error AlreadyVoted();

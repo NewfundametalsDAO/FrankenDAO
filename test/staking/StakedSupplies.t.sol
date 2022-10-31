@@ -1,8 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { StakingBase } from "./StakingBase.t.sol";
+import { StakingBase } from "../bases/StakingBase.t.sol";
 
-contract StakedSupplyTest is StakingBase {
+contract StakedSupplyTests is StakingBase {
 
     // Staking FrankenPunk increases staked supply
     function testStakedSupply__StakingFrankenPunkIncreasesStakedSupply()

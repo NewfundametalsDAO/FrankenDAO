@@ -1,8 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./StakingBase.t.sol";
+import { StakingBase } from "../bases/StakingBase.t.sol";
 
-contract CommunityVotingPower is StakingBase {
+contract StakingCommunityVotingPowerTests is StakingBase {
 
     // ----
     // Multipliers

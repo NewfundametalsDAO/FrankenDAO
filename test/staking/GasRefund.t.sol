@@ -1,6 +1,6 @@
 // pragma solidity ^0.8.13;
 
-// import { StakingBase } from "./StakingBase.t.sol";
+import { StakingBase } from "../bases/StakingBase.t.sol";
 // import {IStaking} from "../../src/interfaces/IStaking.sol";
 
 // contract GasRefundingTest is StakingBase {

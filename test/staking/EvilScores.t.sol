@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { TestBase } from "../TestBase.t.sol";
+import { TestBase } from "../bases/TestBase.t.sol";
 import { LibString } from "solmate/utils/LibString.sol";
 
-contract EvilScoresTest is TestBase {
+contract EvilScoreTests is TestBase {
 
     // Test that all evil scores pulled from on chain match with the local JSON file.
     function testEvilScores(uint tokenId) public {

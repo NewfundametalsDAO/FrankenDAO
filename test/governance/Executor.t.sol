@@ -1,8 +1,6 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-pragma solidity ^0.8.13;
-
-import "forge-std/Test.sol";
 import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 

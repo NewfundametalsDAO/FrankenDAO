@@ -1,10 +1,10 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
 import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 
-contract CommunityPowerTests is GovernanceBase {
+contract GovCommunityPowerTests is GovernanceBase {
     uint64 votesMultiplier;
     uint64 proposalsCreatedMultiplier;
     uint64 proposalsPassedMultiplier;

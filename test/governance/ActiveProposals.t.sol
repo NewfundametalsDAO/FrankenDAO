@@ -1,10 +1,10 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
-import { GovernanceBase } from "./GovernanceBase.t.sol";
+import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 
-contract ActiveProposalTest is GovernanceBase {
+contract ActiveProposalTests is GovernanceBase {
     // Test that proposal is in Active Proposals when it's created.
     function testGovActive__ProposalAddedToActive() public {
         uint proposalId = _createProposal();
@@ -83,6 +83,28 @@ contract ActiveProposalTest is GovernanceBase {
 
         uint[] memory newActiveProposals = gov.getActiveProposals();
         assert(newActiveProposals.length == 0);
+    }
+
+    // Test that a defeated proposal remains in Active Proposals but can then be canceled by anyone to remove it.
+    function testGovActive__ProposalCanBeClearedAndRemovedByStrangerWhenDefeated() public {
+        uint proposalId = _createAndVerifyProposal();
+
+        uint[] memory activeProposals = gov.getActiveProposals();
+        assert(activeProposals.length == 1);
+
+        vm.warp(block.timestamp + gov.votingDelay());
+        gov.castVote(proposalId, 0);
+        vm.warp(block.timestamp + gov.votingPeriod() + 1);
+
+        activeProposals = gov.getActiveProposals();
+        assert(activeProposals.length == 1);
+
+        gov.state(proposalId);
+
+        vm.prank(stranger);
+        gov.clear(proposalId);
+        activeProposals = gov.getActiveProposals();
+        assert(activeProposals.length == 0);
     }
 
     // Test that canceling a proposal after it's queued doesn't remove it from Active Proposals twice.

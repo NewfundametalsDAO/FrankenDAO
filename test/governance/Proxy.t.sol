@@ -1,12 +1,12 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
 import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { Governance } from "../../src/Governance.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 import { GovernanceProxy } from "../../src/proxy/GovernanceProxy.sol";
 
-contract ProxyTests is GovernanceBase {
+contract GovProxyTests is GovernanceBase {
     // Test that we can upgrade the governance implementation contract.
     function testGovProxy__UpgradeImplementation() public {
         address fakeImpl = address(new Governance());

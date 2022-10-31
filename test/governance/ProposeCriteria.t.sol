@@ -1,9 +1,10 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 
-contract ProposeTest is GovernanceBase {
+contract ProposeCriteriaTests is GovernanceBase {
     // Test that a proposal can be created by the proposer
     function testGovPropose__CanCreatePendingProposal() public {
         uint proposalId = _createProposal();
@@ -11,7 +12,7 @@ contract ProposeTest is GovernanceBase {
     }
 
     // Test that a stranger (someone with no votes) cannot create a proposal.
-    function testGovPropose__CannotCreateProposalIInsufficientVotes() public {
+    function testGovPropose__CannotCreateProposalWithInsufficientVotes() public {
         (
             address[] memory targets, 
             uint[] memory values, 
@@ -31,14 +32,28 @@ contract ProposeTest is GovernanceBase {
         uint proposalId2 = _createProposal();
     }
 
-    // Cant propose if already proposed
-    function testGovPropose__CannotCreateProposalIfAlreadyProposed() public {
+    // Test that someone can create a new proposal after their last one was cancelled.
+    function testGovPropose__CanCreateProposalAfterCancel() public {
         uint proposalId = _createProposal();
-        vm.expectRevert(NotEligible.selector);
+        vm.prank(proposer);
+        gov.cancel(proposalId);
         uint proposalId2 = _createProposal();
     }
 
-    // ADD TESTS FOR MULTIPLE PROPOSALS, SAME BLOCK, SEP BLOCKS, ETC
+    // Test that someone can create a new proposal after their last one was vetoed.
+    function testGovPropose__CanCreateProposalAfterVeto() public {
+        uint proposalId = _createProposal();
+        vm.prank(FOUNDER_MULTISIG);
+        gov.veto(proposalId);
+        uint proposalId2 = _createProposal();
+    }
+
+    // Test that someone can create a new proposal after their last one was queued.
+    function testGovPropose__CanCreateProposalAfterExecute() public {
+        uint proposalId = _createSuccessfulProposal();
+        gov.queue(proposalId);
+        uint proposalId2 = _createProposal();
+    }
 }
 
 

@@ -411,13 +411,24 @@ contract Governance is IGovernance, Admin, Refundable {
         if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
         if (
             msg.sender != proposal.proposer &&
-            (proposal.verified || block.timestamp < proposal.endTime) &&
-            state(_proposalId) != ProposalState.Expired
+            (proposal.verified || block.timestamp < proposal.endTime)
         ) revert NotEligible();
 
         _removeTransactionWithQueuedOrExpiredCheck(proposal);
 
         proposal.canceled = true;        
+
+        emit ProposalCanceled(_proposalId);
+    }
+
+    function clear(uint256 _proposalId) external {
+        Proposal storage proposal = proposals[_proposalId];
+        if (
+            state(_proposalId) != ProposalState.Expired &&
+            state(_proposalId) != ProposalState.Defeated
+        ) revert NotEligible();
+
+        _removeTransactionWithQueuedOrExpiredCheck(proposal);
 
         emit ProposalCanceled(_proposalId);
     }
@@ -428,6 +439,8 @@ contract Governance is IGovernance, Admin, Refundable {
      */
     function veto(uint256 _proposalId) external onlyAdmins {
         Proposal storage proposal = proposals[_proposalId];
+        
+        // @todo i think i can get rid of this because it's checked downstream
         if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
 
         _removeTransactionWithQueuedOrExpiredCheck(proposal);
@@ -531,12 +544,15 @@ contract Governance is IGovernance, Admin, Refundable {
         uint256 index;
         uint[] memory actives = activeProposals;
 
+        bool found = false;
         for (uint256 i = 0; i < actives.length; i++) {
-            if(actives[i] == _id) {
+            if (actives[i] == _id) {
+                found = true;
                 index = i;
                 break;
             }
         }
+        if (!found) revert NotInActiveProposals();
 
         activeProposals[index] = activeProposals[actives.length - 1];
         activeProposals.pop();

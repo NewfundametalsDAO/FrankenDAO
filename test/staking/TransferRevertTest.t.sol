@@ -1,9 +1,10 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { StakingBase } from "./StakingBase.t.sol";
+import { StakingBase } from "../bases/StakingBase.t.sol";
 import { IERC721 } from "../../src/interfaces/IERC721.sol";
 
-contract TransferRevertTest is StakingBase {
+contract TransferRevertTests is StakingBase {
     uint ID = 0;
 
     function testTransferFromReverts() public {       

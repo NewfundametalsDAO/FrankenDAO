@@ -1,9 +1,10 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 
-contract Cancel is GovernanceBase {
+contract CancelProposalTests is GovernanceBase {
     // Test that a user can cancel their own proposal right away.
     function testGovCancel__UserCanCancelOwnProposal() public {
         uint proposalId = _createProposal();
@@ -88,18 +89,48 @@ contract Cancel is GovernanceBase {
         assert(_checkState(proposalId, IGovernance.ProposalState.Canceled));
     }
     
-    // Test that anyone can cancel if a proposal isn't executed within the grace period.
-    function testGovCancel__AnyoneCanCancelIfProposalNotExecutedWithinGracePeriod() public {
+    // Test that anyone can clear if a proposal (removing it from executor queue) if isn't executed within the grace period.
+    function testGovCancel__AnyoneCanClearIfProposalNotExecutedWithinGracePeriod() public {
         uint proposalId = _createSuccessfulProposal();
+        
+        (
+            address[] memory targets, 
+            uint[] memory values, 
+            string[] memory sigs, 
+            bytes[] memory calldatas
+        ) = _generateFakeProposalData();
+
+        bytes32 txHash = keccak256(abi.encode(targets[0], values[0], sigs[0], calldatas[0], block.timestamp + executor.DELAY()));
         gov.queue(proposalId);
         assert(_checkState(proposalId, IGovernance.ProposalState.Queued));
-        
+        assert(executor.queuedTransactions(txHash));
+
         vm.warp(block.timestamp + executor.DELAY() + executor.GRACE_PERIOD() + 1);
+        vm.prank(stranger);
+        gov.clear(proposalId);
+
+        assert(!executor.queuedTransactions(txHash));
+        assert(_checkState(proposalId, IGovernance.ProposalState.Expired));
+    }
+
+    // Test that anyone can clear a proposal (removing it from Active Proposals array) once it is defeated.
+    function testGovCancel__ProposalCanBeClearedWhenDefeated() public {
+        uint proposalId = _createAndVerifyProposal();
+        vm.warp(block.timestamp + gov.votingDelay());
+        gov.castVote(proposalId, 0);
+        vm.warp(block.timestamp + gov.votingPeriod() + 1);
+
+        assert(_checkState(proposalId, IGovernance.ProposalState.Defeated));
+
+        uint[] memory activeProposals = gov.getActiveProposals();
 
         vm.prank(stranger);
-        gov.cancel(proposalId);
+        gov.clear(proposalId);
 
-        assert(_checkState(proposalId, IGovernance.ProposalState.Canceled));
+        uint[] memory newActiveProposals = gov.getActiveProposals();
+
+        assert(activeProposals.length == newActiveProposals.length + 1);
+        assert(_checkState(proposalId, IGovernance.ProposalState.Defeated));
     }
 
     // Test that nobody can cancel a proposal if it is verified after endTime.

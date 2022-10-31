@@ -1,9 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { StakingBase } from "./StakingBase.t.sol";
-import "forge-std/Test.sol";
+import { StakingBase } from "../bases/StakingBase.t.sol";
 
-contract StakingParametersTest is StakingBase {
+contract StakingParamsTests is StakingBase {
 
     // can update stake time
     function testBonus__UpdateStakeBonusTime() public {
