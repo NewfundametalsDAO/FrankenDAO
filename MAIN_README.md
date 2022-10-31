@@ -26,8 +26,6 @@ We're a community-based collectibles project featuring art by 3D Punks. 3D Frank
 
 FrankenDAO runs on [Foundry](https://book.getfoundry.sh/). 
 
-If you don't have Foundry installed, follow the instructions in their [getting started tutorial](https://book.getfoundry.sh/getting-started/installation)...
-
 To install Foundry (assuming a Linux or macOS System):
 
 `curl -L https://foundry.paradigm.xyz | bash`
@@ -40,15 +38,17 @@ To install dependencies:
 
 `forge install`
 
+Because our contracts interact with the live Frankenpunks and Frankenmonsters contracts, all tests require forking Ethereum mainnet.
+
+To add your RPC_URL for mainnet forking, open `foundry.toml` and add the following:
+
+```
+[rpc_endpoints]
+mainnet = "https://mainnet.infura.io/v3/324422b5714843da8a919967a9c652ac"
+```
+
 To run tests:
 
 `forge test`
 
-The following modifiers are also available:
-
-```
-Level 2 (-vv): Logs emitted during tests are also displayed.
-Level 3 (-vvv): Stack traces for failing tests are also displayed.
-Level 4 (-vvvv): Stack traces for all tests are displayed, and setup traces for failing tests are displayed.
-Level 5 (-vvvvv): Stack traces and setup traces are always displayed.
-```
+See the [Foundry Book](https://book.getfoundry.sh/) for more on Foundry.
