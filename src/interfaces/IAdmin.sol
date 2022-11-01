@@ -1,5 +1,7 @@
 pragma solidity ^0.8.10;
 
+import {IExecutor} from "./IExecutor.sol";
+
 interface IAdmin {
 
     ////////////////////
@@ -28,7 +30,7 @@ interface IAdmin {
 
     function acceptFounders() external;
     function council() external view returns (address);
-    function executor() external view returns (address);
+    function executor() external view returns (IExecutor);
     function founders() external view returns (address);
     function pauser() external view returns (address);
     function pendingFounders() external view returns (address);

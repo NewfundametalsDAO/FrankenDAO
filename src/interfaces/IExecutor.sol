@@ -6,42 +6,30 @@ interface IExecutor {
     ////// Events //////
     ////////////////////
 
-    event CancelTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        uint256 value,
-        string signature,
-        bytes data,
-        uint256 eta
-    );
-    event ExecuteTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        uint256 value,
-        string signature,
-        bytes data,
-        uint256 eta
-    );
+    /// @notice Emited when a transaction is cancelled
+    event CancelTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
+    /// @notice Emited when a transaction is executed
+    event ExecuteTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
+    /// @notice Emited when a new delay value is set
     event NewDelay(uint256 indexed newDelay);
-    event QueueTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        uint256 value,
-        string signature,
-        bytes data,
-        uint256 eta
-    );
+    /// @notice Emited when a transaction is queued
+    event QueueTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
 
     ////////////////////
     ////// Errors //////
     ////////////////////
 
+    /// @notice Error emited when an address isn't authorized to perform an action
     error Unauthorized();
+    /// @notice Error emited if a transaction can't be queued yet
     error DelayNotSatisfied();
+    /// @notice Error emited if a transaction is already queued
     error IdenticalTransactionAlreadyQueued();
+    /// @notice Error emited if a transaction has not been queued
     error TransactionNotQueued();
+    /// @notice Error emited if a transaction is attempted before it can be executed
     error TimelockNotMet();
-    error StaleTransaction();
+    /// @notice Error emited if a transaction reverts
     error TransactionReverted();
 
     /////////////////////

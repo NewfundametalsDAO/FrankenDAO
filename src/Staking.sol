@@ -220,7 +220,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
 
   /// @notice Transferring of staked tokens is prohibited, so all transfers will revert
   /// @dev This will also block safeTransferFrom, because of solmate's implementation
-  function transferFrom(address, address, uint256) public pure override(ERC721, IStaking) {
+  function transferFrom(address, address, uint256) public pure override(ERC721) {
     revert StakedTokensCannotBeTransferred();
   }
 
@@ -230,7 +230,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
 
   /// @notice Token URI to find metadata for each tokenId
   /// @dev The metadata will be a variation on the metadata of the underlying token
-  function tokenURI(uint256 _tokenId) public view virtual override returns (string memory) {
+  function tokenURI(uint256 _tokenId) public view virtual override(ERC721) returns (string memory) {
     if (ownerOf(_tokenId) == address(0)) revert NonExistentToken();
 
     string memory baseURI = _baseTokenURI;
@@ -558,42 +558,42 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @dev This function can only be called by the executor based on a governance proposal
   function changeStakeTime(uint128 _newMaxStakeBonusTime) external onlyExecutor {
     if (_newMaxStakeBonusTime == 0) revert InvalidParameter();
-    stakingSettings.maxStakeBonusTime = _newMaxStakeBonusTime;
+    emit StakeTimeChanged(stakingSettings.maxStakeBonusTime = _newMaxStakeBonusTime);
   }
 
   /// @notice Set the max staking bonus earned if a token is staked for the max time
   /// @param _newMaxStakeBonusAmount The new max staking bonus
   /// @dev This function can only be called by the executor based on a governance proposal
   function changeStakeAmount(uint128 _newMaxStakeBonusAmount) external onlyExecutor {
-    stakingSettings.maxStakeBonusAmount = _newMaxStakeBonusAmount;
+    emit StakeAmountChanged(stakingSettings.maxStakeBonusAmount = _newMaxStakeBonusAmount);
   }
 
   /// @notice Set the community power multiplier for votes
-  /// @param _votesmultiplier The multiplier applied to community voting power based on past votes
+  /// @param _votesMultiplier The multiplier applied to community voting power based on past votes
   /// @dev This function can only be called by the executor based on a governance proposal
-  function setVotesMultiplier(uint64 _votesmultiplier) external onlyExecutor {
-    communityPowerMultipliers.votes = _votesmultiplier;
+  function setVotesMultiplier(uint64 _votesMultiplier) external onlyExecutor {
+    emit VotesMultiplierChanged(communityPowerMultipliers.votes = _votesMultiplier);
   }
 
   /// @notice Set the community power multiplier for proposals created
   /// @param _proposalsCreatedMultiplier The multiplier applied to community voting power based on proposals created
   /// @dev This function can only be called by the executor based on a governance proposal
   function setProposalsCreatedMultiplier(uint64 _proposalsCreatedMultiplier) external onlyExecutor {
-    communityPowerMultipliers.proposalsCreated = _proposalsCreatedMultiplier;
+    emit ProposalsCreatedMultiplierChanged(communityPowerMultipliers.proposalsCreated = _proposalsCreatedMultiplier);
   }
 
   /// @notice Set the community power multiplier for proposals passed
   /// @param _proposalsPassedMultiplier The multiplier applied to community voting power based on proposals passed
   /// @dev This function can only be called by the executor based on a governance proposal
   function setProposalsPassedMultiplier(uint64 _proposalsPassedMultiplier) external onlyExecutor {
-    communityPowerMultipliers.proposalsPassed = _proposalsPassedMultiplier;
+    emit ProposalPassedMultiplierChanged(communityPowerMultipliers.proposalsPassed =  _proposalsPassedMultiplier);
   }
-  
+
   /// @notice Set the base votes for 1 staked token
   /// @param _baseVotes The number of base votes every staked token will earn (before locking, bonuses, etc)
   /// @dev This function can only be called by the executor based on a governance proposal
   function setBaseVotes(uint _baseVotes) external onlyExecutor {
-    baseVotes = _baseVotes;
+    emit BaseVotesChanged(baseVotes = _baseVotes);
   }
 
   /// @notice Set the FrankenMonster multiplier
@@ -601,15 +601,14 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @dev This value is a percent, so will be divided by 100 when calculating voting power
   /// @dev This function can only be called by the executor based on a governance proposal
   function setMonsterMultiplier(uint _monsterMultiplier) external onlyExecutor {
-    monsterMultiplier = _monsterMultiplier;
+    emit MonsterMultiplierChanged(monsterMultiplier = _monsterMultiplier);
   }
 
   /// @notice Turn on or off gas refunds for staking and delegating
   /// @param _stakingRefund Should refunds for staking be on (true) or off (false)?
   /// @param _delegatingRefund Should refunds for delegating be on (true) or off (false)?
   function setRefunds(bool _stakingRefund, bool _delegatingRefund) external onlyExecutor {
-    stakingRefund = _stakingRefund;
-    delegatingRefund = _delegatingRefund;
+    emit RefundSettingsChanged(stakingRefund = _stakingRefund, delegatingRefund = _delegatingRefund);
   }
 
   /// @notice Pause or unpause staking
@@ -622,6 +621,6 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice Set hte base URI for the metadata for the staked token
   /// @param _baseURI The new base URI
   function setBaseURI(string calldata _baseURI) external onlyAdmins {
-    _baseTokenURI = _baseURI;
+    emit BaseURIChanged(_baseTokenURI = _baseURI);
   }
 }

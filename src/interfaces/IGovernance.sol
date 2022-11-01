@@ -1,56 +1,64 @@
 pragma solidity ^0.8.10;
 
+import {IStaking} from "./IStaking.sol";
+
 interface IGovernance {
 
     ////////////////////
     ////// Events //////
     ////////////////////
-    event IssueRefund(address refunded, uint256 amount, bool sent);
-    event NewCouncil(address oldCouncil, address newCouncil);
-    event NewFounders(address oldFounders, address newFounders);
-    event NewImplementation(address oldImplementation, address newImplementation);
-    event NewPauser(address oldPauser, address newPauser);
-    event NewPendingFounders(address oldPendingFounders, address newPendingFounders);
+
+    /// @notice Emited when a proposal is canceled
     event ProposalCanceled(uint256 id);
-    event ProposalCreated(
-        uint256 id,
-        address proposer,
-        address[] targets,
-        uint256[] values,
-        string[] signatures,
-        bytes[] calldatas,
-        uint256 startTime,
-        uint256 endTime,
-        uint256 proposalThreshold,
-        uint256 quorumVotes,
-        string description
-    );
+    /// @notice Emited when a proposal is created
+    event ProposalCreated( uint256 id, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startTime, uint256 endTime, uint256 proposalThreshold, uint256 quorumVotes, string description);
+    /// @notice Emited when a proposal is executed
     event ProposalExecuted(uint256 id);
+    /// @notice Emited when a proposal is queued
     event ProposalQueued(uint256 id, uint256 eta);
+    /// @notice Emited when a new proposal threshold BPS is set
     event ProposalThresholdBPSSet(uint256 oldProposalThresholdBPS, uint256 newProposalThresholdBPS);
+    /// @notice Emited when a proposal is vetoed
     event ProposalVetoed(uint256 id);
+    /// @notice Emited when a new quorum votes BPS is set
     event QuorumVotesBPSSet(uint256 oldQuorumVotesBPS, uint256 newQuorumVotesBPS);
+    /// @notice Emited when the refund status changes
     event RefundSet(uint8 status);
+    /// @notice Emited when the total community score data is updated
     event TotalCommunityScoreDataUpdated(uint64 proposalsCreated, uint64 proposalsPassed, uint64 votes);
+    /// @notice Emited when a vote is cast
     event VoteCast(address indexed voter, uint256 proposalId, uint8 support, uint256 votes);
+    /// @notice Emited when the voting delay is updated
     event VotingDelaySet(uint256 oldVotingDelay, uint256 newVotingDelay);
+    /// @notice Emited when the voting period is updated
     event VotingPeriodSet(uint256 oldVotingPeriod, uint256 newVotingPeriod);
 
     ////////////////////
     ////// Errors //////
     ////////////////////
 
+    /// @notice Error emited if an address is 0x000
     error ZeroAddress();
+    /// @notice Error emited if someone calls the initializer a second time
     error AlreadyInitialized();
+    /// @notice Error emited if a parameter value is out of range
     error ParameterOutOfBounds();
+    /// @notice Error emited if a proposal doesn't exist for a given ID
     error InvalidId();
+    /// @notice Error emited if the requirements for a proposal are not met
     error InvalidProposal();
+    /// @notice Error emited if an unauthorized action is attempted, given
+    //a proposal's current state
     error InvalidStatus();
+    /// @notice Error emited if an invalid proposal is removed from the list of
+    //active proposals
     error NotInActiveProposals();
+    /// @notice Error emited if an invalid vote is attempted (not 0, 1, or 2)
     error InvalidInput();
-    error AlreadyQueued();
+    /// @notice Error emited if someone tries to vote a second time
     error AlreadyVoted();
-    error RequirementsNotMet();
+    /// @notice Error emited if someone is not elegible to perform an action
+    //(i.e. creating a proposal)
     error NotEligible();
 
     /////////////////////
@@ -148,7 +156,6 @@ interface IGovernance {
 
     function MAX_PROPOSAL_THRESHOLD_BPS() external view returns (uint256);
     function MAX_QUORUM_VOTES_BPS() external view returns (uint256);
-    function MAX_REFUND_PRIORITY_FEE() external view returns (uint256);
     function MAX_VOTING_DELAY() external view returns (uint256);
     function MAX_VOTING_PERIOD() external view returns (uint256);
     function MIN_PROPOSAL_THRESHOLD_BPS() external view returns (uint256);
@@ -156,16 +163,11 @@ interface IGovernance {
     function MIN_VOTING_DELAY() external view returns (uint256);
     function MIN_VOTING_PERIOD() external view returns (uint256);
     function PROPOSAL_MAX_OPERATIONS() external view returns (uint256);
-    function REFUND_BASE_GAS() external view returns (uint256);
-    function acceptFounders() external;
     function activeProposals(uint256) external view returns (uint256);
     function cancel(uint256 _proposalId) external;
     function castVote(uint256 _proposalId, uint8 _support) external;
     function clear(uint256 _proposalId) external;
-    function council() external view returns (address);
     function execute(uint256 _proposalId) external;
-    function executor() external view returns (address);
-    function founders() external view returns (address);
     function getActions(uint256 _proposalId)
         external
         view
@@ -192,8 +194,6 @@ interface IGovernance {
     ) external;
     function latestProposalIds(address) external view returns (uint256);
     function name() external view returns (string memory);
-    function pauser() external view returns (address);
-    function pendingFounders() external view returns (address);
     function proposalCount() external view returns (uint256);
     function proposalRefund() external view returns (bool);
     function proposalThreshold() external view returns (uint256);
@@ -227,18 +227,13 @@ interface IGovernance {
     function queue(uint256 _proposalId) external;
     function quorumVotes() external view returns (uint256);
     function quorumVotesBPS() external view returns (uint256);
-    function revokeFounders() external;
-    function setCouncil(address _newCouncil) external;
-    function setPauser(address _newPauser) external;
-    function setPendingFounders(address _newPendingFounders) external;
     function setProposalThresholdBPS(uint256 _newProposalThresholdBPS) external;
     function setQuorumVotesBPS(uint256 _newQuorumVotesBPS) external;
-    function setRefunds(bool _votingRefund, bool _proposalRefund) external;
-    function setStakingAddress(address _newStaking) external;
+    function setStakingAddress(IStaking _newStaking) external;
     function setVotingDelay(uint256 _newVotingDelay) external;
     function setVotingPeriod(uint256 _newVotingPeriod) external;
-    function staking() external view returns (address);
-    function state(uint256 _proposalId) external view returns (uint8);
+    function staking() external view returns (IStaking);
+    function state(uint256 _proposalId) external view returns (ProposalState);
     function totalCommunityScoreData()
         external
         view
