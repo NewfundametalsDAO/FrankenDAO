@@ -5,37 +5,43 @@ import { StakingBase } from "../bases/StakingBase.t.sol";
 
 contract StakedSupplyTests is StakingBase {
 
-    // Staking FrankenPunk increases staked supply
-    function testStakedSupply__StakingFrankenPunkIncreasesStakedSupply()
-    public {
-        mockStakeSingle(200);
-
-        assertEq(
-            staking.stakedFrankenPunks(),
-            1
-        );
+    // Test that staking FrankenPunk increases staked supply
+    function testStakedSupply__StakingFrankenPunkIncreasesStakedSupply() public {
+        mockStakeSingle(PUNK_ID);
+        assert(staking.stakedFrankenPunks() == 1);
+        assert(staking.stakedFrankenMonsters() == 0);
     }
 
-    // Unstaking FrankenPunk decreases staked supply
-    function testStakedSupply__UnstakingFrankenPunkDecreasesStakedSupply()
-    public {
-        uint _id = 200;
-        mockStakeSingle(_id, block.timestamp + 30 days);
+    // Test that unstaking FrankenPunk decreases staked supply
+    function testStakedSupply__UnstakingFrankenPunkDecreasesStakedSupply() public {
+        address owner = mockStakeSingle(PUNK_ID, 0);
+        assert(staking.stakedFrankenPunks() == 1);
+        assert(staking.stakedFrankenMonsters() == 0);
 
-        assertEq(
-            staking.stakedFrankenPunks(),
-            1
-        );
+        vm.prank(owner);
+        mockUnstakeSingle(PUNK_ID);
 
-        vm.warp(block.timestamp + 31 days);
-        mockUnstakeSingle(_id);
-
-        assertEq(
-            staking.stakedFrankenPunks(),
-            0
-        );
+        assert(staking.stakedFrankenPunks() == 0);
+        assert(staking.stakedFrankenMonsters() == 0);
     }
 
-    // @todo Staking FrankenMonster increases staked supply
-    // @todo Unstaking FrankenMonster decreases staked supply
+    // Test that staking FrankenMonster increases staked supply
+    function testStakedSupply__StakingFrankenMonsterIncreasesStakedSupply() public {
+        mockStakeSingle(MONSTER_ID);
+        assert(staking.stakedFrankenPunks() == 0);
+        assert(staking.stakedFrankenMonsters() == 1);
+    }
+
+    // Test that unstaking FrankenMonster decreases staked supply
+    function testStakedSupply__UnstakingFrankenMonsterDecreasesStakedSupply() public {
+        address owner = mockStakeSingle(MONSTER_ID, 0);
+        assert(staking.stakedFrankenPunks() == 0);
+        assert(staking.stakedFrankenMonsters() == 1);
+
+        vm.prank(owner);
+        mockUnstakeSingle(MONSTER_ID);
+
+        assert(staking.stakedFrankenPunks() == 0);
+        assert(staking.stakedFrankenMonsters() == 0);
+    }
 }

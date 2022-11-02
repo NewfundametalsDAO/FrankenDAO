@@ -12,9 +12,10 @@ contract Refundable is IRefundable, FrankenDAOErrors {
     uint256 public constant MAX_REFUND_PRIORITY_FEE = 2 gwei;
 
     /// @notice Gas used before _startGas or after refund
-    /// @dev Includes 21K TX base, 7K for other overhead, and 7K for ETH transfer 
-    // @todo is this right or just copied from nouns? make sure it doesn't overpay!
-    uint256 public constant REFUND_BASE_GAS = 35_000;
+    /// @dev Includes 21K TX base, 3.7K for other overhead, and 2.3K for ETH transfer 
+    /** @dev This will be slightly different depending on which function is used, but all are within a few 
+        thousand gas, so approximation is fine. */
+    uint256 public constant REFUND_BASE_GAS = 27_000;
 
     /// @notice Take the amount spent on gas supplied and send that to msg.sender from the contract's balance
     /// @param _startGas gasleft() at the start of the transaction, used to calculate gas spent
@@ -31,6 +32,7 @@ contract Refundable is IRefundable, FrankenDAOErrors {
             if (refundAmount > balance) revert InsufficientRefundBalance();
 
             // There shouldn't be any reentrancy risk, as this is called last at all times.
+            // They also can't exploit the refund by wasting gas before we've already finalized amount.
             (bool refundSent, ) = msg.sender.call{ value: refundAmount }('');
             emit IssueRefund(msg.sender, refundAmount, refundSent);
         }

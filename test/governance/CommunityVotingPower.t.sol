@@ -14,6 +14,13 @@ contract GovCommunityPowerTests is GovernanceBase {
         (votesMultiplier, proposalsCreatedMultiplier, proposalsPassedMultiplier) = staking.communityPowerMultipliers();
     }
 
+    // Test that multipliers are set properly in the constructor.
+    function testCommunityPower__MultipliersSetInCustructor() public view {
+        assert(votesMultiplier == 100);
+        assert(proposalsCreatedMultiplier == 200);
+        assert(proposalsPassedMultiplier == 200);
+    }
+
     // Test that voting updates community voting power.
     function testCommunityPower__VotingUpdatesCommunityPower() public {
         uint proposalId = _createAndVerifyProposal();
@@ -51,81 +58,7 @@ contract GovCommunityPowerTests is GovernanceBase {
         gov.execute(proposalId);
         assert(staking.getCommunityVotingPower(proposer) == (votesMultiplier + proposalsCreatedMultiplier + proposalsPassedMultiplier) / 100);
     }
-    // proposing increases my community voting power after verified
-    function testCommunityVP__ProposingIncreasesMyCommunityVP() public {
-        address user = mockStakeSingle(1000);
-
-        uint256 initialCommunityVP = staking.getCommunityVotingPower(user);
-
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            string[] memory sigs,
-            bytes[] memory calldatas
-        ) = _generateFakeProposalData();
-
-        vm.prank(user);
-        uint256 proposalId = gov.propose(
-            targets,
-            values,
-            sigs,
-            calldatas,
-            "test"
-        );
-
-        vm.warp(block.timestamp + gov.votingDelay() + 1);
-
-        vm.prank(COUNCIL_MULTISIG);
-        gov.verifyProposal(proposalId);
-
-        uint256 finalCommunityVP = staking.getCommunityVotingPower(user);
-
-        assert(finalCommunityVP > initialCommunityVP);
-    }
-    // voting increases my community voting power
-    function testCommunityVP__VotingIncreasesCommunityVP() public {
-        uint256 initialCommunityVP = staking.getCommunityVotingPower(voter);
-
-        uint proposalID = _createAndVerifyProposal();
-
-        vm.warp(block.timestamp + gov.votingDelay());
-
-        _vote(proposalID, 1, true);
-
-        uint256 finalCommunityVP = staking.getCommunityVotingPower(voter);
-
-        assert(finalCommunityVP > initialCommunityVP);
-    }
-    // proposal passing increases my community voting power
-    function testCommunityVP__ProposalPassingIncreasesMyCommunityVP() public {
-
-        uint256 initialCommunityVP = staking.getCommunityVotingPower(proposer);
-
-        uint proposalId = _createAndExecuteSuccessfulProposal();
-
-        uint256 finalCommunityVP = staking.getCommunityVotingPower(proposer);
-
-        assert(finalCommunityVP > initialCommunityVP);
-    }
-
-    // ----
-    // Total Community Voting Power
-    // ----
-    // delegating doesn't affect total community voting power
-    function testCommunityVP__DelegatingDoesntAffectTotalCommunityVP() public {
-        address user = mockStakeSingle(1000);
-        address delegate = mockStakeSingle(420);
-
-        uint256 initialTotalVP = staking.getTotalVotingPower();
-
-        vm.prank(user);
-        staking.delegate(delegate);
-
-        uint256 finalTotalVP = staking.getTotalVotingPower();
-
-        assertEq(initialTotalVP, finalTotalVP);
-    }
-
+    
     // Test that updating community multiplers adjusts community voting power as expected.
     function testCommunityVP__UpdatingMultipliersAdjustsCommunityPower() public {
         uint proposalId = _createSuccessfulProposal();
@@ -160,28 +93,6 @@ contract GovCommunityPowerTests is GovernanceBase {
         vm.prank(voter);
         staking.delegate(voter);
         assert(staking.getCommunityVotingPower(voter) == votesMultiplier / 100);
-    }
-
-    function testCommunityVP__VotingIncreasesTotalVotingPower() public {
-        uint initialTotalVP = staking.getTotalVotingPower();
-
-        uint proposalId = _createSuccessfulProposal();
-
-        uint finalTotalVP = staking.getTotalVotingPower();
-
-        assert(finalTotalVP > initialTotalVP);
-    }
-    // proposal passing increases total community voting power
-    function testCommunityVP__ProposalPassingIncreasesTotalVotingPower()
-        public
-    {
-        uint initialTotalVP = staking.getTotalVotingPower();
-
-        _createAndExecuteSuccessfulProposal();
-
-        uint finalTotalVP = staking.getTotalVotingPower();
-
-        assert(finalTotalVP > initialTotalVP);
     }
 
     // Test that total community voting power tracks correctly.

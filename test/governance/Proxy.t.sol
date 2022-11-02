@@ -7,6 +7,7 @@ import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 import { GovernanceProxy } from "../../src/proxy/GovernanceProxy.sol";
 
 contract GovProxyTests is GovernanceBase {
+
     // Test that we can upgrade the governance implementation contract.
     function testGovProxy__UpgradeImplementation() public {
         address fakeImpl = address(new Governance());
@@ -33,6 +34,7 @@ contract GovProxyTests is GovernanceBase {
         assert(proxy.admin() == newAdmin);    
     }
 
+    // Test that AdminOnly functions on the proxy can only be called by the admin.
     function testGovProxy__AdminOnly() public {
         GovernanceProxy proxy = GovernanceProxy(payable(address(gov)));
 

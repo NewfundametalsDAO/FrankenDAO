@@ -5,7 +5,7 @@ import { StakingBase } from "../bases/StakingBase.t.sol";
 
 contract StakingParamsTests is StakingBase {
 
-    // Test that we can update base votes.
+    // Test that we can update base votes
     function testStakingParams__UpdateBaseVotes() public {
         uint256 newBaseVotes = staking.baseVotes() + 1;
         

@@ -5,6 +5,7 @@ import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 
 contract ActiveProposalTests is GovernanceBase {
+
     // Test that proposal is in Active Proposals when it's created.
     function testGovActive__ProposalAddedToActive() public {
         uint proposalId = _createProposal();
@@ -116,13 +117,13 @@ contract ActiveProposalTests is GovernanceBase {
 
         gov.queue(proposalId);
 
-        uint[] memory newActiveProposals = gov.getActiveProposals();
-        assert(newActiveProposals.length == 1);
+        activeProposals = gov.getActiveProposals();
+        assert(activeProposals.length == 1);
 
         vm.prank(proposer);
         gov.cancel(proposalId);
 
-        uint[] memory finalActiveProposals = gov.getActiveProposals();
-        assert(finalActiveProposals.length == 1);
+        activeProposals = gov.getActiveProposals();
+        assert(activeProposals.length == 1);
     }
 }

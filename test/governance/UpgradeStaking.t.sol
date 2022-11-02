@@ -5,6 +5,7 @@ import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { Staking } from "../../src/Staking.sol";
 
 contract UpgradeStakingTests is GovernanceBase {
+    
     // Test that governance can upgrade the Staking contract address.
     function testGovUpgrades__UpgradeStaking() public {
         address fakeStaking = address(new Staking(

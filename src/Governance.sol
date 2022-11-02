@@ -1,11 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+/**
+ _______  _______  _______  _        _        _______  _          _______           _        _        _______
+(  ____ \(  ____ )(  ___  )( (    /|| \    /\(  ____ \( (    /|  (  ____ )|\     /|( (    /|| \    /\(  ____ \
+| (    \/| (    )|| (   ) ||  \  ( ||  \  / /| (    \/|  \  ( |  | (    )|| )   ( ||  \  ( ||  \  / /| (    \/
+| (__    | (____)|| (___) ||   \ | ||  (_/ / | (__    |   \ | |  | (____)|| |   | ||   \ | ||  (_/ / | (_____
+|  __)   |     __)|  ___  || (\ \) ||   _ (  |  __)   | (\ \) |  |  _____)| |   | || (\ \) ||   _ (  (_____  )
+| (      | (\ (   | (   ) || | \   ||  ( \ \ | (      | | \   |  | (      | |   | || | \   ||  ( \ \       ) |
+| )      | ) \ \__| )   ( || )  \  ||  /  \ \| (____/\| )  \  |  | )      | (___) || )  \  ||  /  \ \/\____) |
+|/       |/   \__/|/     \||/    )_)|_/    \/(_______/|/    )_)  |/       (_______)|/    )_)|_/    \/\_______)
+
+*/
+
 import "./interfaces/IGovernance.sol";
 import "./interfaces/IExecutor.sol";
 import "./interfaces/IStaking.sol";
 import "./utils/Admin.sol";
 import "./utils/Refundable.sol";
+
+import "forge-std/Test.sol";
 
 /// @title FrankenDAO Governance
 /// @author Zach Obront & Zakk Fleischmann
@@ -21,7 +35,6 @@ import "./utils/Refundable.sol";
 - removed the ability to pass a reason along with a vote, and to vote by EIP-712 signature
 - allow the contract to receive Ether (for gas refunds)
  */
-// @todo fill in changes from nouns
 contract Governance is IGovernance, Admin, Refundable {
     /// @notice The name of this contract
     string public constant name = "FrankenDAO";
@@ -484,12 +497,12 @@ contract Governance is IGovernance, Admin, Refundable {
         // Nouns allows anyone to cancel if proposer falls below threshold, but because tokens are locked, this isn't possible
         if (msg.sender != proposal.proposer) revert NotEligible();
 
-        // Set the canceled flag to true to change the status to Canceled
-        proposal.canceled = true;   
-
         // If the proposal is queued or executed, remove it from the Executor's queuedTransactions mapping
         // Otherwise, remove it from the Active Proposals array
         _removeTransactionWithQueuedOrExpiredCheck(proposal);
+
+        // Set the canceled flag to true to change the status to Canceled
+        proposal.canceled = true;   
 
         emit ProposalCanceled(_proposalId);
     }
@@ -539,6 +552,7 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @notice Removes a proposal from the ActiveProposals array or the Executor's queuedTransactions mapping
     /// @param _proposal The proposal to remove
     function _removeTransactionWithQueuedOrExpiredCheck(Proposal storage _proposal) internal {
+        console.log(uint8(state(_proposal.id)));
         if (
             state(_proposal.id) == ProposalState.Queued || 
             state(_proposal.id) == ProposalState.Expired

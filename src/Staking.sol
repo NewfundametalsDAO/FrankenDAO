@@ -1,6 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+/**
+ _______  _______  _______  _        _        _______  _          _______           _        _        _______
+(  ____ \(  ____ )(  ___  )( (    /|| \    /\(  ____ \( (    /|  (  ____ )|\     /|( (    /|| \    /\(  ____ \
+| (    \/| (    )|| (   ) ||  \  ( ||  \  / /| (    \/|  \  ( |  | (    )|| )   ( ||  \  ( ||  \  / /| (    \/
+| (__    | (____)|| (___) ||   \ | ||  (_/ / | (__    |   \ | |  | (____)|| |   | ||   \ | ||  (_/ / | (_____
+|  __)   |     __)|  ___  || (\ \) ||   _ (  |  __)   | (\ \) |  |  _____)| |   | || (\ \) ||   _ (  (_____  )
+| (      | (\ (   | (   ) || | \   ||  ( \ \ | (      | | \   |  | (      | |   | || | \   ||  ( \ \       ) |
+| )      | ) \ \__| )   ( || )  \  ||  /  \ \| (____/\| )  \  |  | )      | (___) || )  \  ||  /  \ \/\____) |
+|/       |/   \__/|/     \||/    )_)|_/    \/(_______/|/    )_)  |/       (_______)|/    )_)|_/    \/\_______)
+
+*/
+
 import "solmate/tokens/ERC721.sol";
 import "solmate/utils/LibString.sol";
 import "./utils/SafeCast.sol";
@@ -11,8 +23,6 @@ import "./interfaces/IERC721.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IGovernance.sol";
 import "./interfaces/IExecutor.sol";
-
-import "forge-std/Test.sol";
 
 /// @title FrankenDAO Staking
 /// @author Zach Obront & Zakk Fleischmann

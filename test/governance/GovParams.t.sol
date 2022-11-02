@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 
 contract GovParamsTests is GovernanceBase {
+    
     // Test that all starting params have been set correctly.
     function testGovParams__TestAllCorrectStartingParams() public view {
         assert(gov.proposalThresholdBPS() == 500);
@@ -96,6 +97,7 @@ contract GovParamsTests is GovernanceBase {
         gov.setVotingPeriod(newPeriod);
     }
 
+    // Test that bpsToUint function works as expected.
     function testGovParams__bpstoUintSetsProposalParamsCorrectly() public {
         uint proposalId = _createProposal();
         (uint id, address proposer, uint pThreshold, uint qThreshold) = gov.getProposalData(proposalId);

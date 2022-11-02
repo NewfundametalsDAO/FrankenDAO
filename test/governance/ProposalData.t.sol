@@ -73,7 +73,7 @@ contract ProposalDataTests is GovernanceBase {
             uint abstainVotes
         ) = gov.getProposalVotes(proposalId);
 
-        assert(yesVotes == 22); // 20 + 2 community power for proposing
+        assert(yesVotes == staking.baseVotes() + 2);
         assert(noVotes == 0);
         assert(abstainVotes == 120);
     }

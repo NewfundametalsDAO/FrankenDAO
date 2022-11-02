@@ -44,6 +44,7 @@ contract CancelProposalTests is GovernanceBase {
 
         bytes32 txHash = keccak256(abi.encode(targets[0], values[0], sigs[0], calldatas[0], block.timestamp + executor.DELAY()));
         assert(executor.queuedTransactions(txHash));
+        assert(_checkState(proposalId, IGovernance.ProposalState.Queued));
 
         vm.prank(proposer);
         gov.cancel(proposalId);
@@ -76,15 +77,12 @@ contract CancelProposalTests is GovernanceBase {
         gov.cancel(proposalId);
     }
 
-    // Test that anyone can cancel in a proposal isn't verified until after endTime.
-    function testGovCancel__AnyoneCanCancelIfProposalNotVerifiedAfterEndTime() public {
+    // Test that the proposal is automatically canceled if it isn't verified after endTime.
+    function testGovCancel__AutomaticallyCanceledIfProposalNotVerifiedAfterEndTime() public {
         uint proposalId = _createProposal();
         assert(_checkState(proposalId, IGovernance.ProposalState.Pending));
 
         vm.warp(block.timestamp + gov.votingDelay() + gov.votingPeriod() + 10);
-
-        vm.prank(stranger);
-        gov.cancel(proposalId);
 
         assert(_checkState(proposalId, IGovernance.ProposalState.Canceled));
     }
