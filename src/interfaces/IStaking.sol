@@ -1,14 +1,52 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.10;
 
 interface IStaking {
-    // Errors
+
+    ////////////////////
+    ////// Events //////
+    ////////////////////
+
+    /// @notice Emited a staker changes who they're delegating to
+    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+    /// @notice Emited when staking is paused/unpaused
+    event StakingPause(bool status);
+    /// @notice Emited when admins change the token's base URI
+    event BaseURIChanged(string _baseURI);
+    /// @notice Emited when refund settings are updated
+    event RefundSettingsChanged(bool _stakingRefund, bool _delegatingRefund);
+    /// @notice Emited when FrankenMonster voting multiplier is changed
+    event MonsterMultiplierChanged(uint256 _monsterMultiplier);
+    /// @notice Emited when the voting multiplier for passed proposals is changed
+    event ProposalPassedMultiplierChanged(uint64 _proposalPassedMultiplier);
+    /// @notice Emited when the stake time multiplier is changed
+    event StakeTimeChanged(uint128 _stakeTime);
+    /// @notice Emited when the staking multiplier is changed
+    event StakeAmountChanged(uint128 _stakeAmount);
+    /// @notice Emited when the voting multiplier for voting is changed
+    event VotesMultiplierChanged(uint64 _votesMultiplier);
+    /// @notice Emited when the voting multiplier for creating proposals is changed
+    event ProposalsCreatedMultiplierChanged(uint64 _proposalsCreatedMultiplier);
+    /// @notice Emited when the base votes for a token is changed
+    event BaseVotesChanged(uint256 _baseVotes);
+
+    ////////////////////
+    ////// Errors //////
+    ////////////////////
+
+    /// @notice Error emitted when a bad token ID is used
     error NonExistentToken();
+    /// @notice Error emitted when delegating requirements are not met
     error InvalidDelegation();
-    error Paused();
+    /// @notice Error emitted if an invalid value is provided for a paramter
     error InvalidParameter();
+    /// @notice Error emitted if trying to unstake while token(s) are locked
     error TokenLocked();
+    /// @notice Error emitted when someone tries to transfer staked tokens
     error StakedTokensCannotBeTransferred();
+
+    /////////////////////
+    ////// Storage //////
+    /////////////////////
 
     struct CommunityPowerMultipliers {
         uint64 votes;
@@ -28,64 +66,46 @@ interface IStaking {
         NoRefunds
     }
 
-    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
-    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
-    event DelegatingRefundingSet(bool status);
-    event StakingPause(bool status);
-    event RefundSet(RefundStatus status);
-    
-    // function DELEGATION_TYPEHASH() external view returns (bytes32);
-    // function DOMAIN_TYPEHASH() external view returns (bytes32);
-    // function MAX_REFUND_PRIORITY_FEE() external view returns (uint256);
-    // function REFUND_BASE_GAS() external view returns (uint256);
-    // function _baseTokenURI() external view returns (string memory);
-    // function approve(address to, uint256 tokenId) external;
-    // function balanceOf(address owner) external view returns (uint256);
-    // function changeStakeAmount(uint256 _newMaxStakeBonusAmount) external;
-    // function changeStakeTime(uint256 _newMaxStakeBonusTime) external;
-    // function checkpoints(address, uint32) external view returns (uint32 fromBlock, uint votes);
-    // function delegate(address delegatee) external;
-    // function delegateWithRefund(address delegatee) external;
-    // function delegates(address delegator) external view returns (address);
-    // function delegatingRefund() external view returns (bool);
-    // function getApproved(uint256 tokenId) external view returns (address);
-    function getCommunityVotingPower(address _voter) external view returns (uint256);
-    // function getCurrentVotes(address account) external view returns (uint);
-    // function getPriorVotes(address account, uint256 blockNumber) external view returns (uint);
-    function getTokenVotingPower(uint256 _tokenId) external view returns (uint256);
-    // function incrementTotalCommunityVotingPower(uint256 _amount) external;
-    // function isApprovedForAll(address owner, address operator) external view returns (bool);
-    // function maxStakeBonusAmount() external view returns (uint256);
-    // function maxStakeBonusTime() external view returns (uint256);
-    // function name() external view returns (string memory);
-    // function nonces(address) external view returns (uint256);
-    // function numCheckpoints(address) external view returns (uint32);
-    // function ownerOf(uint256 tokenId) external view returns (address);
-    // function paused() external view returns (bool);
-    // function safeTransferFrom(address from, address to, uint256 tokenId) external;
-    // function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) external;
-    // function setApprovalForAll(address operator, bool approved) external;
-    // function setBaseURI(string memory baseURI_) external;
-    // function setDelegatingRefund(bool _refunding) external;
-    // function setPause(bool _paused) external;
-    // function setStakingRefund(bool _staking) external;
-    function stake(uint256[] memory _tokenIds, uint256 _unlockTime) external;
-    // function stakeWithRefund(uint256[] memory _tokenIds, uint256 _unlockTime) external;
-    // function stakedTimeBonus(uint256) external view returns (uint256);
-    // function stakingRefund() external view returns (bool);
-    // function supportsInterface(bytes4 interfaceId) external view returns (bool);
-    // function symbol() external view returns (string memory);
-    // function tokenByIndex(uint256 index) external view returns (uint256);
-    // function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256);
-    // function tokenURI(uint256 _tokenId) external view returns (string memory);
-    // function totalSupply() external view returns (uint256);
-    function getTotalVotingPower() external view returns (uint256);
-    function getVotes(address account) external view returns (uint);
+    /////////////////////
+    ////// Methods //////
+    /////////////////////
+
+    function _baseTokenURI() external view returns (string memory);
+    function baseVotes() external view returns (uint256);
+    function changeStakeAmount(uint128 _newMaxStakeBonusAmount) external;
+    function changeStakeTime(uint128 _newMaxStakeBonusTime) external;
+    function communityPowerMultipliers()
+        external
+        view
+        returns (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed);
+    function delegate(address _delegatee) external;
+    function delegatingRefund() external view returns (bool);
     function evilBonus(uint256 _tokenId) external view returns (uint256);
-    function transferFrom(address from, address to, uint256 tokenId) external;
-    // function unlockTime(uint256) external view returns (uint256);
-    // function unstake(uint256[] memory _tokenIds, address _to) external;
-    // function unstakeWithRefund(uint256[] memory _tokenIds, address _to) external;
-    // function votesFromOwnedTokens(address) external view returns (uint256);
-    // function votesToDelegate(address delegator) external view returns (uint);
+    function getCommunityVotingPower(address _voter) external view returns (uint256);
+    function getDelegate(address _delegator) external view returns (address);
+    function getStakedTokenSupplies() external view returns (uint128, uint128);
+    function getTokenVotingPower(uint256 _tokenId) external view returns (uint256);
+    function getTotalVotingPower() external view returns (uint256);
+    function getVotes(address _account) external view returns (uint256);
+    function lastDelegatingRefund(address) external view returns (uint256);
+    function lastStakingRefund(address) external view returns (uint256);
+    function monsterMultiplier() external view returns (uint256);
+    function paused() external view returns (bool);
+    function setBaseURI(string memory _baseURI) external;
+    function setBaseVotes(uint256 _baseVotes) external;
+    function setMonsterMultiplier(uint256 _monsterMultiplier) external;
+    function setPause(bool _paused) external;
+    function setProposalsCreatedMultiplier(uint64 _proposalsCreatedMultiplier) external;
+    function setProposalsPassedMultiplier(uint64 _proposalsPassedMultiplier) external;
+    function setRefunds(bool _stakingRefund, bool _delegatingRefund) external;
+    function setVotesMultiplier(uint64 _votesmultiplier) external;
+    function stake(uint256[] memory _tokenIds, uint256 _unlockTime) external;
+    function stakedFrankenMonsters() external view returns (uint128);
+    function stakedFrankenPunks() external view returns (uint128);
+    function stakingRefund() external view returns (bool);
+    function stakingSettings() external view returns (uint128 maxStakeBonusTime, uint128 maxStakeBonusAmount);
+    function tokenVotingPower(address) external view returns (uint256);
+    function unlockTime(uint256) external view returns (uint256);
+    function unstake(uint256[] memory _tokenIds, address _to) external;
+    function votesFromOwnedTokens(address) external view returns (uint256);
 }

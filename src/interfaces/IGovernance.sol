@@ -1,90 +1,69 @@
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.10;
+
+import {IStaking} from "./IStaking.sol";
 
 interface IGovernance {
-    event RefundSet(RefundStatus status);
 
-    // Errors
-    error ZeroAddress();
-    error AlreadyInitialized();
-    error ParameterOutOfBounds();
-    error InvalidId();
-    error InvalidProposal();
-    error InvalidStatus();
-    error NotInActiveProposals();
-    error InvalidInput();
-    error AlreadyQueued();
-    error AlreadyVoted();
-    error RequirementsNotMet();
-    error NotEligible();
+    ////////////////////
+    ////// Events //////
+    ////////////////////
 
-    /// @notice An event emitted when a new proposal is created
-    event ProposalCreated(
-        uint256 id,
-        address proposer,
-        address[] targets,
-        uint256[] values,
-        string[] signatures,
-        bytes[] calldatas,
-        uint256 startTime,
-        uint256 endTime,
-        uint256 proposalThreshold,
-        uint256 quorumVotes,
-        string description
-    );
-
-    /// @notice An event emitted when a vote has been cast on a proposal
-    /// @param voter The address which casted a vote
-    /// @param proposalId The proposal id which was voted on
-    /// @param support Support value for the vote. 0=against, 1=for, 2=abstain
-    /// @param votes Number of votes which were cast by the voter
-    event VoteCast(
-        address indexed voter,
-        uint256 proposalId,
-        uint8 support,
-        uint256 votes
-    );
-
-    /// @notice An event emitted when a proposal has been canceled
+    /// @notice Emited when a proposal is canceled
     event ProposalCanceled(uint256 id);
-
-    /// @notice An event emitted when a proposal has been queued in the FrankenDAOExecutor
-    event ProposalQueued(uint256 id, uint256 eta);
-
-    /// @notice An event emitted when a proposal has been executed in the FrankenDAOExecutor
+    /// @notice Emited when a proposal is created
+    event ProposalCreated( uint256 id, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startTime, uint256 endTime, uint256 proposalThreshold, uint256 quorumVotes, string description);
+    /// @notice Emited when a proposal is executed
     event ProposalExecuted(uint256 id);
-
-    /// @notice An event emitted when a proposal has been vetoed by vetoAddress
+    /// @notice Emited when a proposal is queued
+    event ProposalQueued(uint256 id, uint256 eta);
+    /// @notice Emited when a new proposal threshold BPS is set
+    event ProposalThresholdBPSSet(uint256 oldProposalThresholdBPS, uint256 newProposalThresholdBPS);
+    /// @notice Emited when a proposal is vetoed
     event ProposalVetoed(uint256 id);
-
-    /// @notice An event emitted when the voting delay is set
+    /// @notice Emited when a new quorum votes BPS is set
+    event QuorumVotesBPSSet(uint256 oldQuorumVotesBPS, uint256 newQuorumVotesBPS);
+    /// @notice Emited when the refund status changes
+    event RefundSet(uint8 status);
+    /// @notice Emited when the total community score data is updated
+    event TotalCommunityScoreDataUpdated(uint64 proposalsCreated, uint64 proposalsPassed, uint64 votes);
+    /// @notice Emited when a vote is cast
+    event VoteCast(address indexed voter, uint256 proposalId, uint8 support, uint256 votes);
+    /// @notice Emited when the voting delay is updated
     event VotingDelaySet(uint256 oldVotingDelay, uint256 newVotingDelay);
-
-    /// @notice An event emitted when the voting period is set
+    /// @notice Emited when the voting period is updated
     event VotingPeriodSet(uint256 oldVotingPeriod, uint256 newVotingPeriod);
 
-    /// @notice Emitted when implementation is changed
-    event NewImplementation(
-        address oldImplementation,
-        address newImplementation
-    );
+    ////////////////////
+    ////// Errors //////
+    ////////////////////
 
-    /// @notice Emitted when proposal threshold basis points is set
-    event ProposalThresholdBPSSet(
-        uint256 oldProposalThresholdBPS,
-        uint256 newProposalThresholdBPS
-    );
+    /// @notice Error emited if an address is 0x000
+    error ZeroAddress();
+    /// @notice Error emited if someone calls the initializer a second time
+    error AlreadyInitialized();
+    /// @notice Error emited if a parameter value is out of range
+    error ParameterOutOfBounds();
+    /// @notice Error emited if a proposal doesn't exist for a given ID
+    error InvalidId();
+    /// @notice Error emited if the requirements for a proposal are not met
+    error InvalidProposal();
+    /// @notice Error emited if an unauthorized action is attempted, given
+    //a proposal's current state
+    error InvalidStatus();
+    /// @notice Error emited if an invalid proposal is removed from the list of
+    //active proposals
+    error NotInActiveProposals();
+    /// @notice Error emited if an invalid vote is attempted (not 0, 1, or 2)
+    error InvalidInput();
+    /// @notice Error emited if someone tries to vote a second time
+    error AlreadyVoted();
+    /// @notice Error emited if someone is not elegible to perform an action
+    //(i.e. creating a proposal)
+    error NotEligible();
 
-    /// @notice Emitted when quorum votes basis points is set
-    event QuorumVotesBPSSet(
-        uint256 oldQuorumVotesBPS,
-        uint256 newQuorumVotesBPS
-    );
-
-    event TotalCommunityScoreDataUpdated(
-        uint64 proposalsCreated,
-        uint64 proposalsPassed,
-        uint64 votes
-    );
+    /////////////////////
+    ////// Storage //////
+    /////////////////////
 
     enum RefundStatus {
         VotingAndProposalRefund,
@@ -171,55 +150,38 @@ interface IGovernance {
         Vetoed
     }
 
-    // function BALLOT_TYPEHASH() external view returns (bytes32);
-    // function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
-    // function DOMAIN_TYPEHASH() external view returns (bytes32);
-    // function MAX_PROPOSAL_THRESHOLD_BPS() external view returns (uint256);
-    // function MAX_QUORUM_VOTES_BPS() external view returns (uint256);
-    // function MAX_REFUND_PRIORITY_FEE() external view returns (uint256);
-    // function MAX_VOTING_DELAY() external view returns (uint256);
-    // function MAX_VOTING_PERIOD() external view returns (uint256);
-    // function MIN_PROPOSAL_THRESHOLD_BPS() external view returns (uint256);
-    // function MIN_QUORUM_VOTES_BPS() external view returns (uint256);
-    // function MIN_VOTING_DELAY() external view returns (uint256);
-    // function MIN_VOTING_PERIOD() external view returns (uint256);
-    // function REFUND_BASE_GAS() external view returns (uint256);
-    // function VETOER() external view returns (bytes32);
-    // function _acceptAdmin() external;
-    // function _addVetoer(address newVetoer) external;
-    // function _renouceVetoer() external;
-    // function _setPendingAdmin(address newPendingAdmin) external;
-    // function setProposalThresholdBPS(uint256 newProposalThresholdBPS) external;
-    // function setQuorumVotesBPS(uint256 newQuorumVotesBPS) external;
-    // function setVotingDelay(uint256 newVotingDelay) external;
-    // function setVotingPeriod(uint256 newVotingPeriod) external;
-    // function admin() external view returns (address);
-    // function cancel(uint256 proposalId) external;
-    // function castRefundableVote(uint256 proposalId_, uint8 support_) external;
-    // function castRefundableVoteWithReason(uint256 proposalId_, uint8 support_, string memory reason_) external;
-    // function castVote(uint256 proposalId, uint8 support) external;
-    // function castVoteBySig(uint256 proposalId, uint8 support, uint8 v, bytes32 r, bytes32 s) external;
-    // function castVoteWithReason(uint256 proposalId, uint8 support, string memory reason) external;
-    // function execute(uint256 proposalId) external;
-    // function getActions(uint256 proposalId)
-    //     external
-    //     view
-    //     returns (
-    //         address[] memory targets,
-    //         uint256[] memory values,
-    //         string[] memory signatures,
-    //         bytes[] memory calldatas
-    //     );
-    function userCommunityScoreData(address) external view returns (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed);
-    function totalCommunityScoreData() external view returns (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed);
-    function updateTotalCommunityScoreData(uint64 _votes, uint64 _proposalsCreated, uint64 _proposalsPassed) external;
-    function getProposalData(uint256 id_) external view returns (uint256, address, uint256, uint256);
-    // function getProposalStatus(uint256 id_) external view returns (bool, bool, bool);
-    // function getProposalVotes(uint256 id_) external view returns (uint256, uint256, uint256);
-    function getReceipt(uint256 proposalId, address voter) external view returns (Receipt memory);
-    // function getRoleAdmin(bytes32 role) external view returns (bytes32);
-    // function grantRole(bytes32 role, address account) external;
-    // function hasRole(bytes32 role, address account) external view returns (bool);
+    /////////////////////
+    ////// Methods //////
+    /////////////////////
+
+    function MAX_PROPOSAL_THRESHOLD_BPS() external view returns (uint256);
+    function MAX_QUORUM_VOTES_BPS() external view returns (uint256);
+    function MAX_VOTING_DELAY() external view returns (uint256);
+    function MAX_VOTING_PERIOD() external view returns (uint256);
+    function MIN_PROPOSAL_THRESHOLD_BPS() external view returns (uint256);
+    function MIN_QUORUM_VOTES_BPS() external view returns (uint256);
+    function MIN_VOTING_DELAY() external view returns (uint256);
+    function MIN_VOTING_PERIOD() external view returns (uint256);
+    function PROPOSAL_MAX_OPERATIONS() external view returns (uint256);
+    function activeProposals(uint256) external view returns (uint256);
+    function cancel(uint256 _proposalId) external;
+    function castVote(uint256 _proposalId, uint8 _support) external;
+    function clear(uint256 _proposalId) external;
+    function execute(uint256 _proposalId) external;
+    function getActions(uint256 _proposalId)
+        external
+        view
+        returns (
+            address[] memory targets,
+            uint256[] memory values,
+            string[] memory signatures,
+            bytes[] memory calldatas
+        );
+    function getActiveProposals() external view returns (uint256[] memory);
+    function getProposalData(uint256 _id) external view returns (uint256, address, uint256, uint256);
+    function getProposalStatus(uint256 _id) external view returns (bool, bool, bool);
+    function getProposalVotes(uint256 _id) external view returns (uint256, uint256, uint256);
+    function getReceipt(uint256 _proposalId, address _voter) external view returns (Receipt memory);
     function initialize(
         address _staking,
         address _executor,
@@ -229,44 +191,61 @@ interface IGovernance {
         uint256 _votingDelay,
         uint256 _proposalThresholdBPS,
         uint256 _quorumVotesBPS
-    ) external; 
-    // function latestProposalIds(address) external view returns (uint256);
-    // function name() external view returns (string memory);
-    // function pendingAdmin() external view returns (address);
-    // function proposalCount() external view returns (uint256);
-    // function proposalMaxOperations() external view returns (uint256);
-    // function proposalRefund() external view returns (bool);
-    // function proposalThreshold() external view returns (uint256);
-    // function proposalThresholdBPS() external view returns (uint256);
-    // function propose(
-    //     address[] memory targets,
-    //     uint256[] memory values,
-    //     string[] memory signatures,
-    //     bytes[] memory calldatas,
-    //     string memory description
-    // ) external returns (uint256);
-    // function proposeWithRefund(
-    //     address[] memory targets,
-    //     uint256[] memory values,
-    //     string[] memory signatures,
-    //     bytes[] memory calldatas,
-    //     string memory description
-    // ) external returns (uint256);
-    // function queue(uint256 proposalId) external;
-    // function quorumVotes() external view returns (uint256);
-    // function quorumVotesBPS() external view returns (uint256);
-    // function renounceRole(bytes32 role, address account) external;
-    // function revokeRole(bytes32 role, address account) external;
-    // function setProposalRefund(bool _proposing) external;
-    function setRefunds(bool, bool) external;
-    // function setVotingRefund(bool _voting) external;
-    // function staking() external view returns (address);
-    // function state(uint256 proposalId) external view returns (uint8);
-    // function supportsInterface(bytes4 interfaceId) external view returns (bool);
-    // function timelock() external view returns (address);
-    // function veto(uint256 proposalId) external;
-    // function votingDelay() external view returns (uint256);
-    // function votingPeriod() external view returns (uint256);
-    // function votingRefund() external view returns (bool);
-    function getActiveProposals() external view returns (uint256[] memory);
+    ) external;
+    function latestProposalIds(address) external view returns (uint256);
+    function name() external view returns (string memory);
+    function proposalCount() external view returns (uint256);
+    function proposalRefund() external view returns (bool);
+    function proposalThreshold() external view returns (uint256);
+    function proposalThresholdBPS() external view returns (uint256);
+    function proposals(uint256)
+        external
+        view
+        returns (
+            uint256 id,
+            address proposer,
+            uint256 proposalThreshold,
+            uint256 quorumVotes,
+            uint256 eta,
+            uint256 startTime,
+            uint256 endTime,
+            uint256 forVotes,
+            uint256 againstVotes,
+            uint256 abstainVotes,
+            bool verified,
+            bool canceled,
+            bool vetoed,
+            bool executed
+        );
+    function propose(
+        address[] memory _targets,
+        uint256[] memory _values,
+        string[] memory _signatures,
+        bytes[] memory _calldatas,
+        string memory _description
+    ) external returns (uint256);
+    function queue(uint256 _proposalId) external;
+    function quorumVotes() external view returns (uint256);
+    function quorumVotesBPS() external view returns (uint256);
+    function setProposalThresholdBPS(uint256 _newProposalThresholdBPS) external;
+    function setQuorumVotesBPS(uint256 _newQuorumVotesBPS) external;
+    function setStakingAddress(IStaking _newStaking) external;
+    function setVotingDelay(uint256 _newVotingDelay) external;
+    function setVotingPeriod(uint256 _newVotingPeriod) external;
+    function staking() external view returns (IStaking);
+    function state(uint256 _proposalId) external view returns (ProposalState);
+    function totalCommunityScoreData()
+        external
+        view
+        returns (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed);
+    function updateTotalCommunityScoreData(uint64 _votes, uint64 _proposalsCreated, uint64 _proposalsPassed) external;
+    function userCommunityScoreData(address)
+        external
+        view
+        returns (uint64 votes, uint64 proposalsCreated, uint64 proposalsPassed);
+    function verifyProposal(uint256 _proposalId) external;
+    function veto(uint256 _proposalId) external;
+    function votingDelay() external view returns (uint256);
+    function votingPeriod() external view returns (uint256);
+    function votingRefund() external view returns (bool);
 }
