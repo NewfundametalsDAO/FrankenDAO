@@ -4,8 +4,17 @@ pragma solidity ^0.8.13;
 import { StakingBase } from "../bases/StakingBase.t.sol";
 
 contract PausedTests is StakingBase {
-    function testPausing__RevertsIfStakingPaused() public {
+    address pauser;
+
+    function setUp() override public {
+        pauser = makeAddr("pauser");
+        super.setUp();
         vm.prank(address(FOUNDER_MULTISIG));
+        staking.setPauser(pauser);
+    }
+
+    function testPausing__RevertsIfStakingPaused() public {
+        vm.prank(pauser);
         staking.setPause(true);
 
         address owner = frankenpunks.ownerOf(0);
@@ -24,7 +33,7 @@ contract PausedTests is StakingBase {
         address delegator = mockStakeSingle(0);
         address delegatee = mockStakeSingle(10);
 
-        vm.prank(address(FOUNDER_MULTISIG));
+        vm.prank(pauser);
         staking.setPause(true);
 
         vm.prank(delegator);
@@ -34,21 +43,18 @@ contract PausedTests is StakingBase {
     }
 
     function testPausing__CanStillUnstakeWhilePaused() public {
-        emit log_named_uint("timestamp", block.timestamp);
-        // 1. Stake tokens
         address staker = mockStakeSingle(1559, block.timestamp + 30 days);
-        // 2. Pause Staking
-        vm.prank(address(FOUNDER_MULTISIG));
+
+        vm.prank(pauser);
         staking.setPause(true);
-        // 3. Warp forward to unstake time
+
         vm.warp(block.timestamp + 31 days);
-        emit log_named_uint("timestamp", block.timestamp);
-        // 4. Unstake tokens
+
         uint[] memory ids = new uint[](1);
         ids[0] = 1559;
         vm.prank(staker);
         staking.unstake(ids, staker);
-        // 5. Balance of staked tokens should be 0
+
         assert(staking.balanceOf(staker) == 0);
     }
 }

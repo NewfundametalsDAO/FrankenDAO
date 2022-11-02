@@ -32,4 +32,17 @@ contract GovProxyTests is GovernanceBase {
         GovernanceProxy proxy = GovernanceProxy(payable(address(gov)));
         assert(proxy.admin() == newAdmin);    
     }
+
+    function testGovProxy__AdminOnly() public {
+        GovernanceProxy proxy = GovernanceProxy(payable(address(gov)));
+
+        vm.expectRevert(NotAuthorized.selector);
+        proxy.changeAdmin(address(this));
+
+        vm.expectRevert(NotAuthorized.selector);
+        proxy.upgradeTo(address(FRANKENPUNKS));
+
+        vm.expectRevert(NotAuthorized.selector);
+        proxy.upgradeToAndCall(address(FRANKENPUNKS), abi.encodeWithSignature("admin()"));
+    }
 }

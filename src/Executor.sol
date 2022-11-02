@@ -2,8 +2,9 @@
 pragma solidity ^0.8.13;
 
 import "./interfaces/IExecutor.sol";
+import { FrankenDAOErrors } from "./utils/FrankenDAOErrors.sol";
 
-contract Executor is IExecutor {
+contract Executor is IExecutor, FrankenDAOErrors {
     uint256 public constant DELAY = 2 days;
     uint256 public constant GRACE_PERIOD = 14 days;
     
@@ -23,7 +24,7 @@ contract Executor is IExecutor {
     /////////////////////////////////
 
     modifier onlyGovernance() {
-        if (msg.sender != governance) revert Unauthorized();
+        if (msg.sender != governance) revert NotAuthorized();
         _;
     }
 
@@ -78,7 +79,7 @@ contract Executor is IExecutor {
         queuedTransactions[txHash] = false;
         
         if (bytes(_signature).length > 0) {
-            _data = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
+            _data = abi.encodeWithSignature(_signature, _data);
         }
 
         // solium-disable-next-line security/no-call-value

@@ -86,7 +86,8 @@ contract Governance is IGovernance, Admin, Refundable {
     mapping(uint256 => Proposal) public proposals;
 
     /// @notice Propsals that are currently verified, but have not been canceled, vetoed, or queued
-    // @todo fill in when clear: The admins will cancel defeated proposals on a regular basis to clear them out and keep gas costs low
+    /** @dev Admins (or anyone else) will regularly clear out proposals that have been defeated to 
+             keep gas costs of iterating through this array low  */
     uint256[] public activeProposals;
 
     /// @notice The latest proposal for each proposer

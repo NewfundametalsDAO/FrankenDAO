@@ -3,10 +3,11 @@ pragma solidity ^0.8.13;
 
 import "../interfaces/IAdmin.sol";
 import "../interfaces/IExecutor.sol";
+import { FrankenDAOErrors } from "./FrankenDAOErrors.sol";
 
 /// @notice Custom access control manager for FrankenDAO
 /// @dev This functionality is inherited by Governance.sol and Staking.sol
-abstract contract Admin is IAdmin {
+abstract contract Admin is IAdmin, FrankenDAOErrors {
     /// @notice Founder multisig
     address public founders;
 
@@ -25,9 +26,6 @@ abstract contract Admin is IAdmin {
     /// @dev Only founders is two-step, because errors in transferring other admin addresses can be corrected by founders
     address public pendingFounders;
 
-    /// @notice Error thrown for an unauthorized transaction
-    error NotAuthorized();
-
     /////////////////////////////
     ///////// MODIFIERS /////////
     /////////////////////////////
@@ -35,19 +33,19 @@ abstract contract Admin is IAdmin {
     /// @notice Modifier for functions that can only be called by the Executor contract
     /// @dev This is for functions that only Governance is able to call
     modifier onlyExecutor() {
-        if(msg.sender != address(executor)) revert Unauthorized();
+        if(msg.sender != address(executor)) revert NotAuthorized();
         _;
     }
 
     /// @notice Modifier for functions that can only be called by the Council or Founder multisigs
     modifier onlyAdmins() {
-        if(msg.sender != founders && msg.sender != council) revert Unauthorized();
+        if(msg.sender != founders && msg.sender != council) revert NotAuthorized();
         _;
     }
 
     /// @notice Modifier for functions that can only be called by the Pauser or either multisig
     modifier onlyPauserOrAdmins() {
-        if(msg.sender != founders && msg.sender != council && msg.sender != pauser) revert Unauthorized();
+        if(msg.sender != founders && msg.sender != council && msg.sender != pauser) revert NotAuthorized();
         _;
     }
 
@@ -57,7 +55,7 @@ abstract contract Admin is IAdmin {
             msg.sender != address(executor) && 
             msg.sender != council && 
             msg.sender != founders
-        ) revert Unauthorized();
+        ) revert NotAuthorized();
         _;
     }
 

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/proxy/ERC1967/ERC1967Proxy.sol";
+import "../utils/FrankenDAOErrors.sol";
 
 /// @title FrankenDAO Governance Proxy
 /// @author Zach Obront & Zakk Fleischmann
@@ -9,7 +10,7 @@ import "@openzeppelin/proxy/ERC1967/ERC1967Proxy.sol";
 - allows Admin to access the fallback function (so that Executor can call implementation functions)
 - changes ifAdmin modifier to onlyAdmin, reverting vs fallback if non admin calls a proxy function
 - gives non admin ability to access proxy view functions: admin() and implementation() */
-contract GovernanceProxy is ERC1967Proxy {
+contract GovernanceProxy is ERC1967Proxy, FrankenDAOErrors {
 
     /////////////////////////////
     //////// CONSTRUCTOR ////////
@@ -29,7 +30,7 @@ contract GovernanceProxy is ERC1967Proxy {
 
     /// @notice Modifier used to protect admin functions on this proxy contract
     modifier onlyAdmin() {
-        require(msg.sender == _getAdmin(), 'only admin');
+        if (msg.sender != _getAdmin()) revert NotAuthorized();
         _;
     }
     

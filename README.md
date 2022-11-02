@@ -1,17 +1,5 @@
 # FrankenDAO
 
-## Resources
-
-
-## Audit Scope
-
-The following contracts are in scope:
-- 
-
-
-## About
-
-FrankenDAO is ...
 
 
 

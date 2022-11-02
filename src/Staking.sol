@@ -343,7 +343,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @param _tokenIds An array of the id of the tokens being staked
   /// @param _unlockTime The timestamp of when the tokens will be unlocked
   function _stake(uint[] calldata _tokenIds, uint _unlockTime) internal {
-    if (paused) revert TokenLocked();
+    if (paused) revert Paused();
     if (_unlockTime > 0 && _unlockTime < block.timestamp) revert InvalidParameter();
 
     uint numTokens = _tokenIds.length;
