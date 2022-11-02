@@ -5,6 +5,7 @@ import { IERC721 } from "../../src/interfaces/IERC721.sol";
 
 contract StakingBase is TestBase {
     IERC721 frankenpunks = IERC721(FRANKENPUNKS);
+    IERC721 frankenmonsters = IERC721(FRANKENMONSTERS);
 
     function mockStake(uint[] memory ids) public returns (address[] memory) {
         return _mockStake(ids, 0);
@@ -36,9 +37,10 @@ contract StakingBase is TestBase {
     }
 
     function _mockStakeSingle(uint id, uint stakeTime) public returns (address) {
-        address owner = frankenpunks.ownerOf(id);
+        IERC721 collection = id < 10000 ? frankenpunks : frankenmonsters;
+        address owner = collection.ownerOf(id);
         vm.startPrank(owner);
-        frankenpunks.approve(address(staking), id);
+        collection.approve(address(staking), id);
 
         uint[] memory ids = new uint[](1);
         ids[0] = id;

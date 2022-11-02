@@ -6,7 +6,7 @@ import { IGovernance } from "../../src/interfaces/IGovernance.sol";
 
 contract GovAdminTests is GovernanceBase {
     // Test that the original values for multisigs and executor are set correctly.
-    function testGovAdmin__InitialValues() public {
+    function testGovAdmin__InitialValues() view public {
         assert(gov.founders() == FOUNDER_MULTISIG);
         assert(gov.council() == COUNCIL_MULTISIG);
         assert(gov.executor() == executor);

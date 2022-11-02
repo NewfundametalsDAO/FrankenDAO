@@ -15,23 +15,6 @@ interface IExecutor {
     /// @notice Emited when a transaction is queued
     event QueueTransaction( bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
 
-    ////////////////////
-    ////// Errors //////
-    ////////////////////
-
-    /// @notice Error emited when an address isn't authorized to perform an action
-    error Unauthorized();
-    /// @notice Error emited if a transaction can't be queued yet
-    error DelayNotSatisfied();
-    /// @notice Error emited if a transaction is already queued
-    error IdenticalTransactionAlreadyQueued();
-    /// @notice Error emited if a transaction has not been queued
-    error TransactionNotQueued();
-    /// @notice Error emited if a transaction is attempted before it can be executed
-    error TimelockNotMet();
-    /// @notice Error emited if a transaction reverts
-    error TransactionReverted();
-
     /////////////////////
     ////// Methods //////
     /////////////////////

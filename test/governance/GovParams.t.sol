@@ -29,7 +29,7 @@ contract GovParamsTests is GovernanceBase {
     function testGovParams__StrangerCannotChangeThreshold() public {
         uint newThreshold = 100;
         vm.prank(stranger);
-        vm.expectRevert(Unauthorized.selector);
+        vm.expectRevert(NotAuthorized.selector);
         gov.setProposalThresholdBPS(newThreshold);
     }
 
@@ -50,7 +50,7 @@ contract GovParamsTests is GovernanceBase {
     function testGovParams__StrangerCannotChangeQuorumThreshold() public {
         uint newThreshold = 1000;
         vm.prank(stranger);
-        vm.expectRevert(Unauthorized.selector);
+        vm.expectRevert(NotAuthorized.selector);
         gov.setQuorumVotesBPS(newThreshold);
     }
 
@@ -71,7 +71,7 @@ contract GovParamsTests is GovernanceBase {
     function testGovParams__StrangerCannotChangeVotingDelay() public {
         uint newDelay = 1000;
         vm.prank(stranger);
-        vm.expectRevert(Unauthorized.selector);
+        vm.expectRevert(NotAuthorized.selector);
         gov.setVotingDelay(newDelay);
     }
 
@@ -92,7 +92,7 @@ contract GovParamsTests is GovernanceBase {
     function testGovParams__StrangerCannotChangeVotingPeriod() public {
         uint newPeriod = 1000;
         vm.prank(stranger);
-        vm.expectRevert(Unauthorized.selector);
+        vm.expectRevert(NotAuthorized.selector);
         gov.setVotingPeriod(newPeriod);
     }
 

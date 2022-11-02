@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 contract FrankenDAOErrors {
-    // General purpose.
+    // General purpose
     error NotAuthorized();
 
     // Staking
@@ -11,26 +11,27 @@ contract FrankenDAOErrors {
     error Paused();
     error InvalidParameter();
     error TokenLocked();
+    error StakedTokensCannotBeTransferred();
 
     // Governance
+    error ZeroAddress();
     error AlreadyInitialized();
     error ParameterOutOfBounds();
     error InvalidId();
     error InvalidProposal();
     error InvalidStatus();
     error InvalidInput();
-    error AlreadyQueued();
     error AlreadyVoted();
-    error RequirementsNotMet();
     error NotEligible();
-    error Unauthorized();
-    error NotRefundable();
+    error NotInActiveProposals();
+
+    // Refunds
     error InsufficientRefundBalance();
+
+    // Executor
     error DelayNotSatisfied();
     error IdenticalTransactionAlreadyQueued();
     error TransactionNotQueued();
     error TimelockNotMet();
-    error StaleTransaction();
     error TransactionReverted();
-    error StakedTokensCannotBeTransferred();
 }

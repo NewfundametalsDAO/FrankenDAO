@@ -23,7 +23,7 @@ interface IGovernance {
     /// @notice Emited when a new quorum votes BPS is set
     event QuorumVotesBPSSet(uint256 oldQuorumVotesBPS, uint256 newQuorumVotesBPS);
     /// @notice Emited when the refund status changes
-    event RefundSet(uint8 status);
+    event RefundSet(bool isProposingRefund, bool oldStatus, bool newStatus);
     /// @notice Emited when the total community score data is updated
     event TotalCommunityScoreDataUpdated(uint64 proposalsCreated, uint64 proposalsPassed, uint64 votes);
     /// @notice Emited when a vote is cast
@@ -33,52 +33,9 @@ interface IGovernance {
     /// @notice Emited when the voting period is updated
     event VotingPeriodSet(uint256 oldVotingPeriod, uint256 newVotingPeriod);
 
-    ////////////////////
-    ////// Errors //////
-    ////////////////////
-
-    /// @notice Error emited if an address is 0x000
-    error ZeroAddress();
-    /// @notice Error emited if someone calls the initializer a second time
-    error AlreadyInitialized();
-    /// @notice Error emited if a parameter value is out of range
-    error ParameterOutOfBounds();
-    /// @notice Error emited if a proposal doesn't exist for a given ID
-    error InvalidId();
-    /// @notice Error emited if the requirements for a proposal are not met
-    error InvalidProposal();
-    /// @notice Error emited if an unauthorized action is attempted, given
-    //a proposal's current state
-    error InvalidStatus();
-    /// @notice Error emited if an invalid proposal is removed from the list of
-    //active proposals
-    error NotInActiveProposals();
-    /// @notice Error emited if an invalid vote is attempted (not 0, 1, or 2)
-    error InvalidInput();
-    /// @notice Error emited if someone tries to vote a second time
-    error AlreadyVoted();
-    /// @notice Error emited if someone is not elegible to perform an action
-    //(i.e. creating a proposal)
-    error NotEligible();
-
     /////////////////////
     ////// Storage //////
     /////////////////////
-
-    enum RefundStatus {
-        VotingAndProposalRefund,
-        VotingRefund,
-        ProposalRefund,
-        NoRefunds
-    }
-
-    struct ProposalTemp {
-        uint256 totalSupply;
-        uint256 proposalThreshold;
-        uint256 latestProposalId;
-        uint256 startTime;
-        uint256 endTime;
-    }
 
     struct CommunityScoreData {
         uint64 votes;
@@ -178,9 +135,9 @@ interface IGovernance {
             bytes[] memory calldatas
         );
     function getActiveProposals() external view returns (uint256[] memory);
-    function getProposalData(uint256 _id) external view returns (uint256, address, uint256, uint256);
-    function getProposalStatus(uint256 _id) external view returns (bool, bool, bool);
-    function getProposalVotes(uint256 _id) external view returns (uint256, uint256, uint256);
+    function getProposalData(uint256 _proposalId) external view returns (uint256, address, uint256, uint256);
+    function getProposalStatus(uint256 _proposalId) external view returns (bool, bool, bool, bool);
+    function getProposalVotes(uint256 _proposalId) external view returns (uint256, uint256, uint256);
     function getReceipt(uint256 _proposalId, address _voter) external view returns (Receipt memory);
     function initialize(
         address _staking,
@@ -229,6 +186,7 @@ interface IGovernance {
     function quorumVotesBPS() external view returns (uint256);
     function setProposalThresholdBPS(uint256 _newProposalThresholdBPS) external;
     function setQuorumVotesBPS(uint256 _newQuorumVotesBPS) external;
+    function setRefunds(bool _votingRefund, bool _proposalRefund) external;
     function setStakingAddress(IStaking _newStaking) external;
     function setVotingDelay(uint256 _newVotingDelay) external;
     function setVotingPeriod(uint256 _newVotingPeriod) external;

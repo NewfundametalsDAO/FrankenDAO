@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "../interfaces/IAdmin.sol";
 import "../interfaces/IExecutor.sol";
-import { FrankenDAOErrors } from "./FrankenDAOErrors.sol";
+import { FrankenDAOErrors } from "../errors/FrankenDAOErrors.sol";
 
 /// @notice Custom access control manager for FrankenDAO
 /// @dev This functionality is inherited by Governance.sol and Staking.sol
@@ -86,7 +86,9 @@ abstract contract Admin is IAdmin, FrankenDAOErrors {
     /// @dev This also ensures that pendingFounders is set to address(0), to ensure they can't re-accept it later
     function revokeFounders() external {
         if (msg.sender != founders) revert NotAuthorized();
+        
         emit NewFounders(founders, address(0));
+        
         founders = address(0);
         pendingFounders = address(0);
     }
@@ -95,14 +97,18 @@ abstract contract Admin is IAdmin, FrankenDAOErrors {
     /// @param _newCouncil New address for council
     /// @dev This uses onlyAdmin because either the Council or the Founders can set a new Council.
     function setCouncil(address _newCouncil) external onlyAdmins {
+       
         emit NewCouncil(council, _newCouncil);
+       
         council = _newCouncil;
     }
 
     /// @notice Accepts transfer of council rights. msg.sender must be pendingCouncil
     /// @param _newPauser New address for pauser
     function setPauser(address _newPauser) external onlyExecutorOrAdmins {
+        
         emit NewPauser(pauser, _newPauser);
+        
         pauser = _newPauser;
     }
 }

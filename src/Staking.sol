@@ -12,6 +12,8 @@ import "./interfaces/IStaking.sol";
 import "./interfaces/IGovernance.sol";
 import "./interfaces/IExecutor.sol";
 
+import "forge-std/Test.sol";
+
 /// @title FrankenDAO Staking
 /// @author Zach Obront & Zakk Fleischmann
 /// @notice Users stake FrankenPunks & FrankenMonsters and get ERC721s in return
@@ -169,28 +171,14 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @param _executor The address of the DAO executor contract
   /// @param _founders The address of the founder multisig for restricted functions
   /// @param _council The address of the council multisig for restricted functions
-  /// @param _maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
-  /// @param _maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
-  /// @param _votesMultiplier The multiplier for extra voting power earned per DAO vote cast
-  /// @param _proposalsMultiplier The multiplier for extra voting power earned per proposal created
-  /// @param _executedMultiplier The multiplier for extra voting power earned per proposal passed
-  /// @param _monsterMultiplier The multiplier for voting power earned per monster (relative to punk)
   constructor(
     address _frankenpunks, 
     address _frankenmonsters,
     address _governance, 
     address _executor, 
     address _founders,
-    address _council,
-    uint _maxStakeBonusTime, 
-    uint _maxStakeBonusAmount,
-    uint _votesMultiplier, 
-    uint _proposalsMultiplier, 
-    uint _executedMultiplier,
-    uint _monsterMultiplier
+    address _council
   ) ERC721("Staked FrankenPunks", "sFP") {
-    if(_maxStakeBonusTime == 0) revert InvalidParameter();
-
     frankenpunks = IERC721(_frankenpunks);
     frankenmonsters = IERC721(_frankenmonsters);
     governance = IGovernance( _governance );
@@ -199,19 +187,25 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     founders = _founders;
     council = _council;
 
-    monsterMultiplier = _monsterMultiplier; // 50
-    baseVotes = 20;
+    baseVotes = 20; // Base votes for a staked token
+    monsterMultiplier = 50; // Monsters are worth 50% of Punks
 
+    // Staking bonus increases linearly from 0 to 20 votes over 4 weeks
     stakingSettings = StakingSettings({
-      maxStakeBonusTime: _maxStakeBonusTime.toUint128(), // 4 weeks
-      maxStakeBonusAmount: _maxStakeBonusAmount.toUint128() // 20
+      maxStakeBonusTime: uint128(4 weeks), 
+      maxStakeBonusAmount: uint128(20)
     });
 
+    // Users get a bonus 1 vote per vote, 2 votes per proposal created, and 2 votes per proposal passed
     communityPowerMultipliers = CommunityPowerMultipliers({
-      votes: _votesMultiplier.toUint64(), // 100
-      proposalsCreated: _proposalsMultiplier.toUint64(), // 200
-      proposalsPassed: _executedMultiplier.toUint64() //200
+      votes: uint64(100), 
+      proposalsCreated: uint64(200),
+      proposalsPassed: uint64(200)
     });
+
+    // Refunds are initially turned on.
+    delegatingRefund = true;
+    stakingRefund = true;
   }
 
   /////////////////////////////////
@@ -623,4 +617,10 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   function setBaseURI(string calldata _baseURI) external onlyAdmins {
     emit BaseURIChanged(_baseTokenURI = _baseURI);
   }
+
+  /// @notice Contract can receive ETH (will be used to pay for gas refunds)
+  receive() external payable {}
+
+  /// @notice Contract can receive ETH (will be used to pay for gas refunds)
+  fallback() external payable {}
 }

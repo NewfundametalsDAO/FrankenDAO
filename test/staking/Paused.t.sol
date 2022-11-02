@@ -23,7 +23,7 @@ contract PausedTests is StakingBase {
 
         uint[] memory ids = new uint[](1);
         ids[0] = 0;
-        vm.expectRevert(TokenLocked.selector);
+        vm.expectRevert(Paused.selector);
         staking.stake(ids, 0);
 
         vm.stopPrank();

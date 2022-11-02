@@ -17,13 +17,6 @@ interface IAdmin {
     /// @notice Emitted when pendingFounders is changed
     event NewPendingFounders(address oldPendingFounders, address newPendingFounders);
 
-    ////////////////////
-    ////// Errors //////
-    ////////////////////
-
-    /// @notice Error emitted when an auth condition is not met
-    error Unauthorized();
-
     /////////////////////
     ////// Methods //////
     /////////////////////

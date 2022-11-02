@@ -47,7 +47,7 @@ contract ExecutorTests is GovernanceBase {
 
     // Test that executing reverts if the tx reverts.
     function testExecutor__ExecuteRevertsIfTxReverts() public {
-        uint proposalId = _createSuccessfulProposal();
+        uint proposalId = _passCustomProposal("setVotingPeriod(uint256", abi.encode(2));
         gov.queue(proposalId);
         vm.warp(block.timestamp + executor.DELAY() + 1);
 

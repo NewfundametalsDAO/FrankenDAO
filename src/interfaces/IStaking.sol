@@ -29,21 +29,6 @@ interface IStaking {
     /// @notice Emited when the base votes for a token is changed
     event BaseVotesChanged(uint256 _baseVotes);
 
-    ////////////////////
-    ////// Errors //////
-    ////////////////////
-
-    /// @notice Error emitted when a bad token ID is used
-    error NonExistentToken();
-    /// @notice Error emitted when delegating requirements are not met
-    error InvalidDelegation();
-    /// @notice Error emitted if an invalid value is provided for a paramter
-    error InvalidParameter();
-    /// @notice Error emitted if trying to unstake while token(s) are locked
-    error TokenLocked();
-    /// @notice Error emitted when someone tries to transfer staked tokens
-    error StakedTokensCannotBeTransferred();
-
     /////////////////////
     ////// Storage //////
     /////////////////////

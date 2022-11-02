@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/proxy/ERC1967/ERC1967Proxy.sol";
-import "../utils/FrankenDAOErrors.sol";
+import { ERC1967Proxy } from "@openzeppelin/proxy/ERC1967/ERC1967Proxy.sol";
+import { FrankenDAOErrors } from "../errors/FrankenDAOErrors.sol";
 
 /// @title FrankenDAO Governance Proxy
 /// @author Zach Obront & Zakk Fleischmann

@@ -2,19 +2,35 @@
 pragma solidity ^0.8.13;
 
 import "./interfaces/IExecutor.sol";
-import { FrankenDAOErrors } from "./utils/FrankenDAOErrors.sol";
+import { FrankenDAOErrors } from "./errors/FrankenDAOErrors.sol";
 
+/// @notice Executor contract that holds treasury funds and executes passed Governance proposals
+/** @dev Loosely forked from NounsDAOExecutor.sol (0x0bc3807ec262cb779b38d65b38158acc3bfede10) with following major modifications:
+- DELAY and GRACE_PERIOD are hardcoded
+- we move admin check logic into a modifier and rename admin to governance
+- governance address cannot be changed (in the event of an upgrade, we will first transfer funds to new Executor)
+- we don't allow queueing of identical transactions
+- we don't check whether transactions are past their grace period because that is checked in Governance */
 contract Executor is IExecutor, FrankenDAOErrors {
+
+    /// @notice The delay between when a tx is queued and when it can be executed
     uint256 public constant DELAY = 2 days;
+
+    /// @notice The amount of time a tx can stay queued without being executed before it expires
     uint256 public constant GRACE_PERIOD = 14 days;
     
-    address governance;
+    /// @notice The address of the Governance contract
+    address public governance;
+
+    /// @notice The tx hash of each queued transaction that is allowed to be executed
+    /// @dev The tx hash is a hash of the target address, value, fx signature, data and eta (time execution is permitted)
     mapping(bytes32 => bool) public queuedTransactions;
 
     /////////////////////////////////
     ////////// CONSTRUCTOR //////////
     /////////////////////////////////
 
+    /// @param _governance The address of the Governance contract
     constructor(address _governance) {
         governance = _governance;
     }
@@ -23,6 +39,7 @@ contract Executor is IExecutor, FrankenDAOErrors {
     /////////// MODIFIERS ///////////
     /////////////////////////////////
 
+    /// @notice Modifier for functions that can only be called by the Governance contract (via passed proposals)
     modifier onlyGovernance() {
         if (msg.sender != governance) revert NotAuthorized();
         _;
@@ -32,6 +49,13 @@ contract Executor is IExecutor, FrankenDAOErrors {
     ////////// TX EXECUTION /////////
     /////////////////////////////////
 
+    /// @notice Queues a transaction to be executed after a delay
+    /// @param _target The address of the contract to execute the transaction on
+    /// @param _value The amount of ETH to send with the transaction
+    /// @param _signature The function signature of the transaction
+    /// @param _data The data to send with the transaction
+    /// @param _eta The time at which the transaction can be executed (must be at least DELAY in the future)
+    /// @dev This function is only called by queue() in the Governance contract
     function queueTransaction(
         address _target,
         uint256 _value,
@@ -48,6 +72,14 @@ contract Executor is IExecutor, FrankenDAOErrors {
         emit QueueTransaction(txHash, _target, _value, _signature, _data, _eta);
     }
 
+    /// @notice Cancel a queued transaction, preventing it from being executed
+    /// @param _target The address of the contract to execute the transaction on
+    /// @param _value The amount of ETH to send with the transaction
+    /// @param _signature The function signature of the transaction
+    /// @param _data The data to send with the transaction
+    /// @param _eta The time at which the transaction can be executed
+    /** @dev This function is only called by _removeTransactionWithQueuedOrExpiredCheck() in the Governance contract,
+            which shows up in cancel(), clear() and veto() */
     function cancelTransaction(
         address target,
         uint256 value,
@@ -62,6 +94,13 @@ contract Executor is IExecutor, FrankenDAOErrors {
         emit CancelTransaction(txHash, target, value, signature, data, eta);
     }
 
+    /// @notice Executes a queued transaction after the delay has passed
+    /// @param _target The address of the contract to execute the transaction on
+    /// @param _value The amount of ETH to send with the transaction
+    /// @param _signature The function signature of the transaction
+    /// @param _data The data to send with the transaction
+    /// @param _eta The time at which the transaction can be executed
+    /// @dev This function is only called by execute() in the Governance contract
     function executeTransaction(
         address _target,
         uint256 _value,
@@ -72,17 +111,17 @@ contract Executor is IExecutor, FrankenDAOErrors {
         bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
         
         // We don't need to check if it's expired, because this will be caught by the Governance contract.
-        // (If we are past the grace period, proposal state will be Expired and execute() will revert.)
+        // (ie. If we are past the grace period, proposal state will be Expired and execute() will revert.)
         if (!queuedTransactions[txHash]) revert TransactionNotQueued();
         if (_eta > block.timestamp) revert TimelockNotMet();
         
         queuedTransactions[txHash] = false;
         
         if (bytes(_signature).length > 0) {
-            _data = abi.encodeWithSignature(_signature, _data);
+            // @todo figure out why encodeWithSignature() doesn't work here
+            _data = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
         }
 
-        // solium-disable-next-line security/no-call-value
         (bool success, bytes memory returnData) = _target.call{ value: _value }(_data);
         if (!success) revert TransactionReverted();
 
@@ -90,7 +129,9 @@ contract Executor is IExecutor, FrankenDAOErrors {
         return returnData;
     }
 
+    /// @notice Contract can receive ETH (needed to add funds to the treasury)
     receive() external payable {}
 
+    /// @notice Contract can receive ETH (needed to add funds to the treasury)
     fallback() external payable {}
 }

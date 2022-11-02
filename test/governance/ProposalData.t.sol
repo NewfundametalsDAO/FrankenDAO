@@ -50,12 +50,13 @@ contract ProposalDataTests is GovernanceBase {
     function testGovData__ProposalReturnsCorrectStatus() public {
         uint proposalId = _createProposal();
         (
+            bool verified,
             bool canceled,
             bool vetoed,
             bool executed
         ) = gov.getProposalStatus(proposalId);
 
-        assert(!canceled && !vetoed && !executed);
+        assert(!verified && !canceled && !vetoed && !executed);
     }
 
     // Test that the proposal returns the correct vote information.

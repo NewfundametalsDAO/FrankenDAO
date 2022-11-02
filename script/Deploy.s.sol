@@ -18,7 +18,7 @@ contract DeployScript is Script {
     address FOUNDER_MULTISIG = address(2);
     address COUNCIL_MULTISIG = address(3);
     address FRANKENPUNKS = 0x1FEC856e25F757FeD06eB90548B0224E91095738;
-    address FRANKENMONSTERS = address(1);
+    address FRANKENMONSTERS = 0x2cfBCB9e9C3D1ab06eF332f535266444aa8d9570;
     bytes32 SALT = bytes32("salty");
 
     function run() public {
@@ -52,13 +52,7 @@ contract DeployScript is Script {
             expectedGovProxyAddr,
             address(executor),
             FOUNDER_MULTISIG,
-            COUNCIL_MULTISIG,
-            4 weeks, // maxStakeBonusTime
-            20, // maxStakeBonusAmount
-            100, // votesMultiplier
-            200, // proposalsCreatedMultiplier
-            200, // proposalsPassedMultiplier,
-            50 // monsterMultiplier
+            COUNCIL_MULTISIG
         );
 
         // create governance 
@@ -66,7 +60,7 @@ contract DeployScript is Script {
         govImpl = new Governance();
 
         // create governance proxy and initialize
-        gov = Governance(address(new GovernanceProxy{salt:SALT}(FRANKENPUNKS, address(this), bytes(""))));
+        gov = Governance(payable(address(new GovernanceProxy{salt:SALT}(FRANKENPUNKS, address(this), bytes("")))));
 
         require(address(gov) == expectedGovProxyAddr, "governance proxy address mismatch");
 
