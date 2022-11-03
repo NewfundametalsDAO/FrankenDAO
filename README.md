@@ -43,7 +43,7 @@ Here is a simplified overview of the major actions user's take in the system:
 
 # Contracts In Scope
 
-| Contract | Description | nSLOC
+| Contract | nSLOC | Description
 | --- | ---  | --- |
 | `Staking.sol`  | 325 | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  |
 | `Governance.sol` | 331  | Creating and voting on proposals or queuing the transactions defined in a passed proposal  |
@@ -53,7 +53,7 @@ Here is a simplified overview of the major actions user's take in the system:
 | `GovernanceProxy.sol` | 27  | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)  |
 | Total nSLOC | 805 | | 
 
-Out of Scope: `FrankenDAOErrors.sol`, `SafeCast.sol`, all interfaces.
+(Out of Scope: `FrankenDAOErrors.sol`, `SafeCast.sol`, all interfaces.)
 
 ## Staking.sol
 
@@ -151,7 +151,7 @@ Each of these contracts has a `setRefunds()` function that allows Governance to 
 
 There are a number of "risks" we are aware of and which will not be valid for the contest:
 
-1. No Zero Address Checks™. I'm serious. [See frangio's thoughts here](https://forum.openzeppelin.com/t/removing-address-0x0-checks-from-openzeppelin-contracts/2222) if you want a history on why these make no sense.
+1. No Zero Address Checks™. I'm serious. Please don't tell me to add them. [See frangio's thoughts here](https://forum.openzeppelin.com/t/removing-address-0x0-checks-from-openzeppelin-contracts/2222) if you want a history on why these make no sense.
 
 ![No More Zero Address Checks](./assets/zeroaddr.png)
 
