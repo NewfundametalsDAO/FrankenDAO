@@ -1,6 +1,5 @@
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
 import { StakingBase } from "./StakingBase.t.sol";
 import { IERC721 } from "../../src/interfaces/IERC721.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
@@ -30,10 +29,10 @@ contract GovernanceBase is StakingBase {
         string[] memory,
         bytes[] memory
     ) {
-        return _generateCustomProposalData("setVotingPeriod(uint256)", abi.encode(6 days)); 
+        return _generateCustomProposalData(0, "setVotingPeriod(uint256)", abi.encode(6 days)); 
     }
 
-    function _generateCustomProposalData(string memory _sig, bytes memory _data) public view returns (
+    function _generateCustomProposalData(uint _value, string memory _sig, bytes memory _data) public view returns (
         address[] memory,
         uint[] memory,
         string[] memory,
@@ -43,7 +42,7 @@ contract GovernanceBase is StakingBase {
         targets[0] = address(gov);
 
         uint[] memory values = new uint[](1);
-        values[0] = 0;
+        values[0] = _value;
 
         string[] memory sigs = new string[](1);
         sigs[0] = _sig;
@@ -99,13 +98,13 @@ contract GovernanceBase is StakingBase {
         return proposalId;
     }
 
-    function _passCustomProposal(string memory _sig, bytes memory _data) internal returns(uint) {
+    function _passCustomProposal(uint _value, string memory _sig, bytes memory _data) internal returns(uint) {
         (
             address[] memory targets, 
             uint[] memory values, 
             string[] memory sigs, 
             bytes[] memory calldatas
-        ) = _generateCustomProposalData(_sig, _data);
+        ) = _generateCustomProposalData(_value, _sig, _data);
 
         vm.prank(proposer);
         uint proposalId = gov.propose(targets, values, sigs, calldatas, "this is a test to upgrade governance");
@@ -119,6 +118,10 @@ contract GovernanceBase is StakingBase {
         vm.warp(block.timestamp + gov.votingPeriod() + 1);
 
         return proposalId;
+    }
+
+    function _passCustomProposal(string memory _sig, bytes memory _data) internal returns(uint) {
+        return _passCustomProposal(0, _sig, _data);
     }
 
     function _createAndExecuteSuccessfulProposal() public returns (uint) {

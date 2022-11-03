@@ -47,11 +47,25 @@ contract ExecutorTests is GovernanceBase {
 
     // Test that executing reverts if the tx reverts.
     function testExecutor__ExecuteRevertsIfTxReverts() public {
-        uint proposalId = _passCustomProposal("setVotingPeriod(uint256", abi.encode(2));
+        uint proposalId = _passCustomProposal("setVotingPeriod(uint256)", abi.encode(2));
         gov.queue(proposalId);
         vm.warp(block.timestamp + executor.DELAY() + 1);
 
         vm.expectRevert(TransactionReverted.selector);
         gov.execute(proposalId);
+    }
+
+    // Test that Executor can execute a proposal with Ether value.
+    function testExecutor__ExecutionSucceedsWithEtherValue() public {
+        vm.deal(address(executor), 100 ether);
+        uint proposalId = _passCustomProposal(100 ether, "", bytes(""));
+
+        assert(address(gov).balance == 0);
+
+        gov.queue(proposalId);
+        vm.warp(block.timestamp + executor.DELAY());
+        gov.execute(proposalId);
+
+        assert(address(gov).balance == 100 ether);
     }
 }

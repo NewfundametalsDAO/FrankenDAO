@@ -18,14 +18,14 @@ import "./interfaces/IExecutor.sol";
 import "./interfaces/IStaking.sol";
 import "./utils/Admin.sol";
 import "./utils/Refundable.sol";
-
-import "forge-std/Test.sol";
+import "./utils/SafeCast.sol";
 
 /// @title FrankenDAO Governance
 /// @author Zach Obront & Zakk Fleischmann
 /// @notice Users use their staked FrankenPunks and FrankenMonsters to make & vote on governance proposals
 /** @dev Loosely forked from NounsDAOLogicV1.sol (0xa43afe317985726e4e194eb061af77fbcb43f944) with following major modifications:
-- add optional gas refunding for voting and creating proposals
+- add gas refunding for voting and creating proposals
+- pack proposal struct into fewer storage slots 
 - track votes, proposals created, and proposal passed by user for community score calculation
 - track votes, proposals created, and proposal passed across all users counting towards community voting power
 - removed tempProposal from the proposal creation process
@@ -36,6 +36,8 @@ import "forge-std/Test.sol";
 - allow the contract to receive Ether (for gas refunds)
  */
 contract Governance is IGovernance, Admin, Refundable {
+    using SafeCast for uint;
+
     /// @notice The name of this contract
     string public constant name = "FrankenDAO";
 
@@ -171,9 +173,32 @@ contract Governance is IGovernance, Admin, Refundable {
         emit QuorumVotesBPSSet(0, quorumVotesBPS = _quorumVotesBPS);
     }
 
+    ///////////////////
+    //// Modifiers ////
+    ///////////////////
+
+    modifier cancelable(uint _proposalId) {
+        Proposal storage proposal = proposals[_proposalId];
+
+        if (
+            // Proposals that are executed, canceled, or vetoed have already been removed from
+            // ActiveProposals array and the Executor queue.
+            state(_proposalId) == ProposalState.Executed ||
+            state(_proposalId) == ProposalState.Canceled ||
+            state(_proposalId) == ProposalState.Vetoed ||
+
+            // Proposals that are Defeated or Expired should be cleared instead, to preserve their state.
+            state(_proposalId) == ProposalState.Defeated ||
+            state(_proposalId) == ProposalState.Expired
+        ) revert InvalidStatus();
+
+        _;
+    }
+
     ///////////////
     //// Views ////
     ///////////////
+
     /// @notice Gets actions of a proposal
     /// @param _proposalId the id of the proposal
     /// @return targets Array of addresses that the Executor will call if the proposal passes
@@ -194,11 +219,10 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @param _proposalId the id of the proposal
     /// @return id the id of the proposal
     /// @return proposer the address of the proposer
-    /// @return proposalThreshold the number of votes required to create the proposal
     /// @return quorumVotes the number of YES votes needed for the proposal to pass
-    function getProposalData(uint256 _proposalId) public view returns (uint256, address, uint256, uint256) {
+    function getProposalData(uint256 _proposalId) public view returns (uint256, address, uint256) {
         Proposal storage p = proposals[_proposalId];
-        return (p.id, p.proposer, p.proposalThreshold, p.quorumVotes);
+        return (p.id, p.proposer, p.quorumVotes);
     }
 
     /// @notice Gets the status of a proposal
@@ -363,34 +387,40 @@ contract Governance is IGovernance, Admin, Refundable {
                 proposersLatestProposalState == ProposalState.Pending
             ) revert NotEligible();
         }
-
+        
         // Create a new proposal in storage, and fill it with the correct data
-        Proposal storage newProposal = proposals[++proposalCount];
+        uint newProposalId = ++proposalCount;
+        Proposal storage newProposal = proposals[newProposalId];
 
-        newProposal.id = proposalCount;
+        // All non-array values in the Proposal struct are packed into 2 storage slots:
+        // Slot 1: id (96) + proposer (address, 160)
+        // Slot 2: quorumVotes (24), eta (32), startTime (32), endTime (32), forVotes (24), 
+        //         againstVotes (24), canceled (8), vetoed (8), executed (8), verified (8)
+        
+        // All times are stored as uint32s, which takes us through the year 2106 (we can upgrade then :))
+        // All votes are stored as uint24s with lots of buffer, since max votes in system is ~ 1.75 million
+        // (10k punks * (max 50 token VP + max ~50 community VP) + 10k monsters * (max 25 token VP + max ~50 community VP))
+        
+        newProposal.id = newProposalId.toUint96();
         newProposal.proposer = msg.sender;
-        newProposal.proposalThreshold = votesNeededToPropose;
-        newProposal.quorumVotes = quorumVotes();
-        newProposal.eta = 0;
         newProposal.targets = _targets;
         newProposal.values = _values;
         newProposal.signatures = _signatures;
         newProposal.calldatas = _calldatas;
-        newProposal.startTime = block.timestamp + votingDelay;
-        newProposal.endTime = block.timestamp + votingDelay + votingPeriod;
-        newProposal.forVotes = 0;
-        newProposal.againstVotes = 0;
-        newProposal.abstainVotes = 0;
-        newProposal.verified = false;
-        newProposal.canceled = false;
-        newProposal.executed = false;
-        newProposal.vetoed = false;
+        newProposal.quorumVotes = quorumVotes().toUint24();
+        newProposal.startTime = (block.timestamp + votingDelay).toUint32();
+        newProposal.endTime = (block.timestamp + votingDelay + votingPeriod).toUint32();
+        
+        // Other values are set automatically.
+        //  - forVotes, againstVotes, and abstainVotes are set to 0
+        //  - verified, canceled, executed, and vetoed are set to false
+        //  - eta is set to 0
 
-        latestProposalIds[newProposal.proposer] = newProposal.id;
-        activeProposals.push(newProposal.id);
+        latestProposalIds[newProposal.proposer] = newProposalId;
+        activeProposals.push(newProposalId);
 
         emit ProposalCreated(
-            newProposal.id,
+            newProposalId,
             msg.sender,
             _targets,
             _values,
@@ -398,12 +428,11 @@ contract Governance is IGovernance, Admin, Refundable {
             _calldatas,
             newProposal.startTime,
             newProposal.endTime,
-            newProposal.proposalThreshold,
             newProposal.quorumVotes,
             _description
         );
 
-        return newProposal.id;
+        return newProposalId;
     }
 
     /// @notice Function for verifying a proposal
@@ -439,8 +468,7 @@ contract Governance is IGovernance, Admin, Refundable {
         Proposal storage proposal = proposals[_proposalId];
 
         // Set the ETA (time for execution) to the soonest time based on the Executor's delay
-        uint256 eta = block.timestamp + executor.DELAY();
-        proposal.eta = eta;
+        proposal.eta = (block.timestamp + executor.DELAY()).toUint32();
 
         // Queue separate transactions for each action in the proposal
         uint numTargets = proposal.targets.length;
@@ -485,13 +513,26 @@ contract Governance is IGovernance, Admin, Refundable {
     //// Cancel / Veto Proposal ////
     ////////////////////////////////
 
-    /// @notice Cancels a proposal
-    /// @param _proposalId The id of the proposal to cancel
-    function cancel(uint256 _proposalId) external {
+    /// @notice Vetoes a proposal 
+    /// @param _proposalId The id of the proposal to veto
+    /// @dev This allows the founder or council multisig to veto a malicious proposal
+    function veto(uint256 _proposalId) external cancelable(_proposalId) onlyAdmins {
         Proposal storage proposal = proposals[_proposalId];
 
-        // Proposals cannot be canceled if they are already canceled, executed, or vetoed
-        if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
+        // If the proposal is queued or executed, remove it from the Executor's queuedTransactions mapping
+        // Otherwise, remove it from the Active Proposals array
+        _removeTransactionWithQueuedOrExpiredCheck(proposal);
+
+        // Update the vetoed flag so the proposal's state is Vetoed
+        proposal.vetoed = true;
+
+        emit ProposalVetoed(_proposalId);
+    }
+
+    /// @notice Cancels a proposal
+    /// @param _proposalId The id of the proposal to cancel
+    function cancel(uint256 _proposalId) external cancelable(_proposalId) {
+        Proposal storage proposal = proposals[_proposalId];
 
         // Proposals can be canceled if proposer themselves decide to cancel the proposal (at any time before execution)
         // Nouns allows anyone to cancel if proposer falls below threshold, but because tokens are locked, this isn't possible
@@ -509,66 +550,29 @@ contract Governance is IGovernance, Admin, Refundable {
 
     /// @notice clear the proposal from the ActiveProposals array or the Executor's queuedTransactions
     /// @param _proposalId The id of the proposal to clear
-    // @todo double check the logic for clear and cancel for all situations
     function clear(uint256 _proposalId) external {
         Proposal storage proposal = proposals[_proposalId];
 
         // This function can only be called in three situations:
-        // 1. The proposal was queued but the grace period has passed (removes it from Executor's queuedTransactions)
-        // 2. The proposal is over and was not passed (removes it from ActiveProposals array)
-        // 3. The proposal remained unverified through the endTime and is now considered canceled (removes it from ActiveProposals array)
+        // 1. EXPIRED: The proposal was queued but the grace period has passed (removes it from Executor's 
+        //    queuedTransactions). We use this instead of using cancel() so Expired state is preserved.
+        // 2. DEFEATED: The proposal is over and was not passed (removes it from ActiveProposals array).
+        //    We use this instead of using cancel() so Defeated state is preserved.
+        // 3. UNVERIFIED AFTER END TIME (CANCELED): The proposal remained unverified through the endTime and is 
+        //    now considered canceled (removes it from ActiveProposals array). We use this because cancel() is 
+        //    not allowed to be called on canceled proposals, but this situation is a special case where the 
+        //    proposal still needs to be removed from the ActiveProposals array.
         if (
             state(_proposalId) != ProposalState.Expired &&
             state(_proposalId) != ProposalState.Defeated && 
             (proposal.verified || block.timestamp < proposal.endTime)
         ) revert NotEligible();
 
-        // If the proposal is queued or executed, remove it from the Executor's queuedTransactions mapping
-        // Otherwise, remove it from the Active Proposals array
+        // If the proposal is Expired, remove it from the Executor's queuedTransactions mapping
+        // If the proposal is Defeated or Canceled, remove it from the Active Proposals array
         _removeTransactionWithQueuedOrExpiredCheck(proposal);
 
         emit ProposalCanceled(_proposalId);
-    }
-
-    /// @notice Vetoes a proposal 
-    /// @param _proposalId The id of the proposal to veto
-    /// @dev This allows the founder or council multisig to veto a malicious proposal
-    function veto(uint256 _proposalId) external onlyAdmins {
-        Proposal storage proposal = proposals[_proposalId];
-        
-        // @todo i think i can get rid of this because it's checked downstream
-        if (proposal.executed || proposal.canceled || proposal.vetoed) revert InvalidStatus();
-
-        // If the proposal is queued or executed, remove it from the Executor's queuedTransactions mapping
-        // Otherwise, remove it from the Active Proposals array
-        _removeTransactionWithQueuedOrExpiredCheck(proposal);
-
-        // Update the vetoed flag so the proposal's state is Vetoed
-        proposal.vetoed = true;
-
-        emit ProposalVetoed(_proposalId);
-    }
-
-    /// @notice Removes a proposal from the ActiveProposals array or the Executor's queuedTransactions mapping
-    /// @param _proposal The proposal to remove
-    function _removeTransactionWithQueuedOrExpiredCheck(Proposal storage _proposal) internal {
-        console.log(uint8(state(_proposal.id)));
-        if (
-            state(_proposal.id) == ProposalState.Queued || 
-            state(_proposal.id) == ProposalState.Expired
-        ) {
-            for (uint256 i = 0; i < _proposal.targets.length; i++) {
-                executor.cancelTransaction(
-                    _proposal.targets[i],
-                    _proposal.values[i],
-                    _proposal.signatures[i],
-                    _proposal.calldatas[i],
-                    _proposal.eta
-                );
-            }
-        } else {
-            _removeFromActiveProposals(_proposal.id);
-        }
     }
 
     ////////////////
@@ -611,7 +615,7 @@ contract Governance is IGovernance, Admin, Refundable {
 
         // Calculate the number of votes a user is able to cast
         // This takes into account delegation and community voting power
-        uint votes = staking.getVotes(_voter);
+        uint24 votes = (staking.getVotes(_voter)).toUint24();
 
         // Update the proposal's total voting records based on the votes
         if (_support == 0) {
@@ -625,8 +629,7 @@ contract Governance is IGovernance, Admin, Refundable {
         // Update the user's receipt for this proposal
         receipt.hasVoted = true;
         receipt.support = _support;
-        // Can't overflow because there will never be more than 2 ** 96 votes in the system.
-        receipt.votes = uint96(votes);
+        receipt.votes = votes;
 
         // Make these updates after the vote so it doesn't impact voting power for this vote.
         ++totalCommunityScoreData.votes;
@@ -648,6 +651,27 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @dev Used to calculate the proposalThreshold or quorumThreshold at a given point in time
     function bps2Uint(uint256 _bps, uint256 _number) internal pure returns (uint256) {
         return (_number * _bps) / 10000;
+    }
+
+    /// @notice Removes a proposal from the ActiveProposals array or the Executor's queuedTransactions mapping
+    /// @param _proposal The proposal to remove
+    function _removeTransactionWithQueuedOrExpiredCheck(Proposal storage _proposal) internal {
+        if (
+            state(_proposal.id) == ProposalState.Queued || 
+            state(_proposal.id) == ProposalState.Expired
+        ) {
+            for (uint256 i = 0; i < _proposal.targets.length; i++) {
+                executor.cancelTransaction(
+                    _proposal.targets[i],
+                    _proposal.values[i],
+                    _proposal.signatures[i],
+                    _proposal.calldatas[i],
+                    _proposal.eta
+                );
+            }
+        } else {
+            _removeFromActiveProposals(_proposal.id);
+        }
     }
 
     /// @notice Removes a proposal from the ActiveProposals array
@@ -712,7 +736,6 @@ contract Governance is IGovernance, Admin, Refundable {
     function setVotingDelay(uint256 _newVotingDelay) external onlyExecutor {
         if (_newVotingDelay < MIN_VOTING_DELAY || _newVotingDelay > MAX_VOTING_DELAY) revert ParameterOutOfBounds();
 
-        // @todo confirm that this model works
         emit VotingDelaySet(votingDelay, _newVotingDelay);
 
         votingDelay = _newVotingDelay;

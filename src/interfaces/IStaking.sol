@@ -55,7 +55,7 @@ interface IStaking {
     ////// Methods //////
     /////////////////////
 
-    function _baseTokenURI() external view returns (string memory);
+    function baseTokenURI() external view returns (string memory);
     function baseVotes() external view returns (uint256);
     function changeStakeAmount(uint128 _newMaxStakeBonusAmount) external;
     function changeStakeTime(uint128 _newMaxStakeBonusTime) external;

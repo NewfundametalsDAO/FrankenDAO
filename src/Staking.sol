@@ -100,8 +100,8 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice The total token voting power of the system
   uint totalTokenVotingPower;
 
-  /// @notice Base token UR for the ERC721s representing the staked position
-  string public _baseTokenURI;
+  /// @notice Base token URI for the ERC721s representing the staked position
+  string public baseTokenURI;
 
   /// @notice The total supply of staked frankenpunks
   uint128 public stakedFrankenPunks;
@@ -165,7 +165,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     uint[] memory activeProposals = governance.getActiveProposals();
     for (uint i = 0; i < activeProposals.length; i++) {
       if (governance.getReceipt(activeProposals[i], getDelegate(msg.sender)).hasVoted) revert TokenLocked();
-      (, address proposer,,) = governance.getProposalData(activeProposals[i]);
+      (, address proposer,) = governance.getProposalData(activeProposals[i]);
       if (proposer == getDelegate(msg.sender)) revert TokenLocked();
     }
     _;
@@ -187,7 +187,8 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     address _governance, 
     address _executor, 
     address _founders,
-    address _council
+    address _council,
+    string memory _baseTokenURI
   ) ERC721("Staked FrankenPunks", "sFP") {
     frankenpunks = IERC721(_frankenpunks);
     frankenmonsters = IERC721(_frankenmonsters);
@@ -216,6 +217,9 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     // Refunds are initially turned on.
     delegatingRefund = true;
     stakingRefund = true;
+
+    // Set the base token URI.
+    baseTokenURI = _baseTokenURI;
   }
 
   /////////////////////////////////
@@ -237,7 +241,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   function tokenURI(uint256 _tokenId) public view virtual override(ERC721) returns (string memory) {
     if (ownerOf(_tokenId) == address(0)) revert NonExistentToken();
 
-    string memory baseURI = _baseTokenURI;
+    string memory baseURI = baseTokenURI;
     return bytes(baseURI).length > 0
       ? string(abi.encodePacked(baseURI, _tokenId.toString(), ".json"))
       : "";
@@ -625,7 +629,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice Set hte base URI for the metadata for the staked token
   /// @param _baseURI The new base URI
   function setBaseURI(string calldata _baseURI) external onlyAdmins {
-    emit BaseURIChanged(_baseTokenURI = _baseURI);
+    emit BaseURIChanged(baseTokenURI = _baseURI);
   }
 
   /// @notice Contract can receive ETH (will be used to pay for gas refunds)

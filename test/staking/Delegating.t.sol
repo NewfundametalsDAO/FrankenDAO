@@ -4,67 +4,54 @@ pragma solidity ^0.8.13;
 import { StakingBase } from "../bases/StakingBase.t.sol";
 
 contract DelegatingTests is StakingBase {
-    uint[] ids = [1553, 8687];
-    // delegate - get my address if I haven't delegated
+    
+    // Test that a staked token is delegated to self by default. 
     function testDelegating__DelegateToSelfByDefault() public {
-         //addr 1 stakes
-         address owner = mockStakeSingle(ids[0]);
-         //get current delegate of addr 1
-         assertEq(
-            staking.getDelegate(owner),
-            owner
-         );
+         address owner = mockStakeSingle(PUNK_ID);
+         assert(staking.getDelegate(owner) == owner);
     }
 
-    // delegate - get delegate address if I have delegated
+    // Test that delegating to other staked user works.
     function testDelegating__GetDelegateAddress() public {
+        address owner = mockStakeSingle(PUNK_ID);
+        address delegate = mockStakeSingle(MONSTER_ID);
 
-        // addr 1 stakes
-        address owner = mockStakeSingle(ids[0]);
-        address delegate = frankenpunks.ownerOf(ids[1]);
+        vm.prank(owner);
+        staking.delegate(delegate);
 
-        vm.startPrank(owner);
-
-        // delegate
-        staking.delegate(
-            delegate
-        );
-
-        assertEq(
-            staking.getDelegate(owner),
-            delegate
-        );
+        assert(staking.getDelegate(owner) == delegate);
     }
 
+    // Test that delegating to a non-staked user works.
+    function testDelegating__DelegateToNonStakedUser() public {
+        address owner = mockStakeSingle(PUNK_ID);
+        address delegate = makeAddr("unstakedDelegate");
+
+        vm.prank(owner);
+        staking.delegate(delegate);
+
+        assert(staking.getDelegate(owner) == delegate);
+    }
+
+    // Test that you cannot delegate to your current delegate.
     function testDelegating__RevertsIfDelegatingToCurrentDelegate() public {
+        address owner = mockStakeSingle(PUNK_ID);
+        address delegate = makeAddr("unstakedDelegate");
 
-        // addr 1 stakes
-        address owner = mockStakeSingle(ids[0]);
-        address delegate = frankenpunks.ownerOf(ids[1]);
+        vm.prank(owner);
+        staking.delegate(delegate);
 
-        // delegate
-        vm.startPrank(owner);
-        staking.delegate(
-            delegate
-        );
-
-        // try to delegate to the same address again
         vm.expectRevert(InvalidDelegation.selector);
-        staking.delegate(
-            delegate
-        );
+        staking.delegate(delegate);
     }
 
+    // Test that you cannot delegate if you haven't staked.
     function testDelegating__RevertsIfAddressHasNotStaked() public {
-        address owner = frankenpunks.ownerOf(ids[0]);
-        address delegate = mockStakeSingle(ids[1]);
+        address owner = frankenpunks.ownerOf(PUNK_ID);
+        address delegate = makeAddr("unstakedDelegate");
 
-        vm.startPrank(owner);
-
-        // address that hasn't staked tries to delegate
+        vm.prank(owner);
         vm.expectRevert(InvalidDelegation.selector);
-        staking.delegate(
-            delegate
-        );
+        staking.delegate(delegate);
     }
 }

@@ -21,6 +21,8 @@ contract DeployScript is Script {
     address FRANKENMONSTERS = 0x2cfBCB9e9C3D1ab06eF332f535266444aa8d9570;
     bytes32 SALT = bytes32("salty");
 
+    string BASE_TOKEN_URI = "http://frankenpunks.com/uris/"; // @todo fix this
+
     function run() public {
         vm.startBroadcast();
         _deployAllContracts();
@@ -52,7 +54,8 @@ contract DeployScript is Script {
             expectedGovProxyAddr,
             address(executor),
             FOUNDER_MULTISIG,
-            COUNCIL_MULTISIG
+            COUNCIL_MULTISIG,
+            BASE_TOKEN_URI
         );
 
         // create governance 

@@ -130,7 +130,6 @@ contract Executor is IExecutor, FrankenDAOErrors {
         queuedTransactions[txHash] = false;
         
         if (bytes(_signature).length > 0) {
-            // @todo figure out why encodeWithSignature() doesn't work here
             _data = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
         }
 

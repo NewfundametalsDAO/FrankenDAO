@@ -6,8 +6,8 @@ import { IERC721 } from "../../src/interfaces/IERC721.sol";
 contract StakingBase is TestBase {
     IERC721 frankenpunks = IERC721(FRANKENPUNKS);
     IERC721 frankenmonsters = IERC721(FRANKENMONSTERS);
-    uint PUNK_ID = 0;
-    uint MONSTER_ID = 10000;
+    uint PUNK_ID = 555;
+    uint MONSTER_ID = 15000;
 
     function mockStake(uint[] memory ids) public returns (address[] memory) {
         return _mockStake(ids, 0);

@@ -4,61 +4,62 @@ pragma solidity ^0.8.13;
 import {GovernanceBase} from "../bases/GovernanceBase.t.sol";
 
 contract LockedTests is GovernanceBase {
-    uint[] ids = [1553, 8687];
 
+    // Test that a user can't unstake after voting.
     function testLocking__RevertIfUnstakingAfterVoting() public {
-        address playerOne = mockStakeSingle(ids[0]);
+        address owner = mockStakeSingle(PUNK_ID);
 
         uint proposalId = _createAndVerifyProposal();
         vm.warp(block.timestamp + gov.votingDelay());
 
-        vm.startPrank(playerOne);
+        vm.startPrank(owner);
         gov.castVote(proposalId, 1);
 
-        uint[] memory playerOneIds = new uint[](1);
-        playerOneIds[0] = ids[0];
+        uint[] memory ownerIds = new uint[](1);
+        ownerIds[0] = PUNK_ID;
 
         vm.expectRevert(TokenLocked.selector);
-        staking.unstake(playerOneIds, playerOne);
+        staking.unstake(ownerIds, owner);
     }
 
+    // Test that a user can't unstake after a delegate has voted.
     function testLocking__RevertIfUnstakingAfterDelegateHasVoted() public {
-        address playerOne = mockStakeSingle(ids[0]);
-        address playerTwo = mockStakeSingle(ids[1]);
+        address owner = mockStakeSingle(PUNK_ID);
+        address delegate = mockStakeSingle(MONSTER_ID);
 
-        vm.prank(playerTwo);
-        staking.delegate(playerOne);
+        vm.prank(owner);
+        staking.delegate(delegate);
 
         uint proposalId = _createAndVerifyProposal();
         vm.warp(block.timestamp + gov.votingDelay());
 
-        vm.prank(playerOne);
+        vm.prank(delegate);
         gov.castVote(proposalId, 1);
 
-        vm.startPrank(playerTwo);
-        uint[] memory playerTwoIds = new uint[](1);
-        playerTwoIds[0] = ids[1];
-
+        uint[] memory ownerIds = new uint[](1);
+        ownerIds[0] = MONSTER_ID;
+        
+        vm.prank(owner);
         vm.expectRevert(TokenLocked.selector);
-        staking.unstake(playerTwoIds, playerTwo);
+        staking.unstake(ownerIds, owner);
     }
 
-    // revert if delegating after voting
+    // Test that a user can't delegate after voting.
     function testLocking__RevertIfDelegatingAfterVoting() public {
-        address playerOne = mockStakeSingle(ids[0]);
-        address playerTwo = mockStakeSingle(ids[1]);
+        address owner = mockStakeSingle(PUNK_ID);
+        address delegate = makeAddr("unstakedDelegate");
 
         uint proposalId = _createAndVerifyProposal();
         vm.warp(block.timestamp + gov.votingDelay());
 
-        vm.startPrank(playerOne);
+        vm.startPrank(owner);
         gov.castVote(proposalId, 1);
 
         vm.expectRevert(TokenLocked.selector);
-        staking.delegate(playerTwo);
+        staking.delegate(delegate);
     }
 
-    // Test that delegating after voting doesn't revert if proposal is canceled.
+    // Test that tokens are unlocked if a proposal is canceled.
     function testLocking__DelegatingAfterVotingDoesntRevertIfProposalCanceled() public {
         uint proposalId = _createSuccessfulProposal();
         
@@ -72,7 +73,7 @@ contract LockedTests is GovernanceBase {
         assert(staking.getDelegate(proposer) == voter);
     }
 
-    // Test that delegating after voting doesn't revert if proposal is vetoed.
+    // Test that tokens are unlocked if proposal is vetoed.
     function testLocking__DelegatingAfterVotingDoesntRevertIfProposalVetoed() public {
         uint proposalId = _createSuccessfulProposal();
         
@@ -85,10 +86,11 @@ contract LockedTests is GovernanceBase {
 
         vm.prank(proposer);
         staking.delegate(voter);
+
         assert(staking.getDelegate(proposer) == voter);
     }
 
-    // Test that delegating after voting doesn't revert if proposal is queued.
+    // Test that tokens are unlocked when a proposal is queued.
     function testLocking__DelegatingAfterVotingDoesntRevertIfProposalQueued() public {
         uint proposalId = _createSuccessfulProposal();
         
@@ -101,5 +103,4 @@ contract LockedTests is GovernanceBase {
         staking.delegate(voter);
         assert(staking.getDelegate(proposer) == voter);
     }
-
 }

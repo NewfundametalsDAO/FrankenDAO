@@ -100,10 +100,9 @@ contract GovParamsTests is GovernanceBase {
     // Test that bpsToUint function works as expected.
     function testGovParams__bpstoUintSetsProposalParamsCorrectly() public {
         uint proposalId = _createProposal();
-        (uint id, address proposer, uint pThreshold, uint qThreshold) = gov.getProposalData(proposalId);
+        (,, uint qThreshold) = gov.getProposalData(proposalId);
 
         uint totalVotes = staking.getTotalVotingPower();
-        assert(pThreshold == 500 * totalVotes / 10000);
         assert(qThreshold == 2000 * totalVotes / 10000);
     }
 }

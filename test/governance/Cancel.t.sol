@@ -86,6 +86,23 @@ contract CancelProposalTests is GovernanceBase {
 
         assert(_checkState(proposalId, IGovernance.ProposalState.Canceled));
     }
+
+    // Test that anyone can clear an autocanceled proposal.
+    function testGovCancel__AnyoneCanClearAutocanceledProposal() public {
+        uint proposalId = _createProposal();
+        assert(_checkState(proposalId, IGovernance.ProposalState.Pending));
+
+        vm.warp(block.timestamp + gov.votingDelay() + gov.votingPeriod() + 10);
+
+        assert(_checkState(proposalId, IGovernance.ProposalState.Canceled));
+        assert(gov.getActiveProposals().length == 1);
+
+        vm.prank(stranger);
+        gov.clear(proposalId);
+
+        assert(_checkState(proposalId, IGovernance.ProposalState.Canceled));
+        assert(gov.getActiveProposals().length == 0);
+    }
     
     // Test that anyone can clear if a proposal (removing it from executor queue) if isn't executed within the grace period.
     function testGovCancel__AnyoneCanClearIfProposalNotExecutedWithinGracePeriod() public {
@@ -131,16 +148,32 @@ contract CancelProposalTests is GovernanceBase {
         assert(_checkState(proposalId, IGovernance.ProposalState.Defeated));
     }
 
-    // Test that nobody can cancel a proposal if it is verified after endTime.
-    function testGovCancel__NobodyCanCancelIfProposalVerifiedAfterEndTime() public {
+    // Test that you can't cancel a defeated proposal.
+    function testGovCancel__CantCancelDefeatedProposal() public {
         uint proposalId = _createAndVerifyProposal();
         assert(_checkState(proposalId, IGovernance.ProposalState.Pending));
 
         vm.warp(block.timestamp + gov.votingDelay() + gov.votingPeriod() + 10);
 
-        vm.prank(stranger);
-        vm.expectRevert(NotEligible.selector);
+        vm.prank(proposer);
+        vm.expectRevert(InvalidStatus.selector);
         gov.cancel(proposalId);
+    }
+
+    // Test that you can clear a defeated proposal.
+    function testGovCancel__CanClearDefeatedProposal() public {
+        uint proposalId = _createAndVerifyProposal();
+        assert(_checkState(proposalId, IGovernance.ProposalState.Pending));
+
+        vm.warp(block.timestamp + gov.votingDelay() + gov.votingPeriod() + 10);
+
+        assert(gov.getActiveProposals().length == 1);
+
+        vm.prank(stranger);
+        gov.clear(proposalId);
+
+        assert(_checkState(proposalId, IGovernance.ProposalState.Defeated));
+        assert(gov.getActiveProposals().length == 0);
     }
 
     // Test that a proposal cannot be canceled after it is executed.

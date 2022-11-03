@@ -11,7 +11,7 @@ interface IGovernance {
     /// @notice Emited when a proposal is canceled
     event ProposalCanceled(uint256 id);
     /// @notice Emited when a proposal is created
-    event ProposalCreated( uint256 id, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startTime, uint256 endTime, uint256 proposalThreshold, uint256 quorumVotes, string description);
+    event ProposalCreated( uint256 id, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint32 startTime, uint32 endTime, uint24 quorumVotes, string description);
     /// @notice Emited when a proposal is executed
     event ProposalExecuted(uint256 id);
     /// @notice Emited when a proposal is queued
@@ -45,15 +45,9 @@ interface IGovernance {
 
     struct Proposal {
         /// @notice Unique id for looking up a proposal
-        uint256 id;
+        uint96 id;
         /// @notice Creator of the proposal
         address proposer;
-        /// @notice The number of votes needed to create a proposal at the time of proposal creation. *DIFFERS from GovernerBravo
-        uint256 proposalThreshold;
-        /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed at the time of proposal creation. *DIFFERS from GovernerBravo
-        uint256 quorumVotes;
-        /// @notice The timestamp that the proposal will be available for execution, set once the vote succeeds
-        uint256 eta;
         /// @notice the ordered list of target addresses for calls to be made
         address[] targets;
         /// @notice The ordered list of values (i.e. msg.value) to be passed to the calls to be made
@@ -62,16 +56,20 @@ interface IGovernance {
         string[] signatures;
         /// @notice The ordered list of calldata to be passed to each call
         bytes[] calldatas;
+        /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed at the time of proposal creation. 
+        uint24 quorumVotes;
+        /// @notice The timestamp that the proposal will be available for execution, set once the vote succeeds
+        uint32 eta;
         /// @notice The block at which voting begins: holders must delegate their votes prior to this block
-        uint256 startTime;
+        uint32 startTime;
         /// @notice The block at which voting ends: votes must be cast prior to this block
-        uint256 endTime;
+        uint32 endTime;
         /// @notice Current number of votes in favor of this proposal
-        uint256 forVotes;
+        uint24 forVotes;
         /// @notice Current number of votes in opposition to this proposal
-        uint256 againstVotes;
+        uint24 againstVotes;
         /// @notice Current number of votes for abstaining for this proposal
-        uint256 abstainVotes;
+        uint24 abstainVotes;
         /// @notice Flag marking whether a proposal has been verified
         bool verified;
         /// @notice Flag marking whether the proposal has been canceled
@@ -91,7 +89,7 @@ interface IGovernance {
         /// @notice Whether or not the voter supports the proposal or abstains
         uint8 support;
         /// @notice The number of votes the voter had, which were cast
-        uint96 votes;
+        uint24 votes;
     }
 
     /// @notice Possible states that a proposal may be in
@@ -135,7 +133,7 @@ interface IGovernance {
             bytes[] memory calldatas
         );
     function getActiveProposals() external view returns (uint256[] memory);
-    function getProposalData(uint256 _proposalId) external view returns (uint256, address, uint256, uint256);
+    function getProposalData(uint256 _proposalId) external view returns (uint256, address, uint256);
     function getProposalStatus(uint256 _proposalId) external view returns (bool, bool, bool, bool);
     function getProposalVotes(uint256 _proposalId) external view returns (uint256, uint256, uint256);
     function getReceipt(uint256 _proposalId, address _voter) external view returns (Receipt memory);
@@ -159,16 +157,15 @@ interface IGovernance {
         external
         view
         returns (
-            uint256 id,
+            uint96 id,
             address proposer,
-            uint256 proposalThreshold,
-            uint256 quorumVotes,
-            uint256 eta,
-            uint256 startTime,
-            uint256 endTime,
-            uint256 forVotes,
-            uint256 againstVotes,
-            uint256 abstainVotes,
+            uint24 quorumVotes,
+            uint32 eta,
+            uint32 startTime,
+            uint32 endTime,
+            uint24 forVotes,
+            uint24 againstVotes,
+            uint24 abstainVotes,
             bool verified,
             bool canceled,
             bool vetoed,

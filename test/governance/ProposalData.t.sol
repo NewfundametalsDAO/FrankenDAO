@@ -36,13 +36,11 @@ contract ProposalDataTests is GovernanceBase {
         (
             uint id,
             address proposalProposer,
-            uint proposerThreshold,
             uint quorumVotes
         ) = gov.getProposalData(proposalId);
 
         assert(id == proposalId);
         assert(proposalProposer == proposer);
-        assert(proposerThreshold == 1400 * gov.proposalThresholdBPS() / 1e5);
         assert(quorumVotes == (1400 * gov.quorumVotesBPS() / 1e5));
     }
 
