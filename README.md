@@ -15,6 +15,8 @@ The basic user flow for the DAO is as follows:
 
 The DAO implementation draws heavily from NounsDAO, with deviations described in the contracts.
 
+# Architecture
+
 ```
 ├── Executor.sol
 ├── Governance.sol
