@@ -5,13 +5,15 @@
 FrankenDAO is the staking and governance component of the FrankenPunks
 ecosystem. The DAO will have full control over the FrankenPunks treasury.
 
-DAO members are those who stake their FrankenPunks or FrankenMonsters
-and (optionally) delegate their votes. Committing to a stake period earns
-members more voting power. DAO members then have the ability to create and vote
-on proposals.
+The basic user flow for the DAO is as follows:
+- Holders of FrankenPunks or FrankenMonsters can stake their NFTs
+- They will receive stakedFrankenDAO NFTs in return, which retain their token's ID and characteristics
+- Stakers will earn votes based on the length of time they stake, the uniqueness of their NFT, and their involvement in the DAO
+- Stakers can use this voting power to propose and vote on proposals
+- Alternatively, they can delegate their votes to another user
+- Proposals that receive sufficient votes from the community will be permissionalessly executed
 
-The DAO implementation draws heavily from Compound's Governor Bravo and
-NounsDAO, with deviations described below.
+The DAO implementation draws heavily from NounsDAO, with deviations described in the contracts.
 
 ```
 ├── Executor.sol
@@ -37,17 +39,13 @@ NounsDAO, with deviations described below.
 | Contract | Description | 
 | --- | ---  |
 | `Staking.sol`  | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  |
-| `IStaking.sol`  | Interface for Staking. Adds events and errors, in addition to defining the interface for the Staking contract |
-| `Governance.sol`  | Creating and voting on proposals or queuing the transactions from a proposal.  |
-| `IGovernance.sol`  | Interface for Governance. Adds events and errors, in addition to defining the interface for the Governance contract |
-| `Executor.sol`  | Time lock for the transactions of an approved proposal  |
-| `IExecutor.sol`  | Interface for Executor. Adds events and errors, in addition to defining the interface for the Executor contract |
+| `Governance.sol`  | Creating and voting on proposals or queuing the transactions defined in a passed proposal  |
+| `Executor.sol`  | Treasury for holding DAO funds and executing the transactions of approved proposals  |
 | `Admin.sol`  | Admin roles and permission checks for contracts. Defines roles for founders, commmunity council, the executor contract, and a pauser. |
-| `IAdmin.sol`  | Interface for Admin. Adds events and errors, in addition to defining the interface for the Admin contract |
-| `Refundable.sol`  | Contract for shared functionality for refunding gas on some methods. Implemented by both Staking and Governance to refund staking, delegating, creating proposals, and voting  |
-| `IRefundable.sol`  | Interface for Refundable. Adds events and errors, in addition to defining the interface for the Refundable contract |
-| `GovernanceProxy.sol`  | ERC1967 proxy for Governance. Relies on Open Zeppelin's implementation with a few changes.  |
-| `FrankenDAOErrors.sol`  | Shared errors across Governance, Governance Proxy, Staking, and Delegating  |
+| `Refundable.sol`  | Contract for shared functionality for refunding gas on certain methods. Used to refund staking, delegating, creating proposals, and voting  |
+| `GovernanceProxy.sol`  | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)  |
+
+Here is a simplified overview of the major actions user's take in the system:
 
 ![FrankenDAO Governance Overview](./assets/frankendao.png)
 
