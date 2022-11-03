@@ -49,25 +49,25 @@ Here is a simplified overview of the major actions user's take in the system:
 
 ![FrankenDAO Governance Overview](./assets/frankendao.png)
 
-### Staking
+## Staking
 
 The Staking contract accepts ownership of FrankenPunks and FrankenMonsters and
 mints a corresponding stakedFrankenDAO token -- a non-transferrable NFT.
 
-#### FrankenPunks and FrankenMonsters
+### FrankenPunks and FrankenMonsters
 
 FrankenPunk token IDs begin at 0 and continue through 9,999. FrankenMonster token IDs begin at 10,000 and continue through 20,010. Conveniently, this allows each stakedFrankenDAO token to mirror the ID of the underlying token.
 
 FrankenPunks will earn voting power at 2X the rate that FrankenMonsters do (see below for voting power formula).
 
-#### Staking and Unstaking Tokens
+### Staking and Unstaking Tokens
 
 Users can stake their tokens to receive FrankenDAO tokens. 
 
 Staking is allowed unless it is paused at the contract level. 
 
 When users stake their tokens, they commit to an `unlockTime` for an additional staking bonus. They can set the time to 0 to receive no bonus (which allows them to unlock at any time) or commit to an unlock time in the future for larger rewards.
-#### Voting Power
+### Voting Power
 
 The system is divided into two distinct types of Voting Power.
 
@@ -88,28 +88,28 @@ The system is divided into two distinct types of Voting Power.
 - A user will only earn Community Voting Power if they have _some_ Token Voting Power. In other words, if a user has delegated their votes, or doesn't have any tokens staked or votes delegated to them, they have no voting power, and they therefore forfeit their community power. 
 - Users who delegate their votes to others therefore delegate only their Token Voting Power, and their Community Voting Power is temporarily forfeited (until they undelegate their votes).
 
-#### Locking Tokens
+### Locking Tokens
 
 Most governance systems (including Nouns) use some form of checkpointing to capture each user's voting power at the time of a proposal, to stop users from "double spending" their tokens on votes.
 
 In order to improve gas efficiency, we've implemented a different system. 
 - When a user's votes are used on a proposal (whether through voting directly, having a delegate vote, proposing the proposal directly, or having a delegate propose a proposal), their tokens are locked until that proposal is no longer active.
 - Since FrankenDAO tokens are non-transferrable, we simply block the ability to unstake or delegate, and that ensures that users must hold their tokens once they've "used" them on an active proposal.
-### Governance
+## Governance
 
 The governance system is a modified fork of NounsDAO. Actions like creating a proposal, casting a vote, and queueing a passed proposal all occur on Governance.sol, which is behind a proxy
 (GovernanceProxy.sol). 
 
 Transactions in approved proposals are queued to Executor.sol, where are are subject to a time lock. Just like in Nouns, thresholds for proposing and reaching quorum are calculated on a proposal-by-proposal basis through basis-points of the total voting power in the system. We've implemented mechanisms to track the total Community Voting Power and Token Voting Power in order to make these calculations accurate and efficient.
 
-### Executor
+## Executor
 
 The Executor contract is where transactions are locked for a window of time
 before they can be executed. The Executor is never called directly (except for a view function) -- it is always called by governance to execute on proposals that have already been passed.
 
 Architecturally, this is similar to Nouns and Bravo, with just a few minor modifications.
 
-### Governance Proxy
+## Governance Proxy
 
 In order to allow Governance upgradeability, Governance lives behind a proxy. We use [EIP 1967](https://eips.ethereum.org/EIPS/eip-1967). Our Proxy is similar to OpenZeppelin's `TransparentUpgrardeableProxy` but with a few slight modifications:
 
@@ -117,7 +117,7 @@ In order to allow Governance upgradeability, Governance lives behind a proxy. We
 - we change ifAdmin modifier to onlyAdmin, reverting vs fallback if non admin calls a proxy function
 - we open up non admin ability to access proxy view functions to check admin() and implementation()
 
-### Admin
+## Admin
 
 This contract is where we manage the four roles shared across our Governance and
 Staking and where we implement modifiers for checking those roles. The four
@@ -128,7 +128,7 @@ roles are:
 3. `executor`, the current implementation of Executor
 4. `pauser`, an EOA address with permission only to pause the Staking contract
 
-### Refundable
+## Refundable
 
 This contract is for shared functionality of refunding transactions. It
 is implemented by Staking and Governance, with the following functions being
@@ -141,10 +141,15 @@ refundable:
 
 Each of these contracts has a `setRefunds()` function that allows Governance to turn refunding on and off at the function level. All refunds will start as true and the founders will contribute 5 ETH to each of the two contracts for gas refunds. When this pool runs out, the community will decide whether to keep refunds on and refill the contracts, or turn them off.
 
+# Known Risks
 
+There are a number of "risks" we are aware of and which will not be valid for the contest:
 
+1. No Zero Address Checks™. I'm serious. [See frangio's thoughts here](https://forum.openzeppelin.com/t/removing-address-0x0-checks-from-openzeppelin-contracts/2222) if you want a history on why these make no sense.
 
+![No More Zero Address Checks](./assets/zeroaddr.png)
 
+2. We know the system has some centralization. 
 # Testing Setup
 
 FrankenDAO runs on [Foundry](https://book.getfoundry.sh/). 
