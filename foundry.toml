@@ -8,5 +8,9 @@ fs_permissions = [{ access = "read", path = "./"}]
 
 [rpc_endpoints]
 mainnet = "https://mainnet.infura.io/v3/${INFURA_API_KEY}"
+goerli = "https://goerli.infura.io/v3/${INFURA_API_KEY}"
+
+[etherscan]
+goerli = { key = "${ETHERSCAN_API_KEY}" }
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

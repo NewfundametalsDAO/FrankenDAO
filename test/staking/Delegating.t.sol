@@ -2,13 +2,14 @@
 pragma solidity ^0.8.13;
 
 import { StakingBase } from "../bases/StakingBase.t.sol";
+import "forge-std/Test.sol";
 
 contract DelegatingTests is StakingBase {
     
     // Test that a staked token is delegated to self by default. 
     function testDelegating__DelegateToSelfByDefault() public {
-         address owner = mockStakeSingle(PUNK_ID);
-         assert(staking.getDelegate(owner) == owner);
+        address owner = mockStakeSingle(PUNK_ID);
+        assert(staking.getDelegate(owner) == owner);
     }
 
     // Test that delegating to other staked user works.

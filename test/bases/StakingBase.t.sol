@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 import { TestBase } from "./TestBase.t.sol";
 import { IERC721 } from "../../src/interfaces/IERC721.sol";
 
 contract StakingBase is TestBase {
-    IERC721 frankenpunks = IERC721(FRANKENPUNKS);
-    IERC721 frankenmonsters = IERC721(FRANKENMONSTERS);
     uint PUNK_ID = 555;
     uint MONSTER_ID = 15000;
 
