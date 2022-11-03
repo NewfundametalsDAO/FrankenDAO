@@ -45,10 +45,13 @@ The DAO implementation draws heavily from NounsDAO, with deviations described in
 | `Refundable.sol`  | Contract for shared functionality for refunding gas on certain methods. Used to refund staking, delegating, creating proposals, and voting  |
 | `GovernanceProxy.sol`  | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)  |
 
+# System Overview
+
 Here is a simplified overview of the major actions user's take in the system:
 
 ![FrankenDAO Governance Overview](./assets/frankendao.png)
 
+# Contracts
 ## Staking
 
 The Staking contract accepts ownership of FrankenPunks and FrankenMonsters and
