@@ -44,6 +44,7 @@ Here is a simplified overview of the major actions user's take in the system:
 # Contracts In Scope
 
 | Contract | Description | nSLOC
+| --- | ---  | --- |
 | `Staking.sol`  | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  | 325 |
 | `Governance.sol`  | Creating and voting on proposals or queuing the transactions defined in a passed proposal  | 331 |
 | `Executor.sol`  | Treasury for holding DAO funds and executing the transactions of approved proposals  | 44 |
