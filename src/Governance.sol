@@ -167,6 +167,9 @@ contract Governance is IGovernance, Admin, Refundable {
         council = _council;
         staking = IStaking(_staking);
 
+        votingRefund = true;
+        proposalRefund = true;
+
         emit VotingDelaySet(0, votingDelay = _votingDelay);
         emit VotingPeriodSet(0, votingPeriod = _votingPeriod);
         emit ProposalThresholdBPSSet(0, proposalThresholdBPS = _proposalThresholdBPS);
