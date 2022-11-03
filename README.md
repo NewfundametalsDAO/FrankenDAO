@@ -1,7 +1,5 @@
 # FrankenDAO
 
-## Description
-
 FrankenDAO is the staking and governance component of the FrankenPunks
 ecosystem. The DAO will have full control over the FrankenPunks treasury.
 
@@ -43,18 +41,21 @@ Here is a simplified overview of the major actions user's take in the system:
 
 ![FrankenDAO Governance Overview](./assets/frankendao.png)
 
-# Contracts
+# Contracts In Scope
 
-| Contract | Description | 
+| Contract | Description | nSLOC
 | --- | ---  |
-| `Staking.sol`  | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  |
-| `Governance.sol`  | Creating and voting on proposals or queuing the transactions defined in a passed proposal  |
-| `Executor.sol`  | Treasury for holding DAO funds and executing the transactions of approved proposals  |
-| `Admin.sol`  | Admin roles and permission checks for contracts. Defines roles for founders, commmunity council, the executor contract, and a pauser. |
-| `Refundable.sol`  | Contract for shared functionality for refunding gas on certain methods. Used to refund staking, delegating, creating proposals, and voting  |
-| `GovernanceProxy.sol`  | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)  |
+| `Staking.sol`  | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  | 325 |
+| `Governance.sol`  | Creating and voting on proposals or queuing the transactions defined in a passed proposal  | 331 |
+| `Executor.sol`  | Treasury for holding DAO funds and executing the transactions of approved proposals  | 44 |
+| `Admin.sol`  | Admin roles and permission checks for contracts. Defines roles for founders, commmunity council, the executor contract, and a pauser. | 56 |
+| `Refundable.sol`  | Contract for shared functionality for refunding gas on certain methods. Used to refund staking, delegating, creating proposals, and voting  | 22 |
+| `GovernanceProxy.sol`  | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)  | 27 |
+| Total nSLOC | | 805 |
 
-## Staking
+Out of Scope: FrankenDAOErrors.sol, SafeCast.sol, all interfaces.
+
+## Staking.sol
 
 The Staking contract accepts ownership of FrankenPunks and FrankenMonsters and
 mints a corresponding stakedFrankenDAO token -- a non-transferrable NFT.
@@ -100,21 +101,21 @@ Most governance systems (including Nouns) use some form of checkpointing to capt
 In order to improve gas efficiency, we've implemented a different system. 
 - When a user's votes are used on a proposal (whether through voting directly, having a delegate vote, proposing the proposal directly, or having a delegate propose a proposal), their tokens are locked until that proposal is no longer active.
 - Since FrankenDAO tokens are non-transferrable, we simply block the ability to unstake or delegate, and that ensures that users must hold their tokens once they've "used" them on an active proposal.
-## Governance
+## Governance.sol
 
 The governance system is a modified fork of NounsDAO. Actions like creating a proposal, casting a vote, and queueing a passed proposal all occur on Governance.sol, which is behind a proxy
 (GovernanceProxy.sol). 
 
 Transactions in approved proposals are queued to Executor.sol, where are are subject to a time lock. Just like in Nouns, thresholds for proposing and reaching quorum are calculated on a proposal-by-proposal basis through basis-points of the total voting power in the system. We've implemented mechanisms to track the total Community Voting Power and Token Voting Power in order to make these calculations accurate and efficient.
 
-## Executor
+## Executor.sol
 
 The Executor contract is where transactions are locked for a window of time
 before they can be executed. The Executor is never called directly (except for a view function) -- it is always called by governance to execute on proposals that have already been passed.
 
 Architecturally, this is similar to Nouns and Bravo, with just a few minor modifications.
 
-## Governance Proxy
+## GovernanceProxy.sol
 
 In order to allow Governance upgradeability, Governance lives behind a proxy. We use [EIP 1967](https://eips.ethereum.org/EIPS/eip-1967). Our Proxy is similar to OpenZeppelin's `TransparentUpgrardeableProxy` but with a few slight modifications:
 
@@ -122,7 +123,7 @@ In order to allow Governance upgradeability, Governance lives behind a proxy. We
 - we change ifAdmin modifier to onlyAdmin, reverting vs fallback if non admin calls a proxy function
 - we open up non admin ability to access proxy view functions to check admin() and implementation()
 
-## Admin
+## Admin.sol
 
 This contract is where we manage the four roles shared across our Governance and
 Staking and where we implement modifiers for checking those roles. The four
@@ -133,7 +134,7 @@ roles are:
 3. `executor`, the current implementation of Executor
 4. `pauser`, an EOA address with permission only to pause the Staking contract
 
-## Refundable
+## Refundable.sol
 
 This contract is for shared functionality of refunding transactions. It
 is implemented by Staking and Governance, with the following functions being
