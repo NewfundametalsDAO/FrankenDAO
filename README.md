@@ -149,7 +149,17 @@ There are a number of "risks" we are aware of and which will not be valid for th
 
 ![No More Zero Address Checks](./assets/zeroaddr.png)
 
-2. We know the system has some centralization. 
+2. We know the system has some centralization. Currently, the DAO is operating from a multisig, and this system is a step towards decentralization. Specifically, we're aware that:
+- Proposals could be blocked by not verifying them
+- Proposals could be vetoed
+- Staking could be paused to keep users out
+
+We've added logic to the contracts to be able to continue decentralization in the future, by renouncing the founder multisig (leaving only the commnunity multisig). We may remove verification, vetoing, and pausing entirely in the future, which would require upgrading the contract.
+
+3. We know we could deploy with the wrong parameters, but we're not planning to. You can look at our final deployment script in `script/Deploy.s.sol`. If there is an issue that will could from running that script, please consider that a valid finding. If there is a hypothetical issue that could come if we deployed in a different way, please don't feel the need to report it.
+
+4. We are aware that there are no storage gaps in the contracts inherited by our upgradeable contract. This is generally not best practice but we've chosen to do so because (a) Refundale uses no storage and (b) Admin storage will not be changed or expanded in the case of an upgrade.
+
 # Testing Setup
 
 FrankenDAO runs on [Foundry](https://book.getfoundry.sh/). 
@@ -180,3 +190,15 @@ To run tests:
 `forge test`
 
 See the [Foundry Book](https://book.getfoundry.sh/) for more on Foundry.
+
+# Team & Contacts
+
+We're here to make this test as smooth as possible for you. Ask lots of questions, and let us know if the documentation or system is unclear in any way.
+
+We'll all be in the Discord with DMs open.
+
+- dev: @zachobront#1010
+- dev: @zakk | Cabin#0896
+- team: @DobsGaming#6670
+- team: @CESS#0720
+- team: @TrackerNFT#0230
