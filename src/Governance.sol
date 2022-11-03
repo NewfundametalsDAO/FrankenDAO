@@ -411,10 +411,10 @@ contract Governance is IGovernance, Admin, Refundable {
         newProposal.startTime = (block.timestamp + votingDelay).toUint32();
         newProposal.endTime = (block.timestamp + votingDelay + votingPeriod).toUint32();
         
-        // Other values are set automatically.
-        //  - forVotes, againstVotes, and abstainVotes are set to 0
-        //  - verified, canceled, executed, and vetoed are set to false
-        //  - eta is set to 0
+        // Other values are set automatically:
+        //  - forVotes, againstVotes, and abstainVotes = 0
+        //  - verified, canceled, executed, and vetoed = false
+        //  - eta = 0
 
         latestProposalIds[newProposal.proposer] = newProposalId;
         activeProposals.push(newProposalId);
@@ -468,7 +468,8 @@ contract Governance is IGovernance, Admin, Refundable {
         Proposal storage proposal = proposals[_proposalId];
 
         // Set the ETA (time for execution) to the soonest time based on the Executor's delay
-        proposal.eta = (block.timestamp + executor.DELAY()).toUint32();
+        uint256 eta = block.timestamp + executor.DELAY();
+        proposal.eta = eta.toUint32();
 
         // Queue separate transactions for each action in the proposal
         uint numTargets = proposal.targets.length;

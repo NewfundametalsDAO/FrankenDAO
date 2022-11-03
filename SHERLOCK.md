@@ -44,7 +44,7 @@ To add your RPC_URL for mainnet forking, open `foundry.toml` and add the followi
 
 ```
 [rpc_endpoints]
-mainnet = "https://mainnet.infura.io/v3/324422b5714843da8a919967a9c652ac"
+mainnet = "http://INSERT_YOUR_RPC_ENDPOINT_HERE.com"
 ```
 
 To run tests:

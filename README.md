@@ -3,7 +3,9 @@
 ## Description
 
 FrankenDAO is the staking and governance component of the FrankenPunks
-ecosystem. DAO members are those who stake their FrankenPunks or FrankenMonsters
+ecosystem. The DAO will have full control over the FrankenPunks treasury.
+
+DAO members are those who stake their FrankenPunks or FrankenMonsters
 and (optionally) delegate their votes. Committing to a stake period earns
 members more voting power. DAO members then have the ability to create and vote
 on proposals.
