@@ -45,15 +45,15 @@ Here is a simplified overview of the major actions user's take in the system:
 
 | Contract | Description | nSLOC
 | --- | ---  | --- |
-| `Staking.sol`  | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  | 325 |
-| `Governance.sol`  | Creating and voting on proposals or queuing the transactions defined in a passed proposal  | 331 |
-| `Executor.sol`  | Treasury for holding DAO funds and executing the transactions of approved proposals  | 44 |
-| `Admin.sol`  | Admin roles and permission checks for contracts. Defines roles for founders, commmunity council, the executor contract, and a pauser. | 56 |
-| `Refundable.sol`  | Contract for shared functionality for refunding gas on certain methods. Used to refund staking, delegating, creating proposals, and voting  | 22 |
-| `GovernanceProxy.sol`  | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)  | 27 |
-| Total nSLOC | | 805 |
+| `Staking.sol`  | 325 | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  |
+| `Governance.sol` | 331  | Creating and voting on proposals or queuing the transactions defined in a passed proposal  |
+| `Executor.sol`  | 44 | Treasury for holding DAO funds and executing the transactions of approved proposals  |
+| `Admin.sol` | 56 | Admin roles and permission checks for contracts. Defines roles for founders, commmunity council, the executor contract, and a pauser. |
+| `Refundable.sol` | 22  | Contract for shared functionality for refunding gas on certain methods. Used to refund staking, delegating, creating proposals, and voting  |
+| `GovernanceProxy.sol` | 27  | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)  |
+| Total nSLOC | 805 | | 
 
-Out of Scope: FrankenDAOErrors.sol, SafeCast.sol, all interfaces.
+Out of Scope: `FrankenDAOErrors.sol`, `SafeCast.sol`, all interfaces.
 
 ## Staking.sol
 
