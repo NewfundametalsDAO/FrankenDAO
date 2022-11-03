@@ -11,12 +11,12 @@
 # Audit Scope
 
 The following contracts are in scope:
-- `src/Executor.sol` (x nSLOC)
-- `src/Governance.sol` (x nSLOC)
-- `src/Staking.sol` (x nSLOC)
-- `src/proxy/GovernanceProxy.sol` (x nSLOC)
-- `src/utils/Admin.sol` (x nSLOC)
-- `src/utils/Refundable.sol` (x nSLOC)
+- `src/Governance.sol` (331 nSLOC)
+- `src/Staking.sol` (325 nSLOC)
+- `src/Executor.sol` (44 nSLOC)
+- `src/proxy/GovernanceProxy.sol` (27 nSLOC)
+- `src/utils/Admin.sol` (56 nSLOC)
+- `src/utils/Refundable.sol` (22 nSLOC)
 
 # About
 

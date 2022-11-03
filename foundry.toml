@@ -7,6 +7,6 @@ ffi = true
 fs_permissions = [{ access = "read", path = "./"}]
 
 [rpc_endpoints]
-mainnet = "https://mainnet.infura.io/v3/324422b5714843da8a919967a9c652ac"
+mainnet = "https://mainnet.infura.io/v3/${INFURA_API_KEY}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
