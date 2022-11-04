@@ -40,7 +40,9 @@ To install dependencies:
 
 Because our contracts interact with the live Frankenpunks and Frankenmonsters contracts, all tests require forking Ethereum mainnet.
 
-We have the `foundry.toml` file set up to fork mainnet, but you'll need to add your own RPC URL. Create a `.env` file and add the following:
+We have the `foundry.toml` file set up to fork mainnet and set the gas price to 25 gwei, but you'll need to add your own RPC URL for it to work. 
+
+Create a `.env` file and add the following:
 
 ```
 MAINNET_RPC_URL=http://INSERT_YOUR_URL_HERE.com
