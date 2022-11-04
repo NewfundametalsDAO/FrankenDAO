@@ -4,9 +4,9 @@
 
 # Resources
 
-- Docs
-- Contracts
 - Contract Overview
+- Testing Setup
+- Team Contact
 
 # Audit Scope
 
