@@ -168,9 +168,9 @@ There are a number of "risks" we are aware of and which will not be valid for th
 
 We've added logic to the contracts to be able to continue decentralization in the future, by renouncing the founder multisig (leaving only the commnunity multisig). We may remove verification, vetoing, and pausing entirely in the future, which would require upgrading the contract.
 
-3. We know we could deploy with the wrong parameters, but we're not planning to. You can look at our final deployment script in `script/Deploy.s.sol`. If there is an issue that will could from running that script, please consider that a valid finding. If there is a hypothetical issue that could come if we deployed in a different way, please don't feel the need to report it.
+3. We know we could deploy with the wrong parameters, but we're not planning to. You can look at our final deployment script in `script/Deploy.s.sol`. If there is an issue that will occur from running that script, GREAT! Please consider that a valid finding. If there is a hypothetical issue that could come if we deployed in a different way, please don't feel the need to report it.
 
-4. We are aware that there are no storage gaps in the contracts inherited by our upgradeable contract. This is generally not best practice but we've chosen to do so because (a) Refundale uses no storage and (b) Admin storage will not be changed or expanded in the case of an upgrade.
+4. We are aware that there are no storage gaps in the contracts inherited by our upgradeable contract. This is generally not best practice but we've chosen to do so because (a) Refundable uses no storage and (b) Admin storage will not be changed or expanded in the case of an upgrade.
 
 # Testing Setup
 
