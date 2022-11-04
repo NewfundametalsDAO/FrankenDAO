@@ -47,4 +47,16 @@ contract GovProxyTests is GovernanceBase {
         vm.expectRevert(NotAuthorized.selector);
         proxy.upgradeToAndCall(address(FRANKENPUNKS), abi.encodeWithSignature("admin()"));
     }
+
+    // Test that governance can't be reinitialized.
+    function testGovProxy__CantReinitialize() public {
+        vm.expectRevert(AlreadyInitialized.selector);
+        gov.initialize(
+            address(staking), 
+            address(executor), 
+            FOUNDER_MULTISIG,
+            COUNCIL_MULTISIG,
+            2 days, 2 days, 500, 500
+        );
+    }
 }

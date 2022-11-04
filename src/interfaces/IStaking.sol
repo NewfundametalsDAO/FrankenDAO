@@ -72,6 +72,7 @@ interface IStaking {
     function getTokenVotingPower(uint256 _tokenId) external view returns (uint256);
     function getTotalVotingPower() external view returns (uint256);
     function getVotes(address _account) external view returns (uint256);
+    function isFrankenPunksStakingContract() external pure returns (bool);
     function lastDelegatingRefund(address) external view returns (uint256);
     function lastStakingRefund(address) external view returns (uint256);
     function monsterMultiplier() external view returns (uint256);

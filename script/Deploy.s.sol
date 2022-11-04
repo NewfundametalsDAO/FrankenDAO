@@ -15,11 +15,13 @@ contract DeployScript is Script {
     Governance govImpl;
     Governance gov;
 
-    address REAL_DEPLOYER = 0x1f3958B482d1Ff1660CEE66F8341Bdc1329De4e0;
-    address CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
-
-    address FOUNDER_MULTISIG = 0x1f3958B482d1Ff1660CEE66F8341Bdc1329De4e0; // @todo my goerli, update for mainnet
-    address COUNCIL_MULTISIG = 0x20643627A2d02F520A006dF56Acc51E3e67E3Ee5; // @todo dobs goerli, update for mainnet
+    address FOUNDER_MULTISIG;
+    address FOUNDER_MULTISIG_MAINNET = address(0); // @todo input
+    address FOUNDER_MULTISIG_GOERLI = 0x1f3958B482d1Ff1660CEE66F8341Bdc1329De4e0; // me
+    
+    address COUNCIL_MULTISIG;
+    address COUNCIL_MULTISIG_MAINNET = address(0); // @todo input
+    address COUNCIL_MULTISIG_GOERLI = 0x20643627A2d02F520A006dF56Acc51E3e67E3Ee5; // dobs
     
     address FRANKENPUNKS;
     address FRANKENPUNKS_GOERLI = 0x75Ad4CeCB95b330890A93993a2A5A91d8e5D2f03; 
@@ -31,6 +33,7 @@ contract DeployScript is Script {
     
     bytes32 SALT = bytes32("salty");
     string BASE_TOKEN_URI = "http://frankenpunks.com/uris/"; // @todo fix this
+    address CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
     function run() public {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
@@ -51,10 +54,12 @@ contract DeployScript is Script {
     function _deployAllContracts(bool realDeploy, bool mainnet) internal {
 
         address create2Deployer = realDeploy ? CREATE2_DEPLOYER : address(this);
-        address deployer = realDeploy ? REAL_DEPLOYER : address(this);
+        address deployer = realDeploy ? msg.sender : address(this); // @todo make sure msg.sender will work
 
         FRANKENPUNKS = mainnet ? FRANKENPUNKS_MAINNET : FRANKENPUNKS_GOERLI;
         FRANKENMONSTERS = mainnet ? FRANKENMONSTERS_MAINNET : FRANKENMONSTERS_GOERLI;
+        FOUNDER_MULTISIG = mainnet ? FOUNDER_MULTISIG_MAINNET : FOUNDER_MULTISIG_GOERLI;
+        COUNCIL_MULTISIG = mainnet ? COUNCIL_MULTISIG_MAINNET : COUNCIL_MULTISIG_GOERLI;
 
         bytes memory proxyCreationCode = abi.encodePacked(
             type(GovernanceProxy).creationCode,

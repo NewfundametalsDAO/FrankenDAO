@@ -24,8 +24,8 @@ contract GasRefundTests is GovernanceBase {
         staking.stake(ids, 0);
         vm.stopPrank();
 
-        // This means approx 160-320k gas refunded = 4-8mm gwei
-        assert(_refundInRange(address(staking), stakingBal, owner, ownerBal, 0.004 ether, 0.008 ether));
+        // This means approx 40-320k gas refunded = 1-8mm gwei
+        assert(_refundInRange(address(staking), stakingBal, owner, ownerBal, 0.001 ether, 0.008 ether));
     }
 
     // Test that gas refunding succeeds at a reasonable number for delegating.
@@ -38,8 +38,8 @@ contract GasRefundTests is GovernanceBase {
         vm.prank(owner);
         staking.delegate(makeAddr("randomDelegate"));
 
-        // This means approx 40-100k gas refunded = 1-2.5mm gwei
-        assert(_refundInRange(address(staking), stakingBal, owner, ownerBal, 0.001 ether, 0.025 ether));
+        // This means approx 20-100k gas refunded = 0.5-2.5mm gwei
+        assert(_refundInRange(address(staking), stakingBal, owner, ownerBal, 0.0005 ether, 0.025 ether));
     }
 
     // Test that gas refunding succeeds at a reasonable number for proposing.
@@ -49,8 +49,8 @@ contract GasRefundTests is GovernanceBase {
 
         _createProposal();
 
-        // This means approx 300-400k gas refunded = 7.5-10mm wei
-        assert(_refundInRange(address(gov), govBal, proposer, proposerBal, 0.0075 ether, 0.01 ether));
+        // This means approx 100-400k gas refunded = 5-10mm wei
+        assert(_refundInRange(address(gov), govBal, proposer, proposerBal, 0.0025 ether, 0.01 ether));
     }
 
     // Test that gas refunding succeeeds at a reasonable number for voting.
@@ -64,8 +64,8 @@ contract GasRefundTests is GovernanceBase {
         vm.prank(voter);
         gov.castVote(proposalId, 1);
 
-        // This means approx 40-100k gas refunded = 1-2.5mm gwei
-        assert(_refundInRange(address(gov), govBal, voter, voterBal, 0.001 ether, 0.0025 ether));
+        // This means approx 20-100k gas refunded = 0.5-2.5mm gwei
+        assert(_refundInRange(address(gov), govBal, voter, voterBal, 0.0005 ether, 0.0025 ether));
     }
 
     //////////////////////////

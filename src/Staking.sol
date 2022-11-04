@@ -632,6 +632,13 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     emit BaseURIChanged(baseTokenURI = _baseURI);
   }
 
+  /// @notice Check to confirm that this is a FrankenPunks staking contract
+  /// @dev Used by governance when upgrading staking to ensure the correct contract
+  /// @dev Used instead of an interface because interface may change
+  function isFrankenPunksStakingContract() external pure returns (bool) {
+    return true;
+  }
+
   /// @notice Contract can receive ETH (will be used to pay for gas refunds)
   receive() external payable {}
 

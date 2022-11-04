@@ -8,6 +8,8 @@ interface IGovernance {
     ////// Events //////
     ////////////////////
 
+    /// @notice Emited when the staking contract is changed.
+    event NewStakingContract(address stakingContract);
     /// @notice Emited when a proposal is canceled
     event ProposalCanceled(uint256 id);
     /// @notice Emited when a proposal is created

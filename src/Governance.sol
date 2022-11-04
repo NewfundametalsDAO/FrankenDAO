@@ -312,13 +312,13 @@ contract Governance is IGovernance, Admin, Refundable {
     }
 
     /// @notice Current proposal threshold based on the voting power of the system
-    /// @dev This calculates the totals of both token voting power and community voting power
+    /// @dev This incorporates the totals of both token voting power and community voting power
     function proposalThreshold() public view returns (uint256) {
         return bps2Uint(proposalThresholdBPS, staking.getTotalVotingPower());
     }
 
     /// @notice Current quorum threshold based on the voting power of the system
-    /// @dev This calculates the totals of both token voting power and community voting power
+    /// @dev This incorporates the totals of both token voting power and community voting power
     function quorumVotes() public view returns (uint256) {
         return bps2Uint(quorumVotesBPS, staking.getTotalVotingPower());
     }
@@ -401,8 +401,8 @@ contract Governance is IGovernance, Admin, Refundable {
         //         againstVotes (24), canceled (8), vetoed (8), executed (8), verified (8)
         
         // All times are stored as uint32s, which takes us through the year 2106 (we can upgrade then :))
-        // All votes are stored as uint24s with lots of buffer, since max votes in system is ~ 1.75 million
-        // (10k punks * (max 50 token VP + max ~50 community VP) + 10k monsters * (max 25 token VP + max ~50 community VP))
+        // All votes are stored as uint24s with lots of buffer, since max votes in system is < 4 million
+        // (10k punks * (max 50 token VP + max ~100 community VP) + 10k monsters * (max 25 token VP + max ~100 community VP))
         
         newProposal.id = newProposalId.toUint96();
         newProposal.proposer = msg.sender;
@@ -783,7 +783,15 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @param _newStaking Address of the new Staking contract
     /// @dev Since upgrades are only allowed by governance, this is only callable by Executor
     function setStakingAddress(IStaking _newStaking) external onlyExecutor {
+        try _newStaking.isFrankenPunksStakingContract() returns (bool isStaking) {
+            if (!isStaking) revert NotStakingContract();
+        } catch {
+            revert NotStakingContract();
+        }
+
         staking = _newStaking;
+
+        emit NewStakingContract(address(_newStaking));
     }
 
     /// @notice Contract can receive ETH (will be used to pay for gas refunds)

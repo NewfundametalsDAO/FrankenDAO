@@ -24,6 +24,7 @@ contract FrankenDAOErrors {
     error AlreadyVoted();
     error NotEligible();
     error NotInActiveProposals();
+    error NotStakingContract();
 
     // Refunds
     error InsufficientRefundBalance();

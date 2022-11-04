@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { Staking } from "../../src/Staking.sol";
+import { IStaking } from "../../src/interfaces/IStaking.sol";
 
 contract UpgradeStakingTests is GovernanceBase {
     
@@ -25,6 +26,13 @@ contract UpgradeStakingTests is GovernanceBase {
         gov.execute(proposalId);
 
         assert(address(gov.staking()) == fakeStaking);    
+    }
+
+    // Test that we cannot upgrade staking to an invalid contract.
+    function testGovUpgrades__CantUpgradeStakingToInvalidContract() public {
+        vm.expectRevert(NotStakingContract.selector);
+        vm.prank(address(executor));
+        gov.setStakingAddress(IStaking(FRANKENPUNKS)); 
     }
 
 }
