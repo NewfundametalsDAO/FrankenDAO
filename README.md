@@ -184,12 +184,16 @@ To install dependencies:
 
 Because our contracts interact with the live Frankenpunks and Frankenmonsters contracts, all tests require forking Ethereum mainnet.
 
-To add your RPC_URL for mainnet forking, open `foundry.toml` and add the following:
+We have the `foundry.toml` file set up to fork mainnet and set the gas price to 25 gwei, but you'll need to add your own RPC URL for it to work. 
+
+Create a `.env` file and add the following:
 
 ```
-[rpc_endpoints]
-mainnet = "https://mainnet.infura.io/v3/324422b5714843da8a919967a9c652ac"
+MAINNET_RPC_URL=http://INSERT_YOUR_URL_HERE.com
 ```
+Then source the environment variable by running the following in your terminal:
+
+`source .env`
 
 To run tests:
 
