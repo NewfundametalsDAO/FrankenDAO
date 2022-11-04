@@ -145,7 +145,9 @@ This contract is for shared functionality of refunding transactions. It is imple
 
 Each of these contracts has a `setRefunds()` function that allows Governance to turn refunding on and off at the function level. 
 
-Although no user can earn money through refunds, a malicious user could abuse this functionality waste funds. For this reason, we've implemented a cap on 1 refund per day for staking and delegating. There is no cap on proposing or voting because (a) proposing requires having a large % of FrankenPunks, and we don't believe a major holder would want to waste treasury funds and (b) users can only vote once per proposal, so voting can't be abused. In the case that these assumptions do not hold, the protocol is able to freeze all refunding to avoid major losses.
+Although no user can earn money through refunds, a malicious user could abuse this functionality waste funds. For this reason, we've implemented a cap on 1 refund per day for staking and delegating. There is no cap on proposing or voting because (a) proposing requires having a large % of FrankenPunks, and we don't believe a major holder would want to waste treasury funds and (b) users can only vote once per proposal, so voting can't be abused. 
+
+In the case that these assumptions do not hold, the protocol is able to freeze all refunding to avoid major losses.
 
 All four functions will start as refundable and the founders will contribute 5 ETH to each of the two contracts for gas refunds. When this pool runs out, the community will decide whether to keep refunds on and refill the contracts, or turn them off.
 
