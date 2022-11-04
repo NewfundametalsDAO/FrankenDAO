@@ -170,34 +170,22 @@ We've added logic to the contracts to be able to continue decentralization in th
 
 FrankenDAO runs on [Foundry](https://book.getfoundry.sh/). 
 
-To install Foundry (assuming a Linux or macOS System):
+To download foundryup (assuming a Linux or macOS System): `curl -L https://foundry.paradigm.xyz | bash`
 
-`curl -L https://foundry.paradigm.xyz | bash`
+To start Foundry, run: `foundryup`
 
-This will download foundryup. To start Foundry, run:
+To install dependencies: `forge install`
 
-`foundryup`
-
-To install dependencies:
-
-`forge install`
-
-Because our contracts interact with the live Frankenpunks and Frankenmonsters contracts, all tests require forking Ethereum mainnet.
-
-We have the `foundry.toml` file set up to fork mainnet and set the gas price to 25 gwei, but you'll need to add your own RPC URL for it to work. 
+Because our contracts interact with the live Frankenpunks and Frankenmonsters contracts, all tests require forking Ethereum mainnet. We have the `foundry.toml` file set up to fork mainnet and set the gas price to 25 gwei, but you'll need to add your own RPC URL for it to work. 
 
 Create a `.env` file and add the following:
 
 ```
 MAINNET_RPC_URL=http://INSERT_YOUR_URL_HERE.com
 ```
-Then source the environment variable by running the following in your terminal:
+Then source the environment variable by running the following in your terminal: `source .env`
 
-`source .env`
-
-To run tests:
-
-`forge test`
+To run tests: `forge test`
 
 See the [Foundry Book](https://book.getfoundry.sh/) for more on Foundry.
 
