@@ -26,9 +26,6 @@ contract FrankenDAOErrors {
     error NotInActiveProposals();
     error NotStakingContract();
 
-    // Refunds
-    error InsufficientRefundBalance();
-
     // Executor
     error DelayNotSatisfied();
     error IdenticalTransactionAlreadyQueued();

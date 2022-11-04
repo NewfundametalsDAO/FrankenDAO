@@ -7,7 +7,10 @@ interface IRefundable {
     ////////////////////
 
     /// @notice Emitted when a refund is issued
-    event IssueRefund(address refunded, uint256 amount, bool sent);
+    event IssueRefund(address refunded, uint256 amount, bool sent, uint256 remainingBalance);
+
+    /// @notice Emited when we're not able to refund the full amount
+    event InsufficientFundsForRefund(address refunded, uint256 intendedAmount, uint256 sentAmount);
 
     /////////////////////
     ////// Methods //////

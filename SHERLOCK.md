@@ -12,7 +12,7 @@
 
 The following contracts are in scope:
 - `src/Governance.sol` (337 nSLOC)
-- `src/Staking.sol` (325 nSLOC)
+- `src/Staking.sol` (333 nSLOC)
 - `src/Executor.sol` (44 nSLOC)
 - `src/proxy/GovernanceProxy.sol` (27 nSLOC)
 - `src/utils/Admin.sol` (56 nSLOC)

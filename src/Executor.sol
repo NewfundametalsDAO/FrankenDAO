@@ -93,17 +93,17 @@ contract Executor is IExecutor, FrankenDAOErrors {
     /** @dev This function is only called by _removeTransactionWithQueuedOrExpiredCheck() in the Governance contract,
             which shows up in cancel(), clear() and veto() */
     function cancelTransaction(
-        address target,
-        uint256 value,
-        string memory signature,
-        bytes memory data,
-        uint256 eta
+        address _target,
+        uint256 _value,
+        string memory _signature,
+        bytes memory _data,
+        uint256 _eta
     ) public onlyGovernance {
-        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
         if (!queuedTransactions[txHash]) revert TransactionNotQueued();
         queuedTransactions[txHash] = false;
 
-        emit CancelTransaction(txHash, target, value, signature, data, eta);
+        emit CancelTransaction(txHash, _target, _value, _signature, _data, _eta);
     }
 
     /// @notice Executes a queued transaction after the delay has passed

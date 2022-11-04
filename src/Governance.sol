@@ -268,7 +268,7 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @param _proposalId The id of the proposal
     /// @return Proposal state
     function state(uint256 _proposalId) public view returns (ProposalState) {
-        if(_proposalId > proposalCount) revert InvalidId();
+        if (_proposalId > proposalCount) revert InvalidId();
         Proposal storage proposal = proposals[_proposalId];
 
         // If the proposal has been vetoed, it should always return Vetoed.
@@ -569,7 +569,7 @@ contract Governance is IGovernance, Admin, Refundable {
         if (
             state(_proposalId) != ProposalState.Expired &&
             state(_proposalId) != ProposalState.Defeated && 
-            (proposal.verified || block.timestamp < proposal.endTime)
+            (proposal.verified || block.timestamp <= proposal.endTime)
         ) revert NotEligible();
 
         // If the proposal is Expired, remove it from the Executor's queuedTransactions mapping

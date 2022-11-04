@@ -17,7 +17,7 @@ contract Refundable is IRefundable, FrankenDAOErrors {
         thousand gas, so approximation is fine. */
     uint256 public constant REFUND_BASE_GAS = 27_000;
 
-    /// @notice Take the amount spent on gas supplied and send that to msg.sender from the contract's balance
+    /// @notice Calculate the amount spent on gas and send that to msg.sender from the contract's balance
     /// @param _startGas gasleft() at the start of the transaction, used to calculate gas spent
     /// @dev Forked from NounsDAO: https://github.com/nounsDAO/nouns-monorepo/blob/master/packages/nouns-contracts/contracts/governance/NounsDAOLogicV2.sol#L1033-L1046
     function _refundGas(uint256 _startGas) internal {
@@ -26,14 +26,18 @@ contract Refundable is IRefundable, FrankenDAOErrors {
             uint256 gasUsed = _startGas - gasleft() + REFUND_BASE_GAS;
             uint refundAmount = gasPrice * gasUsed;
             
-            // If gas fund runs out, governance can vote to turn off refunds or add more funds.
-            // This should be done in advance, but if needed, founders can add more to encourage voting.
-            if (refundAmount > address(this).balance) revert InsufficientRefundBalance();
+            // If gas fund runs out, pay out as much as possible and emit warning event.
+            if (address(this).balance < refundAmount) {
+                emit InsufficientFundsForRefund(msg.sender, refundAmount, address(this).balance);
+                refundAmount = address(this).balance;
+            }
 
             // There shouldn't be any reentrancy risk, as this is called last at all times.
             // They also can't exploit the refund by wasting gas before we've already finalized amount.
             (bool refundSent, ) = msg.sender.call{ value: refundAmount }('');
-            emit IssueRefund(msg.sender, refundAmount, refundSent);
+
+            // Includes current balance in event so team can listen and filter to know when to propose refill.
+            emit IssueRefund(msg.sender, refundAmount, refundSent, address(this).balance);
         }
     }
 

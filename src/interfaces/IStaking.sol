@@ -13,7 +13,7 @@ interface IStaking {
     /// @notice Emited when admins change the token's base URI
     event BaseURIChanged(string _baseURI);
     /// @notice Emited when refund settings are updated
-    event RefundSettingsChanged(bool _stakingRefund, bool _delegatingRefund);
+    event RefundSettingsChanged(bool _stakingRefund, bool _delegatingRefund, uint256 _newCooldown);
     /// @notice Emited when FrankenMonster voting multiplier is changed
     event MonsterMultiplierChanged(uint256 _monsterMultiplier);
     /// @notice Emited when the voting multiplier for passed proposals is changed
@@ -83,7 +83,7 @@ interface IStaking {
     function setPause(bool _paused) external;
     function setProposalsCreatedMultiplier(uint64 _proposalsCreatedMultiplier) external;
     function setProposalsPassedMultiplier(uint64 _proposalsPassedMultiplier) external;
-    function setRefunds(bool _stakingRefund, bool _delegatingRefund) external;
+    function setRefunds(bool _stakingRefund, bool _delegatingRefund, uint256 _newCooldown) external;
     function setVotesMultiplier(uint64 _votesmultiplier) external;
     function stake(uint256[] memory _tokenIds, uint256 _unlockTime) external;
     function stakedFrankenMonsters() external view returns (uint128);

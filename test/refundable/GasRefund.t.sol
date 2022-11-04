@@ -1,8 +1,8 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 import { GovernanceBase } from "../bases/GovernanceBase.t.sol";
 import { IGovernance } from "../../src/interfaces/IGovernance.sol";
-import "forge-std/Test.sol";
 
 contract GasRefundTests is GovernanceBase {
 
@@ -72,26 +72,52 @@ contract GasRefundTests is GovernanceBase {
     /// BALANCE RUNNING OUT //
     //////////////////////////
 
-    // Test that gas refunding reverts if the contract has no funds and refunds are on.
-    function testGasRefund__StakingRevertsIfRefundsOnAndNoBalance() public {
+    // Test that delegating works when contract has no balance for refunds and refunding is on.
+    function testGasRefund__StakingWorksIfRefundsOnAndNoBalance() public {
         vm.prank(address(staking));
         payable(address(0)).transfer(address(staking).balance);
 
-        vm.expectRevert(InsufficientRefundBalance.selector);
+        uint stakingBal = address(staking).balance;
+        assert(stakingBal == 0);
+
         vm.prank(proposer);
         staking.delegate(makeAddr("randomDelegate"));
 
+        assert(stakingBal == address(staking).balance);
+        assert(staking.getDelegate(proposer) == makeAddr("randomDelegate"));
+    }
+
+    // Test that proposing works when contract has no balance for refunds and refunding is on.
+    function testGasRefund__ProposingWorksIfRefundsOnAndNoBalance() public {
         vm.prank(address(gov));
         payable(address(0)).transfer(address(gov).balance);
 
-        vm.expectRevert(InsufficientRefundBalance.selector);
-        _createProposal();
+        uint govBal = address(gov).balance;
+        assert(govBal == 0);
+
+        uint proposalId = _createProposal();
+
+        assert(govBal == address(gov).balance);
+        assert(gov.state(proposalId) == IGovernance.ProposalState.Pending);
+    }
+
+    function testGasRefund__WillSendWhateverFundsLeftIfLow() public {
+        vm.prank(address(gov));
+        payable(address(0)).transfer(address(gov).balance - 0.001 ether);
+
+        uint govBal = address(gov).balance;
+        assert(govBal == 0.001 ether);
+
+        uint proposalId = _createProposal();
+
+        assert(address(gov).balance == 0);
+        assert(gov.state(proposalId) == IGovernance.ProposalState.Pending);
     }
 
     // Test that if staking refunding is turned off, we can stake and it doesn't refund (and is fine with no funds).
     function testGasRefund__StakingOffNoBalanceOk() public {
         vm.prank(address(executor));
-        staking.setRefunds(false, true);
+        staking.setRefunds(false, true, 1 days);
 
         vm.prank(address(staking));
         payable(address(0)).transfer(address(staking).balance);
@@ -106,7 +132,7 @@ contract GasRefundTests is GovernanceBase {
    // Test that if delegating refunding is turned off, we can delegate and it doesn't refund (and is fine with no funds).
     function testGasRefund__DelegatingOffNoBalanceOk() public {
         vm.prank(address(executor));
-        staking.setRefunds(true, false);
+        staking.setRefunds(true, false, 1 days);
 
         vm.prank(address(staking));
         payable(address(0)).transfer(address(staking).balance);
@@ -117,15 +143,6 @@ contract GasRefundTests is GovernanceBase {
 
         assert(address(staking).balance == stakingBal);
         assert(stakingBal == 0);
-    }
-
-    // Test that governance reverts if refunding is on but has no balance.
-    function testGasRefund__GovernanceRevertsIfRefundsOnAndNoBalance() public {
-        vm.prank(address(gov));
-        payable(address(0)).transfer(address(gov).balance);
-
-        vm.expectRevert(InsufficientRefundBalance.selector);
-        _createProposal();
     }
 
     // Test that if proposal refunding is turned off, we can propose and it doesn't refund (and is fine with no funds).
@@ -169,7 +186,7 @@ contract GasRefundTests is GovernanceBase {
     // Test that refunding works correctly if staking is on but delegating is off.
     function testGasRefund__StakingOnDelegatingOff() public {
         vm.prank(address(executor));
-        staking.setRefunds(true, false);
+        staking.setRefunds(true, false, 1 days);
 
         uint stakingBal1 = address(staking).balance;
         address owner = _mockStakeSingle(100, 0);
@@ -185,7 +202,7 @@ contract GasRefundTests is GovernanceBase {
     // Test that refunding works correctly if staking is off but delegating is on.
     function testGasRefund__StakingOffDelegatingOn() public {
         vm.prank(address(executor));
-        staking.setRefunds(false, true);
+        staking.setRefunds(false, true, 1 days);
 
         uint stakingBal1 = address(staking).balance;
         address owner = _mockStakeSingle(100, 0);
@@ -233,6 +250,26 @@ contract GasRefundTests is GovernanceBase {
 
         assert(address(gov).balance < govBal2);
         assert(govBal1 == govBal2);
+    }
+
+    //////////////////////////
+    ///// REFUND COOLDOWN ////
+    //////////////////////////
+
+    // Test that the refund cooldown doesn't allow user to be refunded for delegating twice.
+    function testGasRefund__RefundCooldownWorksAsIntended() public {
+        uint stakingBal1 = address(staking).balance;
+
+        vm.prank(proposer);
+        staking.delegate(makeAddr("randomDelegate"));
+
+        uint stakingBal2 = address(staking).balance;
+        assert(stakingBal2 < stakingBal1);
+
+        vm.prank(proposer);
+        staking.delegate(makeAddr("aDifferentDelegate"));
+
+        assert(address(staking).balance == stakingBal2);
     }
 
     //////////////////////////

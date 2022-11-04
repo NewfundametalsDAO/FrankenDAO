@@ -30,7 +30,6 @@ import "./interfaces/IExecutor.sol";
 /// @notice These ERC721s are used for voting power for FrankenDAO governance
 contract Staking is IStaking, ERC721, Admin, Refundable {
   using LibString for uint256;
-  using SafeCast for uint256;
 
   /// @notice The original ERC721 FrankenPunks contract
   IERC721 frankenpunks;
@@ -65,6 +64,9 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
 
   /// @notice The last timestamp at which a user used their delegating refund
   mapping(address => uint256) public lastDelegatingRefund;
+
+  /// @notice How often can a user use their refund?
+  uint256 public refundCooldown;
 
   /// @notice Is staking currently paused or open?
   bool public paused;
@@ -214,9 +216,10 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
       proposalsPassed: uint64(200)
     });
 
-    // Refunds are initially turned on.
+    // Refunds are initially turned on with 1 day cooldown.
     delegatingRefund = true;
     stakingRefund = true;
+    refundCooldown = 1 days;
 
     // Set the base token URI.
     baseTokenURI = _baseTokenURI;
@@ -267,7 +270,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     if (_delegatee == address(0)) _delegatee = msg.sender;
     
     // Refunds gas if delegatingRefund is true and hasn't been used by this user in the past 24 hours
-    if (delegatingRefund && lastDelegatingRefund[msg.sender] + 1 days <= block.timestamp) {
+    if (delegatingRefund && lastDelegatingRefund[msg.sender] + refundCooldown <= block.timestamp) {
       uint256 startGas = gasleft();
       _delegate(msg.sender, _delegatee);
       lastDelegatingRefund[msg.sender] = block.timestamp;
@@ -337,7 +340,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @dev unlockTime can be set to 0 to stake without locking (and earn no extra staked time bonus)
   function stake(uint[] calldata _tokenIds, uint _unlockTime) public {
     // Refunds gas if stakingRefund is true and hasn't been used by this user in the past 24 hours
-    if (stakingRefund && lastStakingRefund[msg.sender] + 1 days <= block.timestamp) {
+    if (stakingRefund && lastStakingRefund[msg.sender] + refundCooldown <= block.timestamp) {
       uint256 startGas = gasleft();
       _stake(_tokenIds, _unlockTime);
       lastStakingRefund[msg.sender] = block.timestamp;
@@ -505,7 +508,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
       if (ownerOf(_tokenId) == address(0)) revert NonExistentToken();
 
       // If tokenId < 10000, it's a FrankenPunk, so 100/100 = a multiplier of 1
-      uint multiplier = _tokenId < 10_000 ? 100 : monsterMultiplier;
+      uint multiplier = _tokenId < 10_000 ? PERCENT : monsterMultiplier;
       
       // evilBonus will return 0 for all FrankenMonsters, as they are not eligible for the evil bonus
       return ((baseVotes * multiplier) / PERCENT) + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
@@ -615,8 +618,13 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice Turn on or off gas refunds for staking and delegating
   /// @param _stakingRefund Should refunds for staking be on (true) or off (false)?
   /// @param _delegatingRefund Should refunds for delegating be on (true) or off (false)?
-  function setRefunds(bool _stakingRefund, bool _delegatingRefund) external onlyExecutor {
-    emit RefundSettingsChanged(stakingRefund = _stakingRefund, delegatingRefund = _delegatingRefund);
+  /// @param _newCooldown The amount of time a user must wait between refunds of the same type
+  function setRefunds(bool _stakingRefund, bool _delegatingRefund, uint _newCooldown) external onlyExecutor {
+    emit RefundSettingsChanged(
+      stakingRefund = _stakingRefund, 
+      delegatingRefund = _delegatingRefund,
+      refundCooldown = _newCooldown
+    );
   }
 
   /// @notice Pause or unpause staking

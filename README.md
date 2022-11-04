@@ -45,13 +45,13 @@ Here is a simplified overview of the major actions user's take in the system:
 
 | Contract | nSLOC | Description
 | --- | ---  | --- |
-| `Staking.sol`  | 325 | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  |
+| `Staking.sol`  | 333 | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  |
 | `Governance.sol` | 337  | Creating and voting on proposals or queuing the transactions defined in a passed proposal  |
 | `Executor.sol`  | 44 | Treasury for holding DAO funds and executing the transactions of approved proposals  |
 | `Admin.sol` | 56 | Admin roles and permission checks for contracts. Defines roles for founders, commmunity council, the executor contract, and a pauser. |
 | `Refundable.sol` | 22  | Contract for shared functionality for refunding gas on certain methods. Used to refund staking, delegating, creating proposals, and voting  |
 | `GovernanceProxy.sol` | 27  | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)  |
-| Total nSLOC | 811 | | 
+| Total nSLOC | 819 | | 
 
 (Out of Scope: `FrankenDAOErrors.sol`, `SafeCast.sol`, all interfaces.)
 
@@ -136,16 +136,20 @@ roles are:
 
 ## Refundable.sol
 
-This contract is for shared functionality of refunding transactions. It
-is implemented by Staking and Governance, with the following functions being
-refundable:
+This contract is for shared functionality of refunding transactions. It is implemented by Staking and Governance, with the following functions being refundable:
 
 1. Proposing
 2. Voting
 3. Staking
 4. Delegating
 
-Each of these contracts has a `setRefunds()` function that allows Governance to turn refunding on and off at the function level. All refunds will start as true and the founders will contribute 5 ETH to each of the two contracts for gas refunds. When this pool runs out, the community will decide whether to keep refunds on and refill the contracts, or turn them off.
+Each of these contracts has a `setRefunds()` function that allows Governance to turn refunding on and off at the function level. 
+
+Although no user can earn money through refunds, a malicious user could abuse this functionality waste funds. For this reason, we've implemented a cap on 1 refund per day for staking and delegating. There is no cap on proposing or voting because (a) proposing requires having a large % of FrankenPunks, and we don't believe a major holder would want to waste treasury funds and (b) users can only vote once per proposal, so this can't be abuse. In the case that these assumptions do not hold, the protocol is able to freeze all refunding to avoid major losses.
+
+All four functions will start as refundable and the founders will contribute 5 ETH to each of the two contracts for gas refunds. When this pool runs out, the community will decide whether to keep refunds on and refill the contracts, or turn them off.
+
+If the community fails to make a decision and a contract runs out of funds, the functions will continue to operate as normal, but refunds will stop being processed. An event will be emitted to notify the team that refunds are failing, so they have a record of which users are owed how much in case they would like to reimburse them at a later date.
 
 # Known Risks
 
