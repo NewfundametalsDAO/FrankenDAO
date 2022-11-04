@@ -194,10 +194,9 @@ See the [Foundry Book](https://book.getfoundry.sh/) for more on Foundry.
 
 # Team & Contacts
 
-We're here to make this test as smooth as possible for you. Ask lots of questions, and let us know if the documentation or system is unclear in any way.
+We want to make this contest as smooth as possible for you. Ask lots of questions, and let us know if the documentation or system is unclear in any way.
 
-We'll all be in the Discord with DMs open.
-
+We'll all be in the Discord with DMs open:
 - dev: @zachobront#1010
 - dev: @zakk | Cabin#0896
 - team: @DobsGaming#6670
