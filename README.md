@@ -183,7 +183,12 @@ MAINNET_RPC_URL=http://INSERT_YOUR_URL_HERE.com
 ```
 Source the environment variable by running the following in your terminal: `source .env`
 
-To run tests: `forge test`
+You are then ready to run tests: 
+```solidity
+forge test -vvv // only show traces for failing tests
+forge test -vvvv // show traces for all tests
+forge test -vvv --match testName // only run tests that match testName
+```
 
 See the [Foundry Book](https://book.getfoundry.sh/) for more on Foundry.
 
