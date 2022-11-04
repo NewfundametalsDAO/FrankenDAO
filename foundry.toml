@@ -5,12 +5,14 @@ libs = ['lib']
 #solc = "0.8.13"
 ffi = true
 fs_permissions = [{ access = "read", path = "./"}]
+gas_price = 25000000000
 
 [rpc_endpoints]
-mainnet = "https://mainnet.infura.io/v3/${INFURA_API_KEY}"
-goerli = "https://goerli.infura.io/v3/${INFURA_API_KEY}"
+mainnet = "${MAINNET_RPC_URL}"
+goerli = "${GOERLI_RPC_URL}"
 
 [etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}" }
 goerli = { key = "${ETHERSCAN_API_KEY}" }
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

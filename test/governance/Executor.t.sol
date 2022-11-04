@@ -60,12 +60,12 @@ contract ExecutorTests is GovernanceBase {
         vm.deal(address(executor), 100 ether);
         uint proposalId = _passCustomProposal(100 ether, "", bytes(""));
 
-        assert(address(gov).balance == 0);
+        uint govBalBefore = address(gov).balance;
 
         gov.queue(proposalId);
         vm.warp(block.timestamp + executor.DELAY());
         gov.execute(proposalId);
 
-        assert(address(gov).balance == 100 ether);
+        assert(address(gov).balance - govBalBefore == 100 ether);
     }
 }

@@ -16,5 +16,8 @@ contract TestBase is Test, FrankenDAOErrors, DeployScript {
 
         frankenpunks = IERC721(FRANKENPUNKS);
         frankenmonsters = IERC721(FRANKENMONSTERS);
+
+        vm.deal(address(staking), 5 ether);
+        vm.deal(address(gov), 5 ether);
     }
 }

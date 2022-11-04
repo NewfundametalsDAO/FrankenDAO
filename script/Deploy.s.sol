@@ -44,7 +44,6 @@ contract DeployScript is Script {
 
         payable(address(gov)).transfer(0.5 ether);
         payable(address(staking)).transfer(0.5 ether);
-        console.log("eth sent to gov & staking");
 
         vm.stopBroadcast();
     }
