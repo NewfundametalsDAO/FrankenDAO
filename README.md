@@ -35,12 +35,6 @@ The DAO implementation draws heavily from NounsDAO, with deviations described in
     ├── Refundable.sol
     └── SafeCast.sol
 ```
-# System Overview
-
-Here is a simplified overview of the major actions user's take in the system:
-
-![FrankenDAO Governance Overview](./assets/frankendao.png)
-
 # Contracts In Scope
 
 | Contract | nSLOC | Description

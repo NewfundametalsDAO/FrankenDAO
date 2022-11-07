@@ -18,10 +18,10 @@ interface IGovernance {
     event ProposalExecuted(uint256 id);
     /// @notice Emited when a proposal is queued
     event ProposalQueued(uint256 id, uint256 eta);
-    /// @notice Emited when a new proposal threshold BPS is set
-    event ProposalThresholdBPSSet(uint256 oldProposalThresholdBPS, uint256 newProposalThresholdBPS);
     /// @notice Emited when a proposal is vetoed
     event ProposalVetoed(uint256 id);
+    /// @notice Emited when a new proposal threshold BPS is set
+    event ProposalThresholdBPSSet(uint256 oldProposalThresholdBPS, uint256 newProposalThresholdBPS);
     /// @notice Emited when a new quorum votes BPS is set
     event QuorumVotesBPSSet(uint256 oldQuorumVotesBPS, uint256 newQuorumVotesBPS);
     /// @notice Emited when the refund status changes
