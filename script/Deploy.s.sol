@@ -106,7 +106,7 @@ contract DeployScript is Script {
                     7 days, // Voting Period
                     1 days, // Voting Delay
                     500, // Proposal BPS: 5%
-                    2000 // Quorum BPS: 35%
+                    2000 // Quorum BPS: 20%
                 )
             )
         );
