@@ -17,10 +17,12 @@
 # On-chain context
 
 ```
-DEPLOYMENT: [e.g. mainnet, arbitrum, optimism, ..]
-ERC20: [e.g. any, none, USDC, USDC and USDT]
-ERC721: [e.g. any, none, UNI-V3]
+DEPLOYMENT: mainnet
+ERC20: none
+ERC721: FrankenPunks, FrankenMonsters, StakedFrankenPunks
 ```
+
+Punks and monsters are existing NFTs that the staking contract accepts. Staked franken punks are in scope (721 produced by staking contract).
 
 # Audit Scope
 
