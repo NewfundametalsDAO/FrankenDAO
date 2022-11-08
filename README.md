@@ -11,18 +11,17 @@
 
 - [Website](https://www.3dfrankenpunks.com/)
 - [Twitter](https://twitter.com/3dFrankenPunks)
-- [Docs](https://docs.3dfrankenpunks.com/)
-- [GitHub](https://github.com/NewfundametalsDAO)
+- [Docs](https://github.com/sherlock-audit/2022-11-frankendao/#frankendao)
 
 # On-chain context
 
 ```
 DEPLOYMENT: mainnet
 ERC20: none
-ERC721: FrankenPunks, FrankenMonsters, StakedFrankenPunks
+ERC721: FrankenPunks, FrankenMonsters
 ```
 
-Punks and monsters are existing NFTs that the staking contract accepts. Staked franken punks are in scope (721 produced by staking contract).
+The ERC721s above existing NFTs that Staking.sol accepts. The Staking contract also is itself an NFT ("Staked FrankenPunks").
 
 # Audit Scope
 
@@ -67,7 +66,9 @@ forge test -vvv --match testName // only run tests that match testName
 
 See the [Foundry Book](https://book.getfoundry.sh/) for more on Foundry.
 
-# FrankenDAO
+***
+
+# FrankenDAO Deep Dive
 
 FrankenDAO is the staking and governance component of the FrankenPunks
 ecosystem. The DAO will have full control over the FrankenPunks treasury.
@@ -239,34 +240,6 @@ We've added logic to the contracts to be able to continue decentralization in th
 3. We know we could deploy with the wrong parameters, but we're not planning to. You can look at our final deployment script in `script/Deploy.s.sol`. If there is an issue that will occur from running that script, GREAT! Please consider that a valid finding. If there is a hypothetical issue that could come if we deployed in a different way, please don't feel the need to report it.
 
 4. We are aware that there are no storage gaps in the contracts inherited by our upgradeable contract. This is generally not best practice but we've chosen to do so because (a) Refundable uses no storage and (b) Admin storage will not be changed or expanded in the case of an upgrade.
-
-# Testing Setup
-
-FrankenDAO runs on [Foundry](https://book.getfoundry.sh/).
-
-- To download foundryup (assuming Linux or macOS): `curl -L https://foundry.paradigm.xyz | bash`
-- To start Foundry, run: `foundryup`
-- To install dependencies: `forge install`
-
-Because our contracts interact with the live Frankenpunks and Frankenmonsters contracts, all tests require forking Ethereum mainnet. We have the `foundry.toml` file set up to fork mainnet and set the gas price to 25 gwei, but you'll need to add your own RPC URL for it to work.
-
-Create a `.env` file at the root of the folder and add the following:
-
-```
-MAINNET_RPC_URL=http://INSERT_YOUR_URL_HERE.com
-```
-
-Source the environment variable by running the following in your terminal: `source .env`
-
-You are then ready to run tests:
-
-```solidity
-forge test -vvv // only show traces for failing tests
-forge test -vvvv // show traces for all tests
-forge test -vvv --match testName // only run tests that match testName
-```
-
-See the [Foundry Book](https://book.getfoundry.sh/) for more on Foundry.
 
 # Team & Contacts
 
