@@ -1,9 +1,79 @@
+# FrankenDAO Contest Details
+
+- 16,000 USDC main award pot
+- Join [Sherlock Discord](https://discord.gg/MABEWyASkp)
+- Submit findings using the issue page in your private contest repo (label issues as med or high)
+- [Read for more details](https://docs.sherlock.xyz/audits/watsons)
+- Starts November 9, 2022 15:00 UTC
+- Ends November 14, 2022 15:00 UTC
+
+# Resources
+
+- [Website](https://www.3dfrankenpunks.com/)
+- [Twitter](https://twitter.com/3dFrankenPunks)
+- [Docs](https://docs.3dfrankenpunks.com/)
+- [GitHub](https://github.com/NewfundametalsDAO)
+
+# On-chain context
+
+```
+DEPLOYMENT: mainnet
+ERC20: none
+ERC721: FrankenPunks, FrankenMonsters, StakedFrankenPunks
+```
+
+Punks and monsters are existing NFTs that the staking contract accepts. Staked franken punks are in scope (721 produced by staking contract).
+
+# Audit Scope
+
+The following contracts are in scope:
+
+- `src/Governance.sol` (337 nSLOC)
+- `src/Staking.sol` (333 nSLOC)
+- `src/Executor.sol` (44 nSLOC)
+- `src/proxy/GovernanceProxy.sol` (27 nSLOC)
+- `src/utils/Admin.sol` (56 nSLOC)
+- `src/utils/Refundable.sol` (22 nSLOC)
+
+# About
+
+We're a community-based collectibles project featuring art by 3D Punks. 3D FrankenPunks come in an evil array of shapes, traits, and sizes with a few surprises along the way. The collection size is 10,000. Each FrankenPunk allows its owner to vote on creating experiences and influencing project developments which are paid for by the Punksville Community Treasury.
+
+# Testing Setup
+
+FrankenDAO runs on [Foundry](https://book.getfoundry.sh/).
+
+- To download foundryup (assuming Linux or macOS): `curl -L https://foundry.paradigm.xyz | bash`
+- To start Foundry, run: `foundryup`
+- To install dependencies: `forge install`
+
+Because our contracts interact with the live Frankenpunks and Frankenmonsters contracts, all tests require forking Ethereum mainnet. We have the `foundry.toml` file set up to fork mainnet and set the gas price to 25 gwei, but you'll need to add your own RPC URL for it to work.
+
+Create a `.env` file at the root of the folder and add the following:
+
+```
+MAINNET_RPC_URL=http://INSERT_YOUR_URL_HERE.com
+```
+
+Source the environment variable by running the following in your terminal: `source .env`
+
+You are then ready to run tests:
+
+```solidity
+forge test -vvv // only show traces for failing tests
+forge test -vvvv // show traces for all tests
+forge test -vvv --match testName // only run tests that match testName
+```
+
+See the [Foundry Book](https://book.getfoundry.sh/) for more on Foundry.
+
 # FrankenDAO
 
 FrankenDAO is the staking and governance component of the FrankenPunks
 ecosystem. The DAO will have full control over the FrankenPunks treasury.
 
 The basic user flow for the DAO is as follows:
+
 - Holders of FrankenPunks or FrankenMonsters can stake their NFTs
 - They will receive stakedFrankenDAO NFTs in return, which retain their token's ID and characteristics
 - Stakers will earn votes based on the length of time they stake, the uniqueness of their NFT, and their involvement in the DAO
@@ -35,17 +105,18 @@ The DAO implementation draws heavily from NounsDAO, with deviations described in
     ├── Refundable.sol
     └── SafeCast.sol
 ```
+
 # Contracts In Scope
 
-| Contract | nSLOC | Description
-| --- | ---  | --- |
-| `Staking.sol`  | 333 | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power  |
-| `Governance.sol` | 337  | Creating and voting on proposals or queuing the transactions defined in a passed proposal  |
-| `Executor.sol`  | 44 | Treasury for holding DAO funds and executing the transactions of approved proposals  |
-| `Admin.sol` | 56 | Admin roles and permission checks for contracts. Defines roles for founders, commmunity council, the executor contract, and a pauser. |
-| `Refundable.sol` | 22  | Contract for shared functionality for refunding gas on certain methods. Used to refund staking, delegating, creating proposals, and voting  |
-| `GovernanceProxy.sol` | 27  | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)  |
-| Total nSLOC | 819 | | 
+| Contract              | nSLOC | Description                                                                                                                                |
+| --------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Staking.sol`         | 333   | Contract for staking FrankenPunks and FrankenMonsters, delegating, and calculating voting power                                            |
+| `Governance.sol`      | 337   | Creating and voting on proposals or queuing the transactions defined in a passed proposal                                                  |
+| `Executor.sol`        | 44    | Treasury for holding DAO funds and executing the transactions of approved proposals                                                        |
+| `Admin.sol`           | 56    | Admin roles and permission checks for contracts. Defines roles for founders, commmunity council, the executor contract, and a pauser.      |
+| `Refundable.sol`      | 22    | Contract for shared functionality for refunding gas on certain methods. Used to refund staking, delegating, creating proposals, and voting |
+| `GovernanceProxy.sol` | 27    | ERC1967 proxy for Governance upgradeability (based on Open Zeppelin's implementation with a few changes)                                   |
+| Total nSLOC           | 819   |                                                                                                                                            |
 
 (Out of Scope: `FrankenDAOErrors.sol`, `SafeCast.sol`, all interfaces.)
 
@@ -62,11 +133,12 @@ FrankenPunks will earn voting power at 2X the rate that FrankenMonsters do (see 
 
 ### Staking and Unstaking Tokens
 
-Users can stake their tokens to receive FrankenDAO tokens. 
+Users can stake their tokens to receive FrankenDAO tokens.
 
-Staking is allowed unless it is paused at the contract level. 
+Staking is allowed unless it is paused at the contract level.
 
 When users stake their tokens, they commit to an `unlockTime` for an additional staking bonus. They can set the time to 0 to receive no bonus (which allows them to unlock at any time) or commit to an unlock time in the future for larger rewards.
+
 ### Voting Power
 
 The system is divided into two distinct types of Voting Power.
@@ -79,26 +151,27 @@ The system is divided into two distinct types of Voting Power.
 - Staking Bonus is calculated when tokens are staked. It is awarded linearly based on the formula `(unlockTime - block.timestamp) / maxStakeBonusTime * maxStakeBonusAmount`. In other words, you can earn `maxStakeBonusAmount` if you stake for `maxStakeBonusTime` and `0` if you stake for no time, and rewards are added linearly between these points. These values will be initialized to `20` and `4 weeks`.
 - Evil Bonus is a bonus for FrankenPunks stakers whose underlying tokens have specific traits. The bitmap of users who have sufficient "evil score" to get this bonus is stored in `EVIL_BITMAPS` and accessed to determine whether a specific ID should get the bonus. This value will be initialized to 10.
 
-
 2. Community Voting Power are the additional votes you earn by being an active participant in the DAO. This is calculated as follows:
 
 `Community Voting Power = ((# Votes * votesMultiplier / 100) + (# Proposals Verified * proposalsCreatedMultiplier / 100) + (# Proposals Passed * proposalsPassedMultiplier / 100))`
 
 - votesMultiplier, proposalsCreatedMultiplier, and proposalsPassedMultiplier are all values that can be set by governance to adjust the importance of these actions. They will be initialized to 100, 200, and 200, meaning users will earn 1 additional vote per vote they cast, 2 votes per proposal they get on chain, and 2 votes per proposal they get passed.
-- A user will only earn Community Voting Power if they have _some_ Token Voting Power. In other words, if a user has delegated their votes, or doesn't have any tokens staked or votes delegated to them, they have no voting power, and they therefore forfeit their community power. 
+- A user will only earn Community Voting Power if they have _some_ Token Voting Power. In other words, if a user has delegated their votes, or doesn't have any tokens staked or votes delegated to them, they have no voting power, and they therefore forfeit their community power.
 - Users who delegate their votes to others therefore delegate only their Token Voting Power, and their Community Voting Power is temporarily forfeited (until they undelegate their votes).
 
 ### Locking Tokens
 
 Most governance systems (including Nouns) use some form of checkpointing to capture each user's voting power at the time of a proposal, to stop users from "double spending" their tokens on votes.
 
-In order to improve gas efficiency, we've implemented a different system. 
+In order to improve gas efficiency, we've implemented a different system.
+
 - When a user's votes are used on a proposal (whether through voting directly, having a delegate vote, proposing the proposal directly, or having a delegate propose a proposal), their tokens are locked until that proposal is no longer active.
 - Since FrankenDAO tokens are non-transferrable, we simply block the ability to unstake or delegate, and that ensures that users must hold their tokens once they've "used" them on an active proposal.
+
 ## Governance.sol
 
 The governance system is a modified fork of NounsDAO. Actions like creating a proposal, casting a vote, and queueing a passed proposal all occur on Governance.sol, which is behind a proxy
-(GovernanceProxy.sol). 
+(GovernanceProxy.sol).
 
 Transactions in approved proposals are queued to Executor.sol, where are are subject to a time lock. Just like in Nouns, thresholds for proposing and reaching quorum are calculated on a proposal-by-proposal basis through basis-points of the total voting power in the system. We've implemented mechanisms to track the total Community Voting Power and Token Voting Power in order to make these calculations accurate and efficient.
 
@@ -137,9 +210,9 @@ This contract is for shared functionality of refunding transactions. It is imple
 3. Staking
 4. Delegating
 
-Each of these contracts has a `setRefunds()` function that allows Governance to turn refunding on and off at the function level. 
+Each of these contracts has a `setRefunds()` function that allows Governance to turn refunding on and off at the function level.
 
-Although no user can earn money through refunds, a malicious user could abuse this functionality waste funds. For this reason, we've implemented a cap on 1 refund per day for staking and delegating. There is no cap on proposing or voting because (a) proposing requires having a large % of FrankenPunks, and we don't believe a major holder would want to waste treasury funds and (b) users can only vote once per proposal, so voting can't be abused. 
+Although no user can earn money through refunds, a malicious user could abuse this functionality waste funds. For this reason, we've implemented a cap on 1 refund per day for staking and delegating. There is no cap on proposing or voting because (a) proposing requires having a large % of FrankenPunks, and we don't believe a major holder would want to waste treasury funds and (b) users can only vote once per proposal, so voting can't be abused.
 
 In the case that these assumptions do not hold, the protocol is able to freeze all refunding to avoid major losses.
 
@@ -156,6 +229,7 @@ There are a number of "risks" we are aware of and which will not be valid for th
 ![No More Zero Address Checks](./assets/zeroaddr.png)
 
 2. We know the system has some centralization. Currently, the DAO is operating from a multisig, and this system is a step towards decentralization. Specifically, we're aware that:
+
 - Proposals could be blocked by not verifying them
 - Proposals could be vetoed
 - Staking could be paused to keep users out
@@ -168,22 +242,24 @@ We've added logic to the contracts to be able to continue decentralization in th
 
 # Testing Setup
 
-FrankenDAO runs on [Foundry](https://book.getfoundry.sh/). 
+FrankenDAO runs on [Foundry](https://book.getfoundry.sh/).
 
 - To download foundryup (assuming Linux or macOS): `curl -L https://foundry.paradigm.xyz | bash`
 - To start Foundry, run: `foundryup`
 - To install dependencies: `forge install`
 
-Because our contracts interact with the live Frankenpunks and Frankenmonsters contracts, all tests require forking Ethereum mainnet. We have the `foundry.toml` file set up to fork mainnet and set the gas price to 25 gwei, but you'll need to add your own RPC URL for it to work. 
+Because our contracts interact with the live Frankenpunks and Frankenmonsters contracts, all tests require forking Ethereum mainnet. We have the `foundry.toml` file set up to fork mainnet and set the gas price to 25 gwei, but you'll need to add your own RPC URL for it to work.
 
 Create a `.env` file at the root of the folder and add the following:
 
 ```
 MAINNET_RPC_URL=http://INSERT_YOUR_URL_HERE.com
 ```
+
 Source the environment variable by running the following in your terminal: `source .env`
 
-You are then ready to run tests: 
+You are then ready to run tests:
+
 ```solidity
 forge test -vvv // only show traces for failing tests
 forge test -vvvv // show traces for all tests
@@ -197,6 +273,7 @@ See the [Foundry Book](https://book.getfoundry.sh/) for more on Foundry.
 We want to make this contest as smooth as possible for you. Ask lots of questions, and let us know if the documentation or system is unclear in any way.
 
 We'll all be in the Discord with DMs open:
+
 - dev: @zachobront#1010
 - dev: @zakk | Cabin#0896
 - team: @DobsGaming#6670
