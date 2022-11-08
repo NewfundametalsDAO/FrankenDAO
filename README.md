@@ -11,7 +11,7 @@
 
 - [Website](https://www.3dfrankenpunks.com/)
 - [Twitter](https://twitter.com/3dFrankenPunks)
-- [Docs](https://github.com/sherlock-audit/2022-11-frankendao/#frankendao)
+- [Docs](https://github.com/sherlock-audit/2022-11-frankendao/#frankendao-deep-dive)
 
 # On-chain context
 
