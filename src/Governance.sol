@@ -442,11 +442,13 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @param _proposalId Id of the proposal to verify
     /// @dev This is intended to confirm that the proposal got through Snapshot pre-governance
     /// @dev This doesn't add any additional centralization risk, as the team already has veto power
-    function verifyProposal(uint _proposalId) external onlyAdmins {
+    function verifyProposal(uint _proposalId) external onlyVerifierOrAdmins {
         // Can only verify proposals that are currently in the Pending state
         if (state(_proposalId) != ProposalState.Pending) revert InvalidStatus();
 
         Proposal storage proposal = proposals[_proposalId];
+        
+        if (proposal.verified) revert InvalidStatus();
         proposal.verified = true;
 
         // If a proposal was valid, we are ready to award the community voting power bonuses to the proposer

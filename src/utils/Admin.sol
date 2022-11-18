@@ -22,6 +22,10 @@ abstract contract Admin is IAdmin, FrankenDAOErrors {
     /// @dev This address is changeable by governance if the community thinks the team is misusing this power
     address public pauser;
 
+    /// @notice Admin that only has the power to verify contracts
+    /// @dev This will be an EOA used by the team for contract verification
+    address public verifier;
+
     /// @notice Pending founder addresses for this contract
     /// @dev Only founders is two-step, because errors in transferring other admin addresses can be corrected by founders
     address public pendingFounders;
@@ -46,6 +50,11 @@ abstract contract Admin is IAdmin, FrankenDAOErrors {
     /// @notice Modifier for functions that can only be called by the Pauser or either multisig
     modifier onlyPauserOrAdmins() {
         if(msg.sender != founders && msg.sender != council && msg.sender != pauser) revert NotAuthorized();
+        _;
+    }
+
+    modifier onlyVerifierOrAdmins() {
+        if(msg.sender != founders && msg.sender != council && msg.sender != verifier) revert NotAuthorized();
         _;
     }
 
@@ -103,7 +112,16 @@ abstract contract Admin is IAdmin, FrankenDAOErrors {
         council = _newCouncil;
     }
 
-    /// @notice Accepts transfer of council rights. msg.sender must be pendingCouncil
+    /// @notice Transfers verifier role to a new address.
+    /// @param _newVerifier New address for verifier
+    function setVerifier(address _newVerifier) external onlyAdmins {
+
+            emit NewVerifier(verifier, _newVerifier);
+            
+            verifier = _newVerifier;
+    }
+
+    /// @notice Transfers pauser role to a new address.
     /// @param _newPauser New address for pauser
     function setPauser(address _newPauser) external onlyExecutorOrAdmins {
         
