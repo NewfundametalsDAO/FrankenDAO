@@ -408,7 +408,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     collection.transferFrom(owner, address(this), _tokenId);
 
     // Mint the staker a new ERC721 token representing their staked token
-    _mint(msg.sender, _tokenId);
+    _safeMint(msg.sender, _tokenId);
 
     // Return the voting power for this token based on staked time bonus and evil score
     return getTokenVotingPower(_tokenId);
