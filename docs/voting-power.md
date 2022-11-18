@@ -53,6 +53,7 @@ If you staked the token with no stake time bonus, then you could expect to have
 a base voting power of 21.13035.
 
 | Attribute | Value |
+| --- | --- |
 | Token Id  | 4701  |
 | Base Votes  | 20  |
 | Multiplier  | 100  |
@@ -63,6 +64,7 @@ Now, let's say you stake the same token for four weeks and earn the stake time
 bonus:
 
 | Attribute | Value |
+| --- | --- |
 | Token Id  | 4701  |
 | Base Votes  | 20  |
 | Multiplier  | 100  |
@@ -89,6 +91,7 @@ Each of these actions is then subject to a community score multiplier. The
 default multipliers are:
  
 | Action | Multipler % | Multiplier # |
+| --- | --- | --- |
 | Voting  | 100%  | 1x  |
 | Creating a proposal | 200%  | 2x  |
 | Passing proposal  | 200%  | 2x  |
@@ -100,6 +103,7 @@ on 15 proposals. You've also submitted 2 proposals of your own, 1 of which did
 pass and one of which did not. Your scores would then be:
 
 | Action | Multiplier | Base Points | VP |
+| --- | --- | --- | --- |
 | Voting  | 1x  | 15  | 15 |
 | Proposing  | 2x  | 2  | 4 |
 | Passing  | 2x  | 1  | 2 |
@@ -116,6 +120,7 @@ and had 1 of them pass.
 This is how you token voting power would break down:
 
 | Token ID | Evil Score | Stake Bonus | Voting Power |
+| --- | --- | --- | --- |
 | #2146  | 1.40952 | 20  | 41.40952 |
 | #6707  | 2.5 | 20  | 42.5  |
 | #2671  | 1.1865 | 20  | 41.1865  |
@@ -125,6 +130,7 @@ Your total token voting power is: 125.09602
 This is how your community score would break down:
 
 | Action | Multiplier | Base Points | VP |
+| --- | --- | --- | --- |
 | Voting  | 1x  | 15  | 15 |
 | Proposing  | 2x  | 2  | 4 |
 | Passing  | 2x  | 1  | 2 |
