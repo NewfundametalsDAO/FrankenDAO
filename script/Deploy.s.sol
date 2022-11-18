@@ -15,12 +15,15 @@ contract DeployScript is Script {
     Governance govImpl;
     Governance gov;
 
+    address DEPLOY_WALLET = address(0); // @todo input for mainnet deployment
+    address CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+
     address FOUNDER_MULTISIG;
-    address FOUNDER_MULTISIG_MAINNET = address(0); // @todo input
-    address FOUNDER_MULTISIG_GOERLI = 0x1f3958B482d1Ff1660CEE66F8341Bdc1329De4e0; // me
+    address FOUNDER_MULTISIG_MAINNET = address(0); // @todo input for mainnet deployment
+    address FOUNDER_MULTISIG_GOERLI = 0x1f3958B482d1Ff1660CEE66F8341Bdc1329De4e0; // z
     
     address COUNCIL_MULTISIG;
-    address COUNCIL_MULTISIG_MAINNET = address(0); // @todo input
+    address COUNCIL_MULTISIG_MAINNET = address(0); // @todo input for mainnet deployment
     address COUNCIL_MULTISIG_GOERLI = 0x20643627A2d02F520A006dF56Acc51E3e67E3Ee5; // dobs
     
     address FRANKENPUNKS;
@@ -31,14 +34,13 @@ contract DeployScript is Script {
     address FRANKENMONSTERS_GOERLI = 0xaFC74C56264824d92303072C5DB23c04ACa78D81;
     address FRANKENMONSTERS_MAINNET = 0x2cfBCB9e9C3D1ab06eF332f535266444aa8d9570;
     
-    bytes32 SALT = bytes32("salty");
-    string BASE_TOKEN_URI = "http://frankenpunks.com/uris/"; // @todo fix this
-    address CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+    bytes32 SALT = bytes32("saltysalty");
+    string BASE_TOKEN_URI = "http://frankenpunks.com/uris/"; // @todo input for mainnet deployment
 
     function run() public {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         
-        _deployAllContracts(true, false);
+        _deployAllContracts(true, false); // @todo edit for mainnet deployment
         
         console.log("executor deployed to: ", address(executor));
         console.log("govImpl deployed to: ", address(govImpl));
@@ -54,7 +56,7 @@ contract DeployScript is Script {
     function _deployAllContracts(bool realDeploy, bool mainnet) internal {
 
         address create2Deployer = realDeploy ? CREATE2_DEPLOYER : address(this);
-        address deployer = realDeploy ? msg.sender : address(this); // @todo make sure msg.sender will work
+        address deployer = realDeploy ? DEPLOY_WALLET : address(this);
 
         FRANKENPUNKS = mainnet ? FRANKENPUNKS_MAINNET : FRANKENPUNKS_GOERLI;
         FRANKENMONSTERS = mainnet ? FRANKENMONSTERS_MAINNET : FRANKENMONSTERS_GOERLI;
@@ -104,7 +106,7 @@ contract DeployScript is Script {
                     7 days, // Voting Period
                     1 days, // Voting Delay
                     500, // Proposal BPS: 5%
-                    2000 // Quorum BPS: 35%
+                    2000 // Quorum BPS: 20%
                 )
             )
         );
