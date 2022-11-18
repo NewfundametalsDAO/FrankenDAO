@@ -404,7 +404,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     }
 
     address owner = collection.ownerOf(_tokenId);
-    if (msg.sender != owner && !collection.isApprovedForAll(owner, msg.sender) && msg.sender != collection.getApproved(_tokenId)) revert NotAuthorized();
+    if (msg.sender != owner) revert NotAuthorized();
     collection.transferFrom(owner, address(this), _tokenId);
 
     // Mint the staker a new ERC721 token representing their staked token
