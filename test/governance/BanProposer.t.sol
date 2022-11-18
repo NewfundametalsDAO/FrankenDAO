@@ -14,4 +14,14 @@ contract ActiveProposalTests is GovernanceBase {
         vm.expectRevert(NotAuthorized.selector);
         uint proposalId = _createProposal();
     }
+
+    // Test that we can ban and unban a user and they'll be able to propose.
+    function testGovBan__UnbanUser() public {
+        vm.startPrank(FOUNDER_MULTISIG);
+        gov.banProposer(proposer, true);
+        gov.banProposer(proposer, false);
+        vm.stopPrank();
+
+        _createProposal();
+    }
 }
