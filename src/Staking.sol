@@ -474,7 +474,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
       collection = frankenmonsters;
       --stakedFrankenMonsters;
     }
-    collection.transferFrom(address(this), _to, _tokenId);
+    collection.safeTransferFrom(address(this), _to, _tokenId);
 
     // Voting power needs to be calculated before staked time bonus is zero'd out, as it uses this value
     uint lostVotingPower = getTokenVotingPower(_tokenId);
