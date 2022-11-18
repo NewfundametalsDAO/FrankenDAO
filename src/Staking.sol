@@ -462,7 +462,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @param _to The address to send the underlying NFT to
   function _unstakeToken(uint _tokenId, address _to) internal returns(uint) {
     address owner = ownerOf(_tokenId);
-    if (msg.sender != owner && !isApprovedForAll[owner][msg.sender] && msg.sender != getApproved[_tokenId]) revert NotAuthorized();
+    if (msg.sender != owner) revert NotAuthorized();
     if (unlockTime[_tokenId] > block.timestamp) revert TokenLocked();
     
     // Transfer the underlying token from the owner to this contract
