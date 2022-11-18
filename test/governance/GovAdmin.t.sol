@@ -42,7 +42,7 @@ contract GovAdminTests is GovernanceBase {
     }
 
     // Test that only the founder can revoke pending founder multisig.
-    function testGovAdmin__TwoStepFounderRevoke() public {
+    function testGovAdmin__FounderRevoke() public {
         // Non founder can't revoke pending founder.
         vm.expectRevert(NotAuthorized.selector);
         gov.revokeFounders();
@@ -90,9 +90,31 @@ contract GovAdminTests is GovernanceBase {
         vm.prank(address(executor));
         gov.setCouncil(newUser);
 
+        vm.expectRevert(NotAuthorized.selector);
+        vm.prank(address(executor));
+        gov.setVerifier(newUser);
+
         vm.prank(address(executor));
         gov.setPauser(newUser);
 
         assert(gov.pauser() == newUser);
     }
+
+    // Test that the verifier role works.
+    function testGovAdmin__VerifierRoleCanBeSetAndVerify() public {
+        address verifier = makeAddr("verifier");
+
+        vm.prank(COUNCIL_MULTISIG);
+        gov.setVerifier(verifier);
+
+        uint proposalId = _createProposal();
+
+        vm.prank(verifier);
+        gov.verifyProposal(proposalId);
+
+        vm.warp(block.timestamp + gov.votingDelay());
+
+        assert(_checkState(proposalId, IGovernance.ProposalState.Active));
+    }
+    
 }

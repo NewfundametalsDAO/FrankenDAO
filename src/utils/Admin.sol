@@ -116,9 +116,9 @@ abstract contract Admin is IAdmin, FrankenDAOErrors {
     /// @param _newVerifier New address for verifier
     function setVerifier(address _newVerifier) external onlyAdmins {
 
-            emit NewVerifier(verifier, _newVerifier);
-            
-            verifier = _newVerifier;
+        emit NewVerifier(verifier, _newVerifier);
+        
+        verifier = _newVerifier;
     }
 
     /// @notice Transfers pauser role to a new address.
