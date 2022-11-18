@@ -371,7 +371,6 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     totalTokenVotingPower += newVotingPower;
 
     // If the user had no tokenVotingPower before and doesn't delegate, they just unlocked their community voting power
-    // If their tokenVotingPower == newVotingPower, that means (a) it was 0 before and (b) they don't delegate, or it'd be 0 now
     if (tokenVotingPower[msg.sender] == newVotingPower) {
       // The user's community voting power is reactivated, so we add it to the total community voting power
       _updateTotalCommunityVotingPower(msg.sender, true);
