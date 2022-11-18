@@ -41,7 +41,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   IGovernance governance;
 
   /// @notice Base votes for holding a Frankenpunk token
-  uint constant BASE_VOTES = 20;
+  uint constant public BASE_VOTES = 20;
 
   /// @return maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
   /// @return maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
