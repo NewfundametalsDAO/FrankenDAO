@@ -357,6 +357,10 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     if (paused) revert Paused();
     if (_unlockTime > 0 && _unlockTime < block.timestamp) revert InvalidParameter();
 
+    if (_unlockTime - block.timestamp > maxStakeTime) {
+      _unlockTime = block.timestamp + maxStakeTime;
+    }
+
     uint numTokens = _tokenIds.length;
     // This is required to ensure the gas refunds are not abused
     if (numTokens == 0) revert InvalidParameter();
