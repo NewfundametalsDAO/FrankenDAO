@@ -123,6 +123,9 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @notice The latest proposal for each proposer
     mapping(address => uint256) public latestProposalIds;
 
+    /// @notice Users who have been banned from creating proposals
+    mapping(address => bool) public bannedProposers;
+
     /// @notice The number of votes, verified proposals, and passed proposals for each user
     mapping(address => CommunityScoreData) public userCommunityScoreData;
 
@@ -368,6 +371,9 @@ contract Governance is IGovernance, Admin, Refundable {
         bytes[] memory _calldatas,
         string memory _description
     ) internal returns (uint256) {
+        // Confirm the user hasn't been banned
+        if (bannedProposers[msg.sender]) revert NotAuthorized();
+
         // Confirm the proposer meets the proposalThreshold
         uint votesNeededToPropose = proposalThreshold();
         if (staking.getVotes(msg.sender) < votesNeededToPropose) revert NotEligible();
@@ -777,6 +783,14 @@ contract Governance is IGovernance, Admin, Refundable {
         emit QuorumVotesBPSSet(quorumVotesBPS, _newQuorumVotesBPS);
         
         quorumVotesBPS = _newQuorumVotesBPS;
+    }
+
+    /// @notice Admin function to ban a user from submitting new proposals
+    /// @param _proposer The user to ban
+    /// @param _banned Should the user be banned (true) or unbanned (false)?
+    /// @dev This function is used if a delegate tries to create constant proposals to prevent undelegation
+    function banProposer(address _proposer, bool _banned) external onlyExecutorOrAdmins {
+        bannedProposers[_proposer] = _banned;
     }
 
     /// @notice Upgrade the Staking contract to a new address
