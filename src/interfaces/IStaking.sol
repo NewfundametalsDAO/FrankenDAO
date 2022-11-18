@@ -75,7 +75,6 @@ interface IStaking {
     function isFrankenPunksStakingContract() external pure returns (bool);
     function lastDelegatingRefund(address) external view returns (uint256);
     function lastStakingRefund(address) external view returns (uint256);
-    function MONSTER_MULTIPLIER() external view returns (uint256);
     function paused() external view returns (bool);
     function setBaseURI(string memory _baseURI) external;
     function setPause(bool _paused) external;

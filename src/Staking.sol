@@ -40,6 +40,9 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice The DAO governance contract (where voting occurs)
   IGovernance governance;
 
+  /// @notice Base votes for holding a Frankenpunk token
+  uint constant BASE_VOTES = 20;
+
   /// @return maxStakeBonusTime The maxmimum time you will earn bonus votes for staking for
   /// @return maxStakeBonusAmount The amount of bonus votes you'll get if you stake for the max time
   StakingSettings public stakingSettings;
@@ -49,13 +52,6 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @return proposalsCreated The multiplier for extra voting power earned per proposal created
   /// @return proposalsPassed The multiplier for extra voting power earned per proposal passed
   CommunityPowerMultipliers public communityPowerMultipliers;
-
-  /// @notice Base votes for holding a Frankenpunk token
-  uint constant BASE_VOTES = 20;
-
-  /// @notice Multiplier for votes that Frankenmonsters earn, relative to Frankenpunks
-  /// @dev Expressed as a percentage (ie punk votes * MONSTER_MULTIPLIER / 100 = monster votes)
-  uint constant MONSTER_MULTIPLIER = 50;
 
   /// @notice Constant to calculate voting power based on multipliers above
   uint constant PERCENT = 100;
@@ -387,7 +383,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     if (_unlockTime > 0) {
       unlockTime[_tokenId] = _unlockTime;
       uint fullStakedTimeBonus = ((_unlockTime - block.timestamp) * stakingSettings.maxStakeBonusAmount) / stakingSettings.maxStakeBonusTime;
-      stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : (fullStakedTimeBonus * MONSTER_MULTIPLIER) / PERCENT;
+      stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : fullStakedTimeBonus / 2;
     }
 
     // Transfer the underlying token from the owner to this contract
@@ -504,11 +500,11 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     function getTokenVotingPower(uint _tokenId) public override view returns (uint) {
       if (ownerOf(_tokenId) == address(0)) revert NonExistentToken();
 
-      // If tokenId < 10000, it's a FrankenPunk, so 100/100 = a multiplier of 1
-      uint multiplier = _tokenId < 10_000 ? PERCENT : MONSTER_MULTIPLIER;
+      // If tokenId < 10000, it's a FrankenPunk, so BASE_VOTES, otherwise, divide by 2 for monsters
+      uint baseVotes = _tokenId < 10_000 ? BASE_VOTES : BASE_VOTES / 2;
       
       // evilBonus will return 0 for all FrankenMonsters, as they are not eligible for the evil bonus
-      return ((BASE_VOTES * multiplier) / PERCENT) + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
+      return baseVotes + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
     }
 
     /// @notice Get the community voting power for a given user
