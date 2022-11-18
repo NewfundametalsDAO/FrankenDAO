@@ -50,6 +50,13 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @return proposalsPassed The multiplier for extra voting power earned per proposal passed
   CommunityPowerMultipliers public communityPowerMultipliers;
 
+  /// @notice Base votes for holding a Frankenpunk token
+  uint constant BASE_VOTES = 20;
+
+  /// @notice Multiplier for votes that Frankenmonsters earn, relative to Frankenpunks
+  /// @dev Expressed as a percentage (ie punk votes * MONSTER_MULTIPLIER / 100 = monster votes)
+  uint constant MONSTER_MULTIPLIER = 50;
+
   /// @notice Constant to calculate voting power based on multipliers above
   uint constant PERCENT = 100;
 
@@ -71,9 +78,6 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice Is staking currently paused or open?
   bool public paused;
 
-  /// @notice Base votes for holding a Frankenpunk token
-  uint public baseVotes;
-
   /// @notice The staked time bonus for each staked token (tokenId => bonus votes)
   /// @dev This needs to be tracked because users will select how much time to lock for, so bonus is variable
   mapping(uint => uint) stakedTimeBonus; 
@@ -81,10 +85,6 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice The allowed unlock time for each staked token (tokenId => timestamp)
   /// @dev This remains at 0 if tokens are staked without locking
   mapping(uint => uint) public unlockTime;
-
-  /// @notice Multiplier for votes that Frankenmonsters earn, relative to Frankenpunks
-  /// @dev Expressed as a percentage (ie punk votes * monsterMultiplier / 100 = monster votes)
-  uint public monsterMultiplier;
 
   /// @notice Addresses that each user delegates votes to
   /// @dev This should only be accessed via getDelegate() function, which overrides address(0) with self
@@ -199,9 +199,6 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     executor = IExecutor(_executor);
     founders = _founders;
     council = _council;
-
-    baseVotes = 20; // Base votes for a staked token
-    monsterMultiplier = 50; // Monsters are worth 50% of Punks
 
     // Staking bonus increases linearly from 0 to 20 votes over 4 weeks
     stakingSettings = StakingSettings({
@@ -390,7 +387,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     if (_unlockTime > 0) {
       unlockTime[_tokenId] = _unlockTime;
       uint fullStakedTimeBonus = ((_unlockTime - block.timestamp) * stakingSettings.maxStakeBonusAmount) / stakingSettings.maxStakeBonusTime;
-      stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : fullStakedTimeBonus / 2;
+      stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : (fullStakedTimeBonus * MONSTER_MULTIPLIER) / PERCENT;
     }
 
     // Transfer the underlying token from the owner to this contract
@@ -508,10 +505,10 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
       if (ownerOf(_tokenId) == address(0)) revert NonExistentToken();
 
       // If tokenId < 10000, it's a FrankenPunk, so 100/100 = a multiplier of 1
-      uint multiplier = _tokenId < 10_000 ? PERCENT : monsterMultiplier;
+      uint multiplier = _tokenId < 10_000 ? PERCENT : MONSTER_MULTIPLIER;
       
       // evilBonus will return 0 for all FrankenMonsters, as they are not eligible for the evil bonus
-      return ((baseVotes * multiplier) / PERCENT) + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
+      return ((BASE_VOTES * multiplier) / PERCENT) + stakedTimeBonus[_tokenId] + evilBonus(_tokenId);
     }
 
     /// @notice Get the community voting power for a given user
@@ -598,21 +595,6 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @dev This function can only be called by the executor based on a governance proposal
   function setProposalsPassedMultiplier(uint64 _proposalsPassedMultiplier) external onlyExecutor {
     emit ProposalPassedMultiplierChanged(communityPowerMultipliers.proposalsPassed =  _proposalsPassedMultiplier);
-  }
-
-  /// @notice Set the base votes for 1 staked token
-  /// @param _baseVotes The number of base votes every staked token will earn (before locking, bonuses, etc)
-  /// @dev This function can only be called by the executor based on a governance proposal
-  function setBaseVotes(uint _baseVotes) external onlyExecutor {
-    emit BaseVotesChanged(baseVotes = _baseVotes);
-  }
-
-  /// @notice Set the FrankenMonster multiplier
-  /// @param _monsterMultiplier The new multiplier for voting power for a FrankenMonster vs a FrankenPunk
-  /// @dev This value is a percent, so will be divided by 100 when calculating voting power
-  /// @dev This function can only be called by the executor based on a governance proposal
-  function setMonsterMultiplier(uint _monsterMultiplier) external onlyExecutor {
-    emit MonsterMultiplierChanged(monsterMultiplier = _monsterMultiplier);
   }
 
   /// @notice Turn on or off gas refunds for staking and delegating

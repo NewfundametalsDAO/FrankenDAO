@@ -56,7 +56,7 @@ interface IStaking {
     /////////////////////
 
     function baseTokenURI() external view returns (string memory);
-    function baseVotes() external view returns (uint256);
+    function BASE_VOTES() external view returns (uint256);
     function changeStakeAmount(uint128 _newMaxStakeBonusAmount) external;
     function changeStakeTime(uint128 _newMaxStakeBonusTime) external;
     function communityPowerMultipliers()
@@ -75,11 +75,9 @@ interface IStaking {
     function isFrankenPunksStakingContract() external pure returns (bool);
     function lastDelegatingRefund(address) external view returns (uint256);
     function lastStakingRefund(address) external view returns (uint256);
-    function monsterMultiplier() external view returns (uint256);
+    function MONSTER_MULTIPLIER() external view returns (uint256);
     function paused() external view returns (bool);
     function setBaseURI(string memory _baseURI) external;
-    function setBaseVotes(uint256 _baseVotes) external;
-    function setMonsterMultiplier(uint256 _monsterMultiplier) external;
     function setPause(bool _paused) external;
     function setProposalsCreatedMultiplier(uint64 _proposalsCreatedMultiplier) external;
     function setProposalsPassedMultiplier(uint64 _proposalsPassedMultiplier) external;
