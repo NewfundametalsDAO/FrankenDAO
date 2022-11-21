@@ -530,6 +530,18 @@ contract Governance is IGovernance, Admin, Refundable {
         // Update the vetoed flag so the proposal's state is Vetoed
         proposal.vetoed = true;
 
+        // Remove Community Voting Power someone might have earned from creating
+        // the proposal
+        if(proposal.verified){
+            --userCommunityScoreData[proposal.proposer].proposalsCreated;
+            --totalCommunityScoreData.proposalsCreated;
+        }
+
+        if (state(_proposalId) == ProposalState.Queued){
+            --userCommunityScoreData[proposal.proposer].proposalsPassed;
+            --totalCommunityScoreData.proposalsPassed;
+        }
+
         emit ProposalVetoed(_proposalId);
     }
 
