@@ -27,7 +27,7 @@ interface IExecutor {
 
     function executeTransaction(uint256 _id, address _target, uint256 _value, string memory _signature, bytes memory _data, uint256 _eta) external returns (bytes memory);
 
-    function queueTransaction(address _target, uint256 _value, string memory _signature, bytes memory _data, uint256 _eta) external returns (bytes32 txHash, uint256 id);
+    function queueTransaction(uint256 _id, address _target, uint256 _value, string memory _signature, bytes memory _data, uint256 _eta) external returns (bytes32 txHash);
 
     function queuedTransactions(bytes32) external view returns (bool);
 }

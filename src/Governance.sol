@@ -476,12 +476,9 @@ contract Governance is IGovernance, Admin, Refundable {
 
         // Queue separate transactions for each action in the proposal
         uint numTargets = proposal.targets.length;
-        uint256[] memory txIds = new uint[](proposal.targets.length);
         for (uint256 i = 0; i < numTargets; i++) {
-            (bytes32 txHash, uint256 id) = executor.queueTransaction(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
-            txIds[i] = id;
+            executor.queueTransaction(i, proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
         }
-        proposal.ids = txIds;
 
         // If a proposal is queued, we are ready to award the community voting power bonuses to the proposer
         ++userCommunityScoreData[proposal.proposer].proposalsCreated;
@@ -509,7 +506,7 @@ contract Governance is IGovernance, Admin, Refundable {
         // Separate transactions were queued for each action in the proposal, so execute each separately
         for (uint256 i = 0; i < proposal.targets.length; i++) {
             executor.executeTransaction(
-                proposal.ids[i], proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta
+                i, proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta
             );
         }
 
@@ -669,7 +666,7 @@ contract Governance is IGovernance, Admin, Refundable {
         ) {
             for (uint256 i = 0; i < _proposal.targets.length; i++) {
                 executor.cancelTransaction(
-                    _proposal.ids[i],
+                    i,
                     _proposal.targets[i],
                     _proposal.values[i],
                     _proposal.signatures[i],
