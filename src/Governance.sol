@@ -467,7 +467,7 @@ contract Governance is IGovernance, Admin, Refundable {
     function queue(uint256 _proposalId) external {
         // Succeeded means we're past the endTime, yes votes outweigh no votes, and quorum threshold is met
         if(state(_proposalId) != ProposalState.Succeeded) revert InvalidStatus();
-        
+
         Proposal storage proposal = proposals[_proposalId];
 
         // Set the ETA (time for execution) to the soonest time based on the Executor's delay
@@ -476,18 +476,21 @@ contract Governance is IGovernance, Admin, Refundable {
 
         // Queue separate transactions for each action in the proposal
         uint numTargets = proposal.targets.length;
+        uint256[] memory txIds = new uint[](proposal.targets.length);
         for (uint256 i = 0; i < numTargets; i++) {
-            executor.queueTransaction(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
+            (bytes32 txHash, uint256 id) = executor.queueTransaction(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
+            txIds[i] = id;
         }
+        proposal.ids = txIds;
 
         // If a proposal is queued, we are ready to award the community voting power bonuses to the proposer
         ++userCommunityScoreData[proposal.proposer].proposalsCreated;
-        
+
         // We don't need to check whether the proposer is accruing community voting power because
         // they needed that voting power to propose, and once they have an Active Proposal, their
         // tokens are locked from delegating and unstaking.
         ++totalCommunityScoreData.proposalsCreated;
-        
+
         // Remove the proposal from the Active Proposals array
         _removeFromActiveProposals(_proposalId);
 
@@ -506,7 +509,7 @@ contract Governance is IGovernance, Admin, Refundable {
         // Separate transactions were queued for each action in the proposal, so execute each separately
         for (uint256 i = 0; i < proposal.targets.length; i++) {
             executor.executeTransaction(
-                proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta
+                proposal.ids[i], proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta
             );
         }
 
@@ -666,6 +669,7 @@ contract Governance is IGovernance, Admin, Refundable {
         ) {
             for (uint256 i = 0; i < _proposal.targets.length; i++) {
                 executor.cancelTransaction(
+                    _proposal.ids[i],
                     _proposal.targets[i],
                     _proposal.values[i],
                     _proposal.signatures[i],

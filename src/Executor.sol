@@ -30,7 +30,10 @@ contract Executor is IExecutor, FrankenDAOErrors {
 
     /// @notice The amount of time a tx can stay queued without being executed before it expires
     uint256 public constant GRACE_PERIOD = 14 days;
-    
+
+    /// @notice The ID for the next transaction to be queued
+    uint256 public nextTransactionID;
+
     /// @notice The address of the Governance contract
     address public governance;
 
@@ -74,17 +77,21 @@ contract Executor is IExecutor, FrankenDAOErrors {
         string memory _signature,
         bytes memory _data,
         uint256 _eta
-    ) public onlyGovernance returns (bytes32 txHash) {
+    ) public onlyGovernance returns (bytes32 txHash, uint256 id) {
         if (block.timestamp + DELAY > _eta) revert DelayNotSatisfied();
 
-        txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
+        id = nextTransactionID;
+        ++nextTransactionID;
+
+        txHash = keccak256(abi.encode(id, _target, _value, _signature, _data, _eta));
         if (queuedTransactions[txHash]) revert IdenticalTransactionAlreadyQueued();
         queuedTransactions[txHash] = true;
 
-        emit QueueTransaction(txHash, _target, _value, _signature, _data, _eta);
+        emit QueueTransaction(txHash, id, _target, _value, _signature, _data, _eta);
     }
 
     /// @notice Cancel a queued transaction, preventing it from being executed
+    /// @param _id The unique sequential ID provided for each transaction
     /// @param _target The address of the contract to execute the transaction on
     /// @param _value The amount of ETH to send with the transaction
     /// @param _signature The function signature of the transaction
@@ -93,20 +100,22 @@ contract Executor is IExecutor, FrankenDAOErrors {
     /** @dev This function is only called by _removeTransactionWithQueuedOrExpiredCheck() in the Governance contract,
             which shows up in cancel(), clear() and veto() */
     function cancelTransaction(
+        uint256 _id,
         address _target,
         uint256 _value,
         string memory _signature,
         bytes memory _data,
         uint256 _eta
     ) public onlyGovernance {
-        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
+        bytes32 txHash = keccak256(abi.encode(_id, _target, _value, _signature, _data, _eta));
         if (!queuedTransactions[txHash]) revert TransactionNotQueued();
         queuedTransactions[txHash] = false;
 
-        emit CancelTransaction(txHash, _target, _value, _signature, _data, _eta);
+        emit CancelTransaction(txHash, _id, _target, _value, _signature, _data, _eta);
     }
 
     /// @notice Executes a queued transaction after the delay has passed
+    /// @param _id The unique sequential ID provided for each transaction
     /// @param _target The address of the contract to execute the transaction on
     /// @param _value The amount of ETH to send with the transaction
     /// @param _signature The function signature of the transaction
@@ -114,21 +123,22 @@ contract Executor is IExecutor, FrankenDAOErrors {
     /// @param _eta The time at which the transaction can be executed
     /// @dev This function is only called by execute() in the Governance contract
     function executeTransaction(
+        uint256 _id,
         address _target,
         uint256 _value,
         string memory _signature,
         bytes memory _data,
         uint256 _eta
     ) public onlyGovernance returns (bytes memory) {
-        bytes32 txHash = keccak256(abi.encode(_target, _value, _signature, _data, _eta));
-        
+        bytes32 txHash = keccak256(abi.encode(_id, _target, _value, _signature, _data, _eta));
+
         // We don't need to check if it's expired, because this will be caught by the Governance contract.
         // (ie. If we are past the grace period, proposal state will be Expired and execute() will revert.)
         if (!queuedTransactions[txHash]) revert TransactionNotQueued();
         if (_eta > block.timestamp) revert TimelockNotMet();
-        
+
         queuedTransactions[txHash] = false;
-        
+
         if (bytes(_signature).length > 0) {
             _data = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
         }
@@ -136,7 +146,7 @@ contract Executor is IExecutor, FrankenDAOErrors {
         (bool success, bytes memory returnData) = _target.call{ value: _value }(_data);
         if (!success) revert TransactionReverted();
 
-        emit ExecuteTransaction(txHash, _target, _value, _signature, _data, _eta);
+        emit ExecuteTransaction(txHash, _id, _target, _value, _signature, _data, _eta);
         return returnData;
     }
 
