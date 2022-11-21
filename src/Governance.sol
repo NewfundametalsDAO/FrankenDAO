@@ -532,12 +532,12 @@ contract Governance is IGovernance, Admin, Refundable {
 
         // Remove Community Voting Power someone might have earned from creating
         // the proposal
-        if (proposal.verified){
+        if (proposal.verified) {
             --userCommunityScoreData[proposal.proposer].proposalsCreated;
             --totalCommunityScoreData.proposalsCreated;
         }
 
-        if (state(_proposalId) == ProposalState.Queued){
+        if (state(_proposalId) == ProposalState.Queued) {
             --userCommunityScoreData[proposal.proposer].proposalsPassed;
             --totalCommunityScoreData.proposalsPassed;
         }
