@@ -633,6 +633,8 @@ contract Governance is IGovernance, Admin, Refundable {
         // This takes into account delegation and community voting power
         uint24 votes = (staking.getVotes(_voter)).toUint24();
 
+        if (votes == 0) revert NotEligible();
+
         // Update the proposal's total voting records based on the votes
         if (_support == 0) {
             proposal.againstVotes = proposal.againstVotes + votes;
