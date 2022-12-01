@@ -534,10 +534,11 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
 
       CommunityPowerMultipliers memory cpMultipliers = communityPowerMultipliers;
 
-      return 
-        (votes * cpMultipliers.votes / PERCENT) + 
-        (proposalsCreated * cpMultipliers.proposalsCreated / PERCENT) + 
-        (proposalsPassed * cpMultipliers.proposalsPassed / PERCENT);
+      return (
+          (votes * cpMultipliers.votes) + 
+          (proposalsCreated * cpMultipliers.proposalsCreated) + 
+          (proposalsPassed * cpMultipliers.proposalsPassed)
+        ) / PERCENT;
     }
 
     /// @notice Get the total voting power of the entire system
