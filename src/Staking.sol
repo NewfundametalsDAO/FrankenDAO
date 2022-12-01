@@ -296,13 +296,14 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     tokenVotingPower[currentDelegate] -= amount;
     tokenVotingPower[_delegatee] += amount; 
 
-    // If a user is delegating back to themselves, they regain their community voting power, so adjust totals up
-    if (_delegator == _delegatee) {
-      _updateTotalCommunityVotingPower(_delegator, true);
+    // If this moved the current delegate down to zero voting power, then remove their community VP from the totals
+    if (tokenVotingPower[currentDelegate] == 0) {
+        _updateTotalCommunityVotingPower(currentDelegate, false);
+    }
 
-    // If a user delegates away their votes, they forfeit their community voting power, so adjust totals down
-    } else if (currentDelegate == _delegator) {
-      _updateTotalCommunityVotingPower(_delegator, false);
+    // If the new delegate previously had zero voting power, then add their community VP to the totals
+    if (tokenVotingPower[_delegatee] == amount) {
+      _updateTotalCommunityVotingPower(_delegatee, true);
     }
 
     emit DelegateChanged(_delegator, currentDelegate, _delegatee);
