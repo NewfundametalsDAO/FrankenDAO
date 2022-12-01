@@ -94,6 +94,7 @@ contract ActiveProposalTests is GovernanceBase {
         assert(activeProposals.length == 1);
 
         vm.warp(block.timestamp + gov.votingDelay());
+        vm.prank(voter);
         gov.castVote(proposalId, 0);
         vm.warp(block.timestamp + gov.votingPeriod() + 1);
 

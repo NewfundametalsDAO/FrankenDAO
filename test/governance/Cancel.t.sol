@@ -42,7 +42,7 @@ contract CancelProposalTests is GovernanceBase {
             bytes[] memory calldatas
         ) = _generateFakeProposalData();
 
-        bytes32 txHash = keccak256(abi.encode(targets[0], values[0], sigs[0], calldatas[0], block.timestamp + executor.DELAY()));
+        bytes32 txHash = _getTxHash(targets[0], values[0], sigs[0], calldatas[0], block.timestamp + executor.DELAY());
         assert(executor.queuedTransactions(txHash));
         assert(_checkState(proposalId, IGovernance.ProposalState.Queued));
 
@@ -115,7 +115,7 @@ contract CancelProposalTests is GovernanceBase {
             bytes[] memory calldatas
         ) = _generateFakeProposalData();
 
-        bytes32 txHash = keccak256(abi.encode(targets[0], values[0], sigs[0], calldatas[0], block.timestamp + executor.DELAY()));
+        bytes32 txHash = _getTxHash(targets[0], values[0], sigs[0], calldatas[0], block.timestamp + executor.DELAY());
         gov.queue(proposalId);
         assert(_checkState(proposalId, IGovernance.ProposalState.Queued));
         assert(executor.queuedTransactions(txHash));
@@ -132,6 +132,7 @@ contract CancelProposalTests is GovernanceBase {
     function testGovCancel__ProposalCanBeClearedWhenDefeated() public {
         uint proposalId = _createAndVerifyProposal();
         vm.warp(block.timestamp + gov.votingDelay());
+        vm.prank(voter);
         gov.castVote(proposalId, 0);
         vm.warp(block.timestamp + gov.votingPeriod() + 1);
 

@@ -60,7 +60,7 @@ contract GovernanceBase is StakingBase {
         bytes memory data, 
         uint eta
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(target, value, sig, data, eta));
+        return keccak256(abi.encode(0, target, value, sig, data, eta));
     }
 
     function _checkState(uint proposalId, IGovernance.ProposalState targetState) internal view returns (bool) {

@@ -351,7 +351,8 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     if (paused) revert Paused();
     if (_unlockTime > 0 && _unlockTime < block.timestamp) revert InvalidParameter();
 
-    if (_unlockTime - block.timestamp > maxStakeTime) {
+    uint maxStakeTime = stakingSettings.maxStakeBonusTime;
+    if (_unlockTime > 0 && _unlockTime - block.timestamp > maxStakeTime) {
       _unlockTime = block.timestamp + maxStakeTime;
     }
 
@@ -382,7 +383,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     if (_unlockTime > 0) {
       unlockTime[_tokenId] = _unlockTime;
       uint fullStakedTimeBonus = ((_unlockTime - block.timestamp) * stakingSettings.maxStakeBonusAmount) / stakingSettings.maxStakeBonusTime;
-      stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : fullStakedTimeBonus * monsterMultiplier / PERCENT;
+      stakedTimeBonus[_tokenId] = _tokenId < 10000 ? fullStakedTimeBonus : fullStakedTimeBonus / 2;
     }
 
     // Transfer the underlying token from the owner to this contract
