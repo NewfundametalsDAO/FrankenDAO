@@ -481,13 +481,13 @@ contract Governance is IGovernance, Admin, Refundable {
         }
 
         // If a proposal is queued, we are ready to award the community voting power bonuses to the proposer
-        ++userCommunityScoreData[proposal.proposer].proposalsCreated;
-        
+        ++userCommunityScoreData[proposal.proposer].proposalsPassed;
+
         // We don't need to check whether the proposer is accruing community voting power because
         // they needed that voting power to propose, and once they have an Active Proposal, their
         // tokens are locked from delegating and unstaking.
-        ++totalCommunityScoreData.proposalsCreated;
-        
+        ++totalCommunityScoreData.proposalsPassed;
+
         // Remove the proposal from the Active Proposals array
         _removeFromActiveProposals(_proposalId);
 
