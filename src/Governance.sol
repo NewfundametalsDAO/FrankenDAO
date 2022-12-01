@@ -475,7 +475,7 @@ contract Governance is IGovernance, Admin, Refundable {
     function queue(uint256 _proposalId) external {
         // Succeeded means we're past the endTime, yes votes outweigh no votes, and quorum threshold is met
         if(state(_proposalId) != ProposalState.Succeeded) revert InvalidStatus();
-        
+
         Proposal storage proposal = proposals[_proposalId];
 
         // Set the ETA (time for execution) to the soonest time based on the Executor's delay
@@ -485,7 +485,7 @@ contract Governance is IGovernance, Admin, Refundable {
         // Queue separate transactions for each action in the proposal
         uint numTargets = proposal.targets.length;
         for (uint256 i = 0; i < numTargets; i++) {
-            executor.queueTransaction(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
+            executor.queueTransaction(i, proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], eta);
         }
 
         // If a proposal is queued, we are ready to award the community voting power bonuses to the proposer
@@ -514,7 +514,7 @@ contract Governance is IGovernance, Admin, Refundable {
         // Separate transactions were queued for each action in the proposal, so execute each separately
         for (uint256 i = 0; i < proposal.targets.length; i++) {
             executor.executeTransaction(
-                proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta
+                i, proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta
             );
         }
 
@@ -688,6 +688,7 @@ contract Governance is IGovernance, Admin, Refundable {
         ) {
             for (uint256 i = 0; i < _proposal.targets.length; i++) {
                 executor.cancelTransaction(
+                    i,
                     _proposal.targets[i],
                     _proposal.values[i],
                     _proposal.signatures[i],

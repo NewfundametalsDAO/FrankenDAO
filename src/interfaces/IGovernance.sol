@@ -50,6 +50,8 @@ interface IGovernance {
         uint96 id;
         /// @notice Creator of the proposal
         address proposer;
+        /// @notice the unique sequential transaction ids
+        uint256[] ids;
         /// @notice the ordered list of target addresses for calls to be made
         address[] targets;
         /// @notice The ordered list of values (i.e. msg.value) to be passed to the calls to be made
