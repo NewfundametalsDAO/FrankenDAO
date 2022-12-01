@@ -123,6 +123,9 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @notice The latest proposal for each proposer
     mapping(address => uint256) public latestProposalIds;
 
+    /// @notice Users who have been banned from creating proposals
+    mapping(address => bool) public bannedProposers;
+
     /// @notice The number of votes, verified proposals, and passed proposals for each user
     mapping(address => CommunityScoreData) public userCommunityScoreData;
 
@@ -368,6 +371,9 @@ contract Governance is IGovernance, Admin, Refundable {
         bytes[] memory _calldatas,
         string memory _description
     ) internal returns (uint256) {
+        // Confirm the user hasn't been banned
+        if (bannedProposers[msg.sender]) revert NotAuthorized();
+
         // Confirm the proposer meets the proposalThreshold
         uint votesNeededToPropose = proposalThreshold();
         if (staking.getVotes(msg.sender) < votesNeededToPropose) revert NotEligible();
@@ -442,11 +448,13 @@ contract Governance is IGovernance, Admin, Refundable {
     /// @param _proposalId Id of the proposal to verify
     /// @dev This is intended to confirm that the proposal got through Snapshot pre-governance
     /// @dev This doesn't add any additional centralization risk, as the team already has veto power
-    function verifyProposal(uint _proposalId) external onlyAdmins {
+    function verifyProposal(uint _proposalId) external onlyVerifierOrAdmins {
         // Can only verify proposals that are currently in the Pending state
         if (state(_proposalId) != ProposalState.Pending) revert InvalidStatus();
 
         Proposal storage proposal = proposals[_proposalId];
+        
+        if (proposal.verified) revert InvalidStatus();
         proposal.verified = true;
 
         // If a proposal was valid, we are ready to award the community voting power bonuses to the proposer
@@ -481,12 +489,12 @@ contract Governance is IGovernance, Admin, Refundable {
         }
 
         // If a proposal is queued, we are ready to award the community voting power bonuses to the proposer
-        ++userCommunityScoreData[proposal.proposer].proposalsCreated;
+        ++userCommunityScoreData[proposal.proposer].proposalsPassed;
 
         // We don't need to check whether the proposer is accruing community voting power because
         // they needed that voting power to propose, and once they have an Active Proposal, their
         // tokens are locked from delegating and unstaking.
-        ++totalCommunityScoreData.proposalsCreated;
+        ++totalCommunityScoreData.proposalsPassed;
 
         // Remove the proposal from the Active Proposals array
         _removeFromActiveProposals(_proposalId);
@@ -529,6 +537,18 @@ contract Governance is IGovernance, Admin, Refundable {
 
         // Update the vetoed flag so the proposal's state is Vetoed
         proposal.vetoed = true;
+
+        // Remove Community Voting Power someone might have earned from creating
+        // the proposal
+        if (proposal.verified) {
+            --userCommunityScoreData[proposal.proposer].proposalsCreated;
+            --totalCommunityScoreData.proposalsCreated;
+        }
+
+        if (state(_proposalId) == ProposalState.Queued) {
+            --userCommunityScoreData[proposal.proposer].proposalsPassed;
+            --totalCommunityScoreData.proposalsPassed;
+        }
 
         emit ProposalVetoed(_proposalId);
     }
@@ -620,6 +640,8 @@ contract Governance is IGovernance, Admin, Refundable {
         // Calculate the number of votes a user is able to cast
         // This takes into account delegation and community voting power
         uint24 votes = (staking.getVotes(_voter)).toUint24();
+
+        if (votes == 0) revert NotEligible();
 
         // Update the proposal's total voting records based on the votes
         if (_support == 0) {
@@ -778,6 +800,14 @@ contract Governance is IGovernance, Admin, Refundable {
         emit QuorumVotesBPSSet(quorumVotesBPS, _newQuorumVotesBPS);
         
         quorumVotesBPS = _newQuorumVotesBPS;
+    }
+
+    /// @notice Admin function to ban a user from submitting new proposals
+    /// @param _proposer The user to ban
+    /// @param _banned Should the user be banned (true) or unbanned (false)?
+    /// @dev This function is used if a delegate tries to create constant proposals to prevent undelegation
+    function banProposer(address _proposer, bool _banned) external onlyExecutorOrAdmins {
+        bannedProposers[_proposer] = _banned;
     }
 
     /// @notice Upgrade the Staking contract to a new address

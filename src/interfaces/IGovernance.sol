@@ -8,8 +8,6 @@ interface IGovernance {
     ////// Events //////
     ////////////////////
 
-    /// @notice Emited when the staking contract is changed.
-    event NewStakingContract(address stakingContract);
     /// @notice Emited when a proposal is canceled
     event ProposalCanceled(uint256 id);
     /// @notice Emited when a proposal is created
@@ -34,6 +32,8 @@ interface IGovernance {
     event VotingDelaySet(uint256 oldVotingDelay, uint256 newVotingDelay);
     /// @notice Emited when the voting period is updated
     event VotingPeriodSet(uint256 oldVotingPeriod, uint256 newVotingPeriod);
+    /// @notice Emited when the staking contract is changed.
+    event NewStakingContract(address stakingContract);
 
     /////////////////////
     ////// Storage //////

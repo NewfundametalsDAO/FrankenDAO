@@ -14,6 +14,8 @@ interface IAdmin {
     event NewFounders(address oldFounders, address newFounders);
     /// @notice Emited when a new address is set for the Pauser
     event NewPauser(address oldPauser, address newPauser);
+    /// @notice Emited when a new address is set for the Verifier
+    event NewVerifier(address oldVerifier, address newVerifier);
     /// @notice Emitted when pendingFounders is changed
     event NewPendingFounders(address oldPendingFounders, address newPendingFounders);
 
