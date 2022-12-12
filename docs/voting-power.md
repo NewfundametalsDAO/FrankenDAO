@@ -39,12 +39,18 @@ tokens, and the staking bonus applied based on how long you commit your tokens
 for.
 
 Each staked FrankenPunk gives a DAO member a base of 20 voting power. Staking
-a FrankenPunk with a higher Evil Score will provide a bonus on top of that base
-of 20 points though. The exact formula is:
+a FrankenPunk with an Evil Score greater than 1.5 will provides a bonus on top
+of that base of 10 points. The exact formula is: 
 
 ```
 ((baseVotes * multipler) / 100) + stakedTimeBonus + evilBonus
 ```
+
+Where:
+* `baseVotes` is the bonus for staking a FrankenPunk
+* `multiplier` is the optional multiplier tied to staking
+* `stakedTimeBonus` is the bonus earned for staking length
+* `evilBonus` is either 10 or 0, depending on how Evil your FrankenPunk is
 
 A possible scenario:
 
@@ -52,7 +58,6 @@ Let's say you were to stake [FrankenPunk
 #4701](https://opensea.io/assets/ethereum/0x1fec856e25f757fed06eb90548b0224e91095738/4701).
 If you staked the token with no stake time bonus, your score would break down as
 follows:
-
 
 | Attribute | Value |
 | --- | --- |
@@ -62,7 +67,7 @@ follows:
 | Stake Time Bonus  | 0  |
 | Evil Bonus  | 1.13035  |
 
-Your voting power would be **21.13035**.
+Your voting power would be **20**.
 
 Now, let's say you stake the same token for four weeks and earn the stake time
 bonus:
@@ -75,7 +80,7 @@ bonus:
 | Stake Time Bonus  | 20  |
 | Evil Bonus  | 1.13035  |
 
-Now your voting power for the same token is **41.13035**.
+Now your voting power for the same token is **40**.
 
 The stake time bonus is linear across the staking window. So if the stake window
 is 4 weeks and the bonus is 20 VP, staking a token for 2 weeks would earn you 10
@@ -125,11 +130,11 @@ This is how your token voting power would break down:
 
 | Token ID | Evil Score | Stake Bonus | Voting Power |
 | --- | --- | --- | --- |
-| #2146  | 1.40952 | 20  | 41.40952 |
-| #6707  | 2.5 | 20  | 42.5  |
-| #2671  | 1.1865 | 20  | 41.1865  |
+| #2146  | 1.40952 | 20  | 40 |
+| #6707  | 2.5 | 20  | 50  |
+| #2671  | 1.1865 | 20  | 40  |
 
-Your total token voting power is: 125.09602
+Your total token voting power is: 130
 
 This is how your community score would break down:
 
@@ -142,7 +147,7 @@ This is how your community score would break down:
 Your total community voting power would be: 21
 
 Your total voting power is the combination of these two, which would be
-**146.09602**.
+**151**.
 
 As you can see the 'Community Voting Power' addition is added to the wallet's
 other tokens' voting power. The community voting power metric will benefit
