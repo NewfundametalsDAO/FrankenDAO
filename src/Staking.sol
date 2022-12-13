@@ -101,6 +101,9 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @notice Base token URI for the ERC721s representing the staked position
   string public baseTokenURI;
 
+  /// @notice Contract URI for marketplace metadata
+  string public contractURI;
+
   /// @notice The total supply of staked frankenpunks
   uint128 public stakedFrankenPunks;
 
@@ -186,7 +189,8 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
     address _executor, 
     address _founders,
     address _council,
-    string memory _baseTokenURI
+    string memory _baseTokenURI,
+    string memory _contractURI
   ) ERC721("Staked FrankenPunks", "sFP") {
     frankenpunks = IERC721(_frankenpunks);
     frankenmonsters = IERC721(_frankenmonsters);
@@ -216,6 +220,9 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
 
     // Set the base token URI.
     baseTokenURI = _baseTokenURI;
+
+    // Set the contract URI.
+    contractURI = _contractURI;
   }
 
   /////////////////////////////////
@@ -242,7 +249,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
       ? string(abi.encodePacked(baseURI, _tokenId.toString(), ".json"))
       : "";
   }
-  
+
   /////////////////////////////////
   /////// DELEGATION LOGIC ////////
   /////////////////////////////////
@@ -617,6 +624,12 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @param _baseURI The new base URI
   function setBaseURI(string calldata _baseURI) external onlyAdmins {
     emit BaseURIChanged(baseTokenURI = _baseURI);
+  }
+
+  /// @notice Set the contract URI for marketplace metadata
+  /// @param _newContractURI The new contract URI
+  function setContractURI(string calldata _newContractURI) externaly onlyAdmins {
+    emit ContractURIChanged(contractURI = _newContractURI);
   }
 
   /// @notice Check to confirm that this is a FrankenPunks staking contract
