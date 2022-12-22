@@ -182,6 +182,8 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
   /// @param _executor The address of the DAO executor contract
   /// @param _founders The address of the founder multisig for restricted functions
   /// @param _council The address of the council multisig for restricted functions
+  /// @param _baseTokenURI Token URI for the Staking NFT contract
+  /// @param _contractURI URI for the contract metadata
   constructor(
     address _frankenpunks, 
     address _frankenmonsters,
@@ -628,7 +630,7 @@ contract Staking is IStaking, ERC721, Admin, Refundable {
 
   /// @notice Set the contract URI for marketplace metadata
   /// @param _newContractURI The new contract URI
-  function setContractURI(string calldata _newContractURI) externaly onlyAdmins {
+  function setContractURI(string calldata _newContractURI) external onlyAdmins {
     emit ContractURIChanged(contractURI = _newContractURI);
   }
 
