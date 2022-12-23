@@ -36,6 +36,7 @@ contract DeployScript is Script {
     
     bytes32 SALT = bytes32("saltysalty");
     string BASE_TOKEN_URI = "http://frankenpunks.com/uris/"; // @todo input for mainnet deployment
+    string CONTRACT_URI = "http://frankenpunks.com/uris/"; // @todo input for mainnet deployment
 
     function run() public {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
@@ -83,7 +84,8 @@ contract DeployScript is Script {
             address(executor),
             FOUNDER_MULTISIG,
             COUNCIL_MULTISIG,
-            BASE_TOKEN_URI
+            BASE_TOKEN_URI,
+            CONTRACT_URI
         );
 
         // create governance (no need to initialize because nothing vulnerable in implementation)

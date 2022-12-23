@@ -12,6 +12,8 @@ interface IStaking {
     event StakingPause(bool status);
     /// @notice Emited when admins change the token's base URI
     event BaseURIChanged(string _baseURI);
+    /// @notice Emited when the contract URI is updated
+    event ContractURIChanged(string _contractURI);
     /// @notice Emited when refund settings are updated
     event RefundSettingsChanged(bool _stakingRefund, bool _delegatingRefund, uint256 _newCooldown);
     /// @notice Emited when FrankenMonster voting multiplier is changed
