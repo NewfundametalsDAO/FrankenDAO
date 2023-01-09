@@ -1,9 +1,10 @@
 ---
 name: Audit item
 about: These are the audit items that end up in the report
-title: ""
-labels: ""
-assignees: ""
+title: ''
+labels: ''
+assignees: ''
+
 ---
 
 ## Summary
